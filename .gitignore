@@ -6,7 +6,7 @@ node_modules/
 # Environment files (sensitive credentials)
 .env
 # /backend/.env
-/frontend/.env
+# /frontend/.env
 .env.local
 .env.development.local
 .env.test.local
