@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: reality-contest-backend-service
+  namespace: default
+  labels:
+    app: reality-contest-backend
+spec:
+  type: ClusterIP
+  sessionAffinity: ClientIP # WebSockets require sticky clients
+  ports:
+    - port: 80
+      targetPort: 5000
+      protocol: TCP
+  selector:
+    app: reality-contest-backend

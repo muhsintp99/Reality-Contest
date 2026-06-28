@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb-replica:27017/reality_contest
+      - REDIS_URL=redis://redis-cache:6379
+      - JWT_ACCESS_SECRET=your_super_secret_access_token_12345_rcp_prod_key
+      - JWT_REFRESH_SECRET=your_super_secret_refresh_token_67890_rcp_prod_key
+    depends_on:
+      - mongodb-replica
+      - redis-cache
+    networks:
+      - platform-network
+
+  redis-cache:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - platform-network
+
+  mongodb-replica:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - platform-network
+
+volumes:
+  redis-data:
+  mongo-data:
+
+networks:
+  platform-network:
+    driver: bridge
