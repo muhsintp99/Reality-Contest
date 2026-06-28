@@ -18,6 +18,12 @@ export const swaggerDocument = {
     { name: 'Device Sessions', description: 'Manage active logged-in device sessions' },
     { name: 'KYC Verification', description: 'KYC upload and administrator review workflows' },
     { name: 'Multipart Uploads', description: 'Large file multi-part upload operations' },
+    { name: 'Contests', description: 'Contest list, details, creation, and participant registrations' },
+    { name: 'Stages', description: 'Group stages, attempt activations, and quiz submissions' },
+    { name: 'Wallet', description: 'Balance deposits and ledger transaction logs' },
+    { name: 'Question Pools', description: 'Quiz pools builder and question banks management' },
+    { name: 'Admin Controls', description: 'Super Admin overrides, user role promotions, and system audit logs' },
+    { name: 'Single Uploads', description: 'Standard file upload endpoints' },
   ],
   components: {
     securitySchemes: {
@@ -202,6 +208,123 @@ export const swaggerDocument = {
           kycId: { type: 'string', example: '662bd890bca4871d34c89299' },
           status: { type: 'string', enum: ['Approved', 'Rejected'], example: 'Approved' },
           rejectionReason: { type: 'string', example: 'Selfie blurred or non-matching.' },
+        },
+      },
+      CreateContestRequest: {
+        type: 'object',
+        required: ['title', 'entryFee', 'prizePool', 'registrationStartDate', 'registrationEndDate', 'startDate', 'endDate'],
+        properties: {
+          title: { type: 'string', example: 'India Creator Showdown 2026' },
+          description: { type: 'string', example: 'Join the showdown' },
+          prizePool: { type: 'string', example: '10,00,000' },
+          registrationStartDate: { type: 'string', format: 'date-time', example: '2026-06-01T00:00:00.000Z' },
+          registrationEndDate: { type: 'string', format: 'date-time', example: '2026-06-30T00:00:00.000Z' },
+          startDate: { type: 'string', format: 'date-time', example: '2026-07-01T00:00:00.000Z' },
+          endDate: { type: 'string', format: 'date-time', example: '2026-07-15T00:00:00.000Z' },
+          entryFee: { type: 'number', example: 499 },
+          maxParticipants: { type: 'number', example: 500 },
+        },
+      },
+      ContestResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '662bd890bca4871d34c89290' },
+          title: { type: 'string', example: 'India Creator Showdown 2026' },
+          description: { type: 'string', example: 'Join the showdown' },
+          prizePool: { type: 'string', example: '10,00,000' },
+          entryFee: { type: 'number', example: 499 },
+          status: { type: 'string', enum: ['Upcoming', 'Registration Open', 'Active', 'Completed'], example: 'Registration Open' },
+        },
+      },
+      CreateStageRequest: {
+        type: 'object',
+        required: ['name', 'type', 'timeLimit', 'passingPercentage'],
+        properties: {
+          name: { type: 'string', example: 'Stage 1: GK Quiz Arena' },
+          type: { type: 'string', enum: ['Quiz', 'VideoUpload', 'CustomStage'], example: 'Quiz' },
+          timeLimit: { type: 'number', example: 300, description: 'Time limit in seconds.' },
+          passingPercentage: { type: 'number', example: 60 },
+          rules: {
+            type: 'object',
+            properties: {
+              rules: { type: 'string', example: 'Answer questions within time.' },
+              instructions: { type: 'string', example: 'Do not refresh page.' },
+              regulations: { type: 'string', example: 'Standard code of conduct.' },
+              attemptPolicy: { type: 'string', example: 'Single attempt allowed.' },
+              disqualificationPolicy: { type: 'string', example: 'Tab switches auto disqualify.' },
+            },
+          },
+        },
+      },
+      StageResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: 'stage_id_123' },
+          name: { type: 'string', example: 'Stage 1: GK Quiz Arena' },
+          type: { type: 'string', example: 'Quiz' },
+          timeLimit: { type: 'number', example: 300 },
+          passingPercentage: { type: 'number', example: 60 },
+          rules: {
+            type: 'object',
+            properties: {
+              rules: { type: 'string' },
+              instructions: { type: 'string' },
+              regulations: { type: 'string' },
+              attemptPolicy: { type: 'string' },
+              disqualificationPolicy: { type: 'string' },
+            },
+          },
+        },
+      },
+      DepositRequest: {
+        type: 'object',
+        required: ['amount'],
+        properties: {
+          amount: { type: 'number', example: 1000 },
+          description: { type: 'string', example: 'User Deposit' },
+        },
+      },
+      WalletTransactionResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: 'txn_id_123' },
+          amount: { type: 'number', example: 1000 },
+          type: { type: 'string', enum: ['Deposit', 'Withdrawal', 'Entry Fee'], example: 'Deposit' },
+          status: { type: 'string', enum: ['Pending', 'Completed', 'Failed'], example: 'Completed' },
+          description: { type: 'string', example: 'User Deposit' },
+          createdAt: { type: 'string', format: 'date-time', example: '2026-06-26T15:12:00.000Z' },
+        },
+      },
+      CreatePoolRequest: {
+        type: 'object',
+        required: ['name', 'category'],
+        properties: {
+          name: { type: 'string', example: 'GK General Knowledge Pool' },
+          category: { type: 'string', example: 'Knowledge' },
+          description: { type: 'string', example: 'Pool for GK quizzes' },
+        },
+      },
+      AddQuestionRequest: {
+        type: 'object',
+        required: ['questionText', 'type', 'options', 'correctAnswerIndex'],
+        properties: {
+          questionText: { type: 'string', example: 'What is the capital of India?' },
+          type: { type: 'string', enum: ['Single Choice', 'Multiple Choice'], example: 'Single Choice' },
+          options: {
+            type: 'array',
+            items: { type: 'string' },
+            example: ['New Delhi', 'Mumbai', 'Chennai', 'Kolkata'],
+          },
+          correctAnswerIndex: { type: 'number', example: 0 },
+        },
+      },
+      Question: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: 'q_123' },
+          questionText: { type: 'string', example: 'What is the capital of India?' },
+          type: { type: 'string', example: 'Single Choice' },
+          options: { type: 'array', items: { type: 'string' }, example: ['New Delhi', 'Mumbai', 'Chennai', 'Kolkata'] },
         },
       },
     },
@@ -1080,6 +1203,764 @@ export const swaggerDocument = {
                   properties: {
                     success: { type: 'boolean', example: true },
                     fileUrl: { type: 'string', format: 'uri', example: 'https://s3.amazonaws.com/bucket/uploads/video.mp4' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/upload': {
+      post: {
+        tags: ['Single Uploads'],
+        summary: 'Upload a Single File',
+        description: 'Uploads a single image/video file to the local server or cloud database.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'File uploaded successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    fileUrl: { type: 'string', example: '/uploads/file-1719400000.jpg' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/contests': {
+      post: {
+        tags: ['Contests'],
+        summary: 'Create a Contest (Admin)',
+        description: 'Creates a new contest with registration fees and start/end details.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateContestRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Contest created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    contest: { $ref: '#/components/schemas/ContestResponse' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ['Contests'],
+        summary: 'List Contests',
+        description: 'Retrieves a list of all active/upcoming/completed contests.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of contests.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    contests: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/ContestResponse' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/contests/{id}': {
+      get: {
+        tags: ['Contests'],
+        summary: 'Get Contest Details',
+        description: 'Returns metadata, rounds, and participant group metrics for a contest.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Contest ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Contest details.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    contest: { $ref: '#/components/schemas/ContestResponse' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/contests/{id}/join': {
+      post: {
+        tags: ['Contests'],
+        summary: 'Register for a Contest',
+        description: 'Registers the authenticated user for a contest. Subtracts entryFee from their wallet balance.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Contest ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Registered successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Registered for contest successfully.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/groups/{groupId}/stages': {
+      post: {
+        tags: ['Stages'],
+        summary: 'Create a Stage in Group (Admin)',
+        description: 'Adds a quiz or video upload stage round into a participant group.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'groupId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Group ID',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateStageRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Stage created.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    stage: { $ref: '#/components/schemas/StageResponse' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ['Stages'],
+        summary: 'List Stages in Group',
+        description: 'Lists all rounds and stages configured for a specific group.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'groupId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Group ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'List of stages.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    stages: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/StageResponse' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/stages/{id}/unlock-status': {
+      get: {
+        tags: ['Stages'],
+        summary: 'Check Stage Unlock Status',
+        description: 'Checks if the user has qualified and unlocked this stage.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Stage ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Unlock status check.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    unlocked: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/stages/{id}/accept-rules': {
+      post: {
+        tags: ['Stages'],
+        summary: 'Accept Stage Attempt Rules',
+        description: 'User accepts attempt terms and anti-cheat policies.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Stage ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Rules accepted.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/stages/{id}/start': {
+      post: {
+        tags: ['Stages'],
+        summary: 'Start Stage Attempt',
+        description: 'Initiates attempt timers, locks fullscreen checks, and retrieves quiz questions.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Stage ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Attempt started.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    attemptId: { type: 'string', example: 'att_12345' },
+                    questions: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Question' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/stages/{id}/submit': {
+      post: {
+        tags: ['Stages'],
+        summary: 'Submit Stage Attempt',
+        description: 'Submits user answers or files. Processes AI grading engine scoring.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Stage ID',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  answers: { type: 'object', example: { 'q-1': 0, 'q-2': [1, 2] } },
+                  fileUrl: { type: 'string', example: 'https://example.com/pitch.mp4' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Attempt submitted.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    score: { type: 'number', example: 80 },
+                    passed: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/wallet/deposit': {
+      post: {
+        tags: ['Wallet'],
+        summary: 'Deposit Funds',
+        description: 'Simulates payment gateway transaction and increments wallet balance.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/DepositRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Deposit completed.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    walletBalance: { type: 'number', example: 3500 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/wallet/transactions': {
+      get: {
+        tags: ['Wallet'],
+        summary: 'Get Transaction Ledger',
+        description: 'Returns transaction logs for deposits, withdrawals, and entries.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Transactions list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    transactions: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/WalletTransactionResponse' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/question-pools': {
+      post: {
+        tags: ['Question Pools'],
+        summary: 'Create Question Pool (Admin)',
+        description: 'Creates a question category pool for stage integration.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreatePoolRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Pool created.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ['Question Pools'],
+        summary: 'List Question Pools (Admin)',
+        description: 'Lists all available question category pools.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Pools list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    pools: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          _id: { type: 'string' },
+                          name: { type: 'string' },
+                          category: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/question-pools/{poolId}/questions': {
+      post: {
+        tags: ['Question Pools'],
+        summary: 'Add Question to Pool (Admin)',
+        description: 'Appends a single trivia/quiz question to the pool bank.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'poolId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Pool ID',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AddQuestionRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Question added.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        tags: ['Question Pools'],
+        summary: 'List Questions in Pool',
+        description: 'Returns all questions inside the specified pool.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'poolId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Pool ID',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Questions fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/question-pools/{poolId}/import': {
+      post: {
+        tags: ['Question Pools'],
+        summary: 'Bulk Import Questions (Admin)',
+        description: 'Bulk imports questions from a list.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'poolId',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Pool ID',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  questions: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/AddQuestionRequest' },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Import complete.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/admin/audit-logs': {
+      get: {
+        tags: ['Admin Controls'],
+        summary: 'Get Audit Security logs (Super Admin)',
+        description: 'Retrieves active system actions logging for audits.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Logs fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    logs: { type: 'array', items: { type: 'object' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/admin/results/override': {
+      put: {
+        tags: ['Admin Controls'],
+        summary: 'Manual Override qualification (Super Admin)',
+        description: 'Forces qualification overrides for a participant attempt.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['resultId', 'status'],
+                properties: {
+                  resultId: { type: 'string', example: 'res_123' },
+                  status: { type: 'string', enum: ['Qualified', 'Disqualified'], example: 'Qualified' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Override successful.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Status updated successfully.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/admin/users/role': {
+      put: {
+        tags: ['Admin Controls'],
+        summary: 'Promote User Role (Super Admin)',
+        description: 'Changes system access level role of a user email.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'role'],
+                properties: {
+                  email: { type: 'string', format: 'email', example: 'judge@rcp.com' },
+                  role: { type: 'string', enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin'], example: 'Judge' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Role promoted.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'User role updated.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/admin/users/{role}': {
+      get: {
+        tags: ['Admin Controls'],
+        summary: 'List Users by Role (Admin)',
+        description: 'Returns all system users having a specific role credential.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'role',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin'] },
+            description: 'System role',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Users fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
                   },
                 },
               },
