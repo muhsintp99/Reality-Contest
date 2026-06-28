@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { uploadKycRequest, fetchKycStatusRequest } from '../store/authSlice';
 import { Shield, UploadCloud, Camera, CheckCircle2, AlertTriangle, RefreshCw, UserCheck } from 'lucide-react';
 import axios from 'axios';
 
 export const KycVerification = () => {
-  const { user, currentKyc, uploadKyc, fetchKycStatus, loading, isMockMode } = useAuthStore();
+  const dispatch = useDispatch();
+  const { user, currentKyc, loading, isMockMode } = useSelector((state) => state.auth);
   const [docType, setDocType] = useState('Aadhaar');
   const [docNum, setDocNum] = useState('');
   const [docFileSelected, setDocFileSelected] = useState(false);
@@ -18,8 +20,8 @@ export const KycVerification = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
 
   useEffect(() => {
-    fetchKycStatus();
-  }, []);
+    dispatch(fetchKycStatusRequest());
+  }, [dispatch]);
 
   const handleSelectDocClick = () => {
     if (isMockMode) {
@@ -62,7 +64,7 @@ export const KycVerification = () => {
     setSelfieUrl(`https://api.dicebear.com/7.x/avataaars/svg?seed=Selfie-${rand}`);
   };
 
-  const handleSubmitKyc = async (e) => {
+  const handleSubmitKyc = (e) => {
     e.preventDefault();
     if (!docFileSelected || !selfieCaptured) {
       alert('Please upload your document file and capture a liveness selfie.');
@@ -70,17 +72,20 @@ export const KycVerification = () => {
     }
     
     setSubmitting(true);
-    const success = await uploadKyc({
-      documentType: docType,
-      documentNumber: docNum,
-      documentFrontUrl: isMockMode ? `https://storage.realitycontest.in/uploads/${docFileName}` : realDocUrl,
-      selfieUrl: selfieUrl
-    });
-    setSubmitting(false);
-
-    if (success) {
-      alert('KYC submitted! AI systems have run a baseline face match check.');
-    }
+    dispatch(uploadKycRequest({
+      data: {
+        documentType: docType,
+        documentNumber: docNum,
+        documentFrontUrl: isMockMode ? `https://storage.realitycontest.in/uploads/${docFileName}` : realDocUrl,
+        selfieUrl: selfieUrl
+      },
+      callback: (success) => {
+        setSubmitting(false);
+        if (success) {
+          alert('KYC submitted! AI systems have run a baseline face match check.');
+        }
+      }
+    }));
   };
 
   if (currentKyc) {

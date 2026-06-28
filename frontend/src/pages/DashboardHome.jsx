@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateWalletBalance, fetchPendingKycsRequest, reviewKycRequest } from '../store/authSlice';
 import axios from 'axios';
 import { 
   Users, Activity, Wallet, Trophy, Award, Landmark, 
@@ -14,7 +15,8 @@ const STATS_DATA = [
 ];
 
 export const DashboardHome = ({ onViewChange, selectedRole }) => {
-  const { user, pendingKycs, updateWalletBalance, fetchPendingKycs, reviewKyc, isMockMode } = useAuthStore();
+  const dispatch = useDispatch();
+  const { user, pendingKycs, isMockMode } = useSelector((state) => state.auth);
   const [depositAmount, setDepositAmount] = useState('1000');
 
   // React state elements for dynamic lists
@@ -102,16 +104,16 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
 
   React.useEffect(() => {
     if (selectedRole === 'Admin') {
-      fetchPendingKycs();
+      dispatch(fetchPendingKycsRequest());
     } else if (selectedRole === 'Super Admin') {
       fetchAuditLogs();
     }
-  }, [selectedRole]);
+  }, [selectedRole, dispatch]);
 
   const handleQuickDeposit = () => {
     const val = parseFloat(depositAmount);
     if (isNaN(val) || val <= 0) return;
-    updateWalletBalance(val);
+    dispatch(updateWalletBalance(val));
     alert(`₹${val} loaded into platform wallet.`);
   };
 
@@ -121,7 +123,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
       alert('Insufficient wallet balance. Please add funds first.');
       return;
     }
-    updateWalletBalance(-fee);
+    dispatch(updateWalletBalance(-fee));
     setJoinedContests(prev => [...prev, id]);
     alert('Joined contest successfully!');
   };
@@ -144,12 +146,18 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
     alert('Sponsorship campaign syndicated successfully.');
   };
 
-  const handleReviewKycSubmit = async (kycId, status) => {
+  const handleReviewKycSubmit = (kycId, status) => {
     const reason = status === 'Rejected' ? 'Uploaded document text is illegible.' : undefined;
-    const success = await reviewKyc(kycId, status, reason);
-    if (success) {
-      alert(`KYC application marked: ${status}.`);
-    }
+    dispatch(reviewKycRequest({
+      kycId,
+      status,
+      reason,
+      callback: (success) => {
+        if (success) {
+          alert(`KYC application marked: ${status}.`);
+        }
+      }
+    }));
   };
 
   const contestsList = [

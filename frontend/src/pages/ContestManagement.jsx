@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector } from 'react-redux';
 import { Trophy, Plus, Settings, Sparkles, ShieldAlert, ArrowRight, Check, X } from 'lucide-react';
 import axios from 'axios';
 
 export const ContestManagement = () => {
-  const { isMockMode } = useAuthStore();
+  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(false);
 

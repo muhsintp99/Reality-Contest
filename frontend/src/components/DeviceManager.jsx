@@ -1,26 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchSessionsRequest, revokeSessionRequest, logoutAllDevicesRequest } from '../store/authSlice';
 import { Monitor, Smartphone, Globe, LogOut, ShieldAlert } from 'lucide-react';
 
 export const DeviceManager = () => {
-  const { sessions, fetchSessions, revokeSession, logoutAllDevices } = useAuthStore();
+  const dispatch = useDispatch();
+  const { sessions } = useSelector((state) => state.auth);
   const [loadingId, setLoadingId] = useState(null);
   const [revokingAll, setRevokingAll] = useState(false);
 
   useEffect(() => {
-    fetchSessions();
-  }, []);
+    dispatch(fetchSessionsRequest());
+  }, [dispatch]);
 
-  const handleRevoke = async (id) => {
+  const handleRevoke = (id) => {
     setLoadingId(id);
-    await revokeSession(id);
+    dispatch(revokeSessionRequest(id));
     setLoadingId(null);
   };
 
-  const handleRevokeAll = async () => {
+  const handleRevokeAll = () => {
     if (confirm('Are you sure you want to log out of all other devices?')) {
       setRevokingAll(true);
-      await logoutAllDevices();
+      dispatch(logoutAllDevicesRequest());
       setRevokingAll(false);
     }
   };

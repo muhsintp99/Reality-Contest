@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector } from 'react-redux';
 import { Layers, Plus, Upload, Play, Check, Clock, Trash, FileText, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 
 export const QuizBuilder = () => {
-  const { isMockMode } = useAuthStore();
+  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const [pools, setPools] = useState([]);
   const [selectedPool, setSelectedPool] = useState(null);
   const [questions, setQuestions] = useState([]);

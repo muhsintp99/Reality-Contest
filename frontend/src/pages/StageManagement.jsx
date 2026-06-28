@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector } from 'react-redux';
 import { Milestone, Plus, Info, Clock, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
 export const StageManagement = () => {
-  const { isMockMode } = useAuthStore();
+  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const [groups, setGroups] = useState([]);
   const [pools, setPools] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);

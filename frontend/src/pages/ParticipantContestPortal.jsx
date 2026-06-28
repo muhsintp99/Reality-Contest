@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateWalletBalance } from '../store/authSlice';
 import { Trophy, Milestone, Lock, Unlock, HelpCircle, ShieldCheck, Check, UploadCloud, Clock } from 'lucide-react';
 import axios from 'axios';
 import { QuizEngine } from './QuizEngine';
 
 export const ParticipantContestPortal = () => {
-  const { user, isMockMode, updateWalletBalance } = useAuthStore();
+  const dispatch = useDispatch();
+  const { user, isMockMode } = useSelector((state) => state.auth);
   const [contests, setContests] = useState([]);
   const [selectedContest, setSelectedContest] = useState(null);
   const [groups, setGroups] = useState([]);
@@ -47,7 +49,7 @@ export const ParticipantContestPortal = () => {
     }
 
     if (isMockMode) {
-      updateWalletBalance(-c.entryFee);
+      dispatch(updateWalletBalance(-c.entryFee));
       alert('Registered successfully in mock mode!');
       handleSelectContest(c);
       return;
@@ -57,7 +59,7 @@ export const ParticipantContestPortal = () => {
       const res = await axios.post(`/api/contests/${c._id}/join`, {}, { withCredentials: true });
       if (res.data.success) {
         alert('Joined contest successfully!');
-        updateWalletBalance(-c.entryFee);
+        dispatch(updateWalletBalance(-c.entryFee));
         handleSelectContest(c);
       }
     } catch (err) {

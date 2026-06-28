@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { forgotPasswordRequest, resetPasswordRequest } from '../store/authSlice';
 import { Shield, KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 
 export const ForgotPassword = ({ onBackToLogin }) => {
-  const { forgotPassword, resetPassword, isMockMode } = useAuthStore();
+  const dispatch = useDispatch();
+  const { isMockMode } = useSelector((state) => state.auth);
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
@@ -14,24 +16,25 @@ export const ForgotPassword = ({ onBackToLogin }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSendOtp = async (e) => {
+  const handleSendOtp = (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    try {
-      const res = await forgotPassword(email);
-      if (res && res.success) {
-        setUserId(res.userId);
-        if (res.mockOtp) {
-          setMockOtp(res.mockOtp);
+    dispatch(forgotPasswordRequest({
+      email,
+      callback: (res) => {
+        setLoading(false);
+        if (res && res.success) {
+          setUserId(res.userId);
+          if (res.mockOtp) {
+            setMockOtp(res.mockOtp);
+          }
+          setStep(2);
+        } else {
+          setError(res?.message || 'Failed to request reset OTP.');
         }
-        setStep(2);
       }
-    } catch (err) {
-      setError(err.message || 'Failed to request reset OTP.');
-    } finally {
-      setLoading(false);
-    }
+    }));
   };
 
   const handleVerifyOtp = (e) => {
@@ -44,7 +47,7 @@ export const ForgotPassword = ({ onBackToLogin }) => {
     setStep(3);
   };
 
-  const handleResetPasswordSubmit = async (e) => {
+  const handleResetPasswordSubmit = (e) => {
     e.preventDefault();
     setError(null);
     if (newPassword !== confirmPassword) {
@@ -53,14 +56,17 @@ export const ForgotPassword = ({ onBackToLogin }) => {
     }
 
     setLoading(true);
-    const success = await resetPassword({ userId, otp, newPassword });
-    setLoading(false);
-
-    if (success) {
-      setStep(4);
-    } else {
-      setError('Failed to update credentials. Please retry.');
-    }
+    dispatch(resetPasswordRequest({
+      data: { userId, otp, newPassword },
+      callback: (success) => {
+        setLoading(false);
+        if (success) {
+          setStep(4);
+        } else {
+          setError('Failed to update credentials. Please retry.');
+        }
+      }
+    }));
   };
 
   return (
@@ -171,7 +177,7 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                 <p className="text-xs text-white/50">Declare a secure new password for your platform profile.</p>
               </div>
 
-              <div>
+               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
                   New Password
                 </label>
@@ -184,6 +190,7 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm"
                   />
@@ -203,6 +210,7 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm"
                   />

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateWalletBalance } from '../store/authSlice';
 import { Wallet, ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Calendar, FileText } from 'lucide-react';
 import axios from 'axios';
 
 export const WalletDashboard = () => {
-  const { user, isMockMode, updateWalletBalance } = useAuthStore();
+  const dispatch = useDispatch();
+  const { user, isMockMode } = useSelector((state) => state.auth);
   const [balance, setBalance] = useState(user?.walletBalance || 0);
   const [amount, setAmount] = useState('500');
   const [desc, setDesc] = useState('User Deposit');
@@ -48,7 +50,7 @@ export const WalletDashboard = () => {
     if (isNaN(val) || val <= 0) return;
 
     if (isMockMode) {
-      updateWalletBalance(val);
+      dispatch(updateWalletBalance(val));
       setAmount('');
       alert(`₹${val} loaded in mock mode.`);
       fetchWalletData();

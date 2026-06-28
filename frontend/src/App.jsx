@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from './store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { loadCurrentUserRequest, logoutRequest } from './store/authSlice';
 import { ThemeProvider } from './context/ThemeContext';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { Navbar } from './components/navbar/Navbar';
@@ -22,7 +23,8 @@ import {
 } from 'lucide-react';
 
 const AppContent = () => {
-  const { isAuthenticated, user, loadCurrentUser, logout, isMockMode } = useAuthStore();
+  const dispatch = useDispatch();
+  const { isAuthenticated, user, isMockMode } = useSelector((state) => state.auth);
   const [view, setView] = useState('login'); // login, register, forgot
   const [activeView, setActiveView] = useState('dashboard');
   const [isOpenMobileMenu, setIsOpenMobileMenu] = useState(false);
@@ -30,9 +32,9 @@ const AppContent = () => {
 
   useEffect(() => {
     if (!isMockMode) {
-      loadCurrentUser();
+      dispatch(loadCurrentUserRequest());
     }
-  }, [isMockMode]);
+  }, [isMockMode, dispatch]);
 
   useEffect(() => {
     if (user?.role) {
@@ -44,9 +46,8 @@ const AppContent = () => {
   const showRegister = () => setView('register');
   const showForgot = () => setView('forgot');
 
-  const handleLogout = async () => {
-    await logout();
-    showLogin();
+  const handleLogout = () => {
+    dispatch(logoutRequest({ callback: showLogin }));
   };
 
   if (isAuthenticated) {

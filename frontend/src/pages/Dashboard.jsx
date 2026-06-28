@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { 
+  updateProfileRequest, updateAvatarRequest, updateWalletBalance, 
+  fetchPendingKycsRequest, reviewKycRequest 
+} from '../store/authSlice';
 import { KycVerification } from './KycVerification';
 import { DeviceManager } from '../components/DeviceManager';
 import { 
@@ -14,7 +18,8 @@ const CONTESTS_LIST = [
 ];
 
 export const Dashboard = ({ onLogoutClick }) => {
-  const { user, pendingKycs, updateProfile, updateAvatar, updateWalletBalance, fetchPendingKycs, reviewKyc, isMockMode } = useAuthStore();
+  const dispatch = useDispatch();
+  const { user, pendingKycs, isMockMode } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('panels');
   const [selectedRole, setSelectedRole] = useState(user?.role || 'Contestant');
 
@@ -46,29 +51,33 @@ export const Dashboard = ({ onLogoutClick }) => {
 
   useEffect(() => {
     if (['Admin', 'Super Admin'].includes(selectedRole)) {
-      fetchPendingKycs();
+      dispatch(fetchPendingKycsRequest());
     }
-  }, [selectedRole]);
+  }, [selectedRole, dispatch]);
 
-  const handleUpdateProfile = async (e) => {
+  const handleUpdateProfile = (e) => {
     e.preventDefault();
-    const success = await updateProfile({ name: editName, phone: editPhone });
-    if (success) {
-      alert('Profile details updated successfully.');
-    }
+    dispatch(updateProfileRequest({
+      data: { name: editName, phone: editPhone },
+      callback: (success) => {
+        if (success) {
+          alert('Profile details updated successfully.');
+        }
+      }
+    }));
   };
 
-  const handleUpdateAvatar = async () => {
+  const handleUpdateAvatar = () => {
     const rand = Math.floor(Math.random() * 10000);
     const av = `https://api.dicebear.com/7.x/avataaars/svg?seed=Avatar-${rand}`;
     setEditAvatar(av);
-    await updateAvatar(av);
+    dispatch(updateAvatarRequest({ avatarUrl: av }));
   };
 
   const handleWalletDeposit = () => {
     const val = parseFloat(walletAmount);
     if (isNaN(val) || val <= 0) return;
-    updateWalletBalance(val);
+    dispatch(updateWalletBalance(val));
     alert(`₹${val} loaded into your platform wallet via simulated PG transaction.`);
   };
 
@@ -78,7 +87,7 @@ export const Dashboard = ({ onLogoutClick }) => {
       alert('Insufficient wallet balance. Please add funds first.');
       return;
     }
-    updateWalletBalance(-fee);
+    dispatch(updateWalletBalance(-fee));
     setJoinedContests(prev => [...prev, id]);
     alert('Joined contest successfully!');
   };
@@ -101,12 +110,18 @@ export const Dashboard = ({ onLogoutClick }) => {
     alert('Sponsorship campaign syndicated successfully.');
   };
 
-  const handleReviewKycSubmit = async (kycId, status) => {
+  const handleReviewKycSubmit = (kycId, status) => {
     const reason = status === 'Rejected' ? 'Uploaded document text is illegible.' : undefined;
-    const success = await reviewKyc(kycId, status, reason);
-    if (success) {
-      alert(`KYC application marked: ${status}.`);
-    }
+    dispatch(reviewKycRequest({
+      kycId,
+      status,
+      reason,
+      callback: (success) => {
+        if (success) {
+          alert(`KYC application marked: ${status}.`);
+        }
+      }
+    }));
   };
 
   const contestsList = CONTESTS_LIST;

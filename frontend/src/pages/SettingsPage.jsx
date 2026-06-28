@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateProfileRequest } from '../store/authSlice';
 import { DeviceManager } from '../components/DeviceManager';
 import { 
   Settings, User, Lock, Bell, Globe, KeyRound, 
@@ -14,7 +15,8 @@ const TABS = [
 ];
 
 export const SettingsPage = () => {
-  const { user, updateProfile } = useAuthStore();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('general');
   const [copiedKey, setCopiedKey] = useState(false);
   const [apiKey, setApiKey] = useState('rcp_live_token_7c3aed06b6d4f59e0b2382');
@@ -30,8 +32,14 @@ export const SettingsPage = () => {
 
   const handleUpdate = (e) => {
     e.preventDefault();
-    updateProfile({ name, phone });
-    alert('Configuration saved successfully.');
+    dispatch(updateProfileRequest({
+      data: { name, phone },
+      callback: (success) => {
+        if (success) {
+          alert('Configuration saved successfully.');
+        }
+      }
+    }));
   };
 
   const handleGenerateKey = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { useAuthStore } from '../../store/authStore';
+import { useSelector } from 'react-redux';
 import { 
   Search, Bell, Globe, Sun, Moon, Monitor, Command, 
   Menu, ShieldAlert, Sparkles, User, Settings, CreditCard, HelpCircle
@@ -14,7 +14,7 @@ const LANGUAGES = [
 
 export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRole, setSelectedRole }) => {
   const { theme, setTheme } = useTheme();
-  const { user, sessions, isMockMode } = useAuthStore();
+  const { user, sessions, isMockMode } = useSelector((state) => state.auth);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifyMenu, setShowNotifyMenu] = useState(false);

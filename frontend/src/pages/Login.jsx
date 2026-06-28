@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { loginRequest, sendOtpRequest, toggleMockMode } from '../store/authSlice';
 import { Shield, Eye, EyeOff, Lock, Mail, Phone, KeyRound, Sparkles, Chrome, Github, Facebook } from 'lucide-react';
 
 export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
-  const { login, sendOtp, error, loading, isMockMode, toggleMockMode } = useAuthStore();
+  const dispatch = useDispatch();
+  const { error, loading, isMockMode } = useSelector((state) => state.auth);
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -13,32 +15,42 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
   const [sentOtpVal, setSentOtpVal] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    const success = await login(loginId, password, isOtpLogin, otpCode);
-    if (success) {
-      onLoginSuccess();
-    }
+    dispatch(loginRequest({
+      loginId,
+      password,
+      isOtpLogin,
+      otp: otpCode,
+      callback: (success) => {
+        if (success) onLoginSuccess();
+      }
+    }));
   };
 
-  const handleSendOtp = async () => {
+  const handleSendOtp = () => {
     if (!loginId) {
       alert('Please enter your email or mobile number first.');
       return;
     }
-    const otp = await sendOtp(loginId, 'login');
-    setOtpSent(true);
-    setSentOtpVal(otp);
+    dispatch(sendOtpRequest({
+      loginId,
+      type: 'login',
+      callback: (otp) => {
+        setOtpSent(true);
+        setSentOtpVal(otp);
+      }
+    }));
   };
 
-  const handleSocialLogin = async (provider) => {
-    const success = await login(
-      `${provider.toLowerCase()}-user@realitycontest.in`, 
-      'password'
-    );
-    if (success) {
-      onLoginSuccess();
-    }
+  const handleSocialLogin = (provider) => {
+    dispatch(loginRequest({
+      loginId: `${provider.toLowerCase()}-user@realitycontest.in`,
+      password: 'password',
+      callback: (success) => {
+        if (success) onLoginSuccess();
+      }
+    }));
   };
 
   return (
@@ -108,7 +120,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
           <span className="text-white/60">Mock Environment:</span>
           <button
             type="button"
-            onClick={() => toggleMockMode(!isMockMode)}
+            onClick={() => dispatch(toggleMockMode(!isMockMode))}
             className={`px-2 py-0.5 rounded font-bold uppercase transition-colors ${
               isMockMode ? 'bg-purple-600 text-white' : 'bg-white/10 text-white/50'
             }`}
@@ -148,6 +160,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                     required
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
+                    autoComplete="username"
                     placeholder="name@domain.com or +919876543210"
                     className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm transition-all"
                   />
@@ -177,6 +190,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                       required={!isOtpLogin}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
                       placeholder="••••••••"
                       className="block w-full pl-10 pr-10 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm transition-all"
                     />

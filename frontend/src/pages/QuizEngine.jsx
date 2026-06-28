@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector } from 'react-redux';
 import { ShieldAlert, Clock, Play, Check, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import axios from 'axios';
 
 export const QuizEngine = ({ stage, onBack }) => {
-  const { isMockMode } = useAuthStore();
+  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const containerRef = useRef(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);

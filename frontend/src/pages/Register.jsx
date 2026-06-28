@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { registerRequest, verifyOtpRequest } from '../store/authSlice';
 import { ArrowRight, ArrowLeft, Shield, CheckCircle, Sparkles, AlertCircle, Camera, Check } from 'lucide-react';
 import { auth as firebaseAuth } from '../config/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
@@ -9,7 +10,8 @@ const AVAILABLE_SKILLS = ['Public Speaking', 'Video Editing', 'Cognitive Analysi
 const AVAILABLE_INTERESTS = ['E-Sports', 'Indie SaaS', 'Short Film Making', 'Finance Debates', 'Eco Campaigns', 'Startup Incubators'];
 
 export const Register = ({ onLoginClick, onRegisterSuccess }) => {
-  const { register, verifyOtp, error, loading, isMockMode } = useAuthStore();
+  const dispatch = useDispatch();
+  const { error, loading, isMockMode } = useSelector((state) => state.auth);
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState('');
   const [formErr, setFormErr] = useState(null);
@@ -70,10 +72,10 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
     setStep(prev => prev - 1);
   };
 
-  const handleRegisterSubmit = async () => {
+  const handleRegisterSubmit = () => {
     setFormErr(null);
-    try {
-      const res = await register({
+    dispatch(registerRequest({
+      data: {
         name: formData.name,
         username: formData.username,
         email: formData.email,
@@ -88,17 +90,19 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
         favoriteCategories: formData.favoriteCategories,
         skills: formData.skills,
         interests: formData.interests
-      });
-      if (res && res.success) {
-        setUserId(res.userId);
-        if (res.mockOtps) {
-          setMockOtps(res.mockOtps);
+      },
+      callback: (res) => {
+        if (res && res.success) {
+          setUserId(res.userId);
+          if (res.mockOtps) {
+            setMockOtps(res.mockOtps);
+          }
+          setStep(4);
+        } else {
+          setFormErr(res?.error || 'Failed to submit registration data.');
         }
-        setStep(4);
       }
-    } catch (err) {
-      setFormErr(error || 'Failed to submit registration data.');
-    }
+    }));
   };
 
   const handleSendFirebaseSms = async () => {
@@ -122,25 +126,30 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
     }
   };
 
-  const handleVerifyOtp = async (type) => {
+  const handleVerifyOtp = (type) => {
     setFormErr(null);
     
     if (type === 'phone_verify' && !isMockMode && confirmationResult) {
       setFormErr(null);
-      try {
-        const result = await confirmationResult.confirm(phoneOtp);
+      confirmationResult.confirm(phoneOtp).then(async (result) => {
         const idToken = await result.user.getIdToken();
-        const verified = await verifyOtp(userId, idToken, 'phone_verify');
-        if (verified) {
-          setIsPhoneVerified(true);
-          if (isEmailVerified) setStep(5);
-        } else {
-          setFormErr('Backend failed to verify Firebase OTP token.');
-        }
-      } catch (err) {
+        dispatch(verifyOtpRequest({
+          userId,
+          otp: idToken,
+          type: 'phone_verify',
+          callback: (verified) => {
+            if (verified) {
+              setIsPhoneVerified(true);
+              if (isEmailVerified) setStep(5);
+            } else {
+              setFormErr('Backend failed to verify Firebase OTP token.');
+            }
+          }
+        }));
+      }).catch((err) => {
         console.error(err);
         setFormErr('Invalid Firebase SMS code. Please check and retry.');
-      }
+      });
       return;
     }
 
@@ -150,19 +159,25 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
       return;
     }
 
-    const verified = await verifyOtp(userId, code, type);
-    if (verified) {
-      if (type === 'email_verify') setIsEmailVerified(true);
-      if (type === 'phone_verify') setIsPhoneVerified(true);
-      
-      const emailStatus = type === 'email_verify' ? true : isEmailVerified;
-      const phoneStatus = type === 'phone_verify' ? true : isPhoneVerified;
-      if (emailStatus && phoneStatus) {
-        setStep(5);
+    dispatch(verifyOtpRequest({
+      userId,
+      otp: code,
+      type,
+      callback: (verified) => {
+        if (verified) {
+          if (type === 'email_verify') setIsEmailVerified(true);
+          if (type === 'phone_verify') setIsPhoneVerified(true);
+          
+          const emailStatus = type === 'email_verify' ? true : isEmailVerified;
+          const phoneStatus = type === 'phone_verify' ? true : isPhoneVerified;
+          if (emailStatus && phoneStatus) {
+            setStep(5);
+          }
+        } else {
+          setFormErr('Incorrect OTP code. Please check and retry.');
+        }
       }
-    } else {
-      setFormErr('Incorrect OTP code. Please check and retry.');
-    }
+    }));
   };
 
   const toggleSelection = (key, item) => {
@@ -292,6 +307,7 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none"
                   />
@@ -303,6 +319,7 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
                     required
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none"
                   />
