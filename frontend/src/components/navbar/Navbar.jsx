@@ -1,26 +1,40 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useSelector } from 'react-redux';
 import { 
-  Search, Bell, Globe, Sun, Moon, Monitor, Command, 
-  Menu, ShieldAlert, Sparkles, User, Settings, CreditCard, HelpCircle
+  Search, Bell, Sun, Moon, Monitor, Command, Maximize2, Minimize2,
+  Menu, Sparkles, User, Settings, CreditCard
 } from 'lucide-react';
 
-const LANGUAGES = [
-  { code: 'en', label: 'English' },
-  { code: 'hi', label: 'हिन्दी' },
-  { code: 'es', label: 'Español' }
-];
-
-export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRole, setSelectedRole }) => {
+export const Navbar = ({ activeView, onOpenMobileMenu, selectedRole, setSelectedRole }) => {
   const { theme, setTheme } = useTheme();
-  const { user, sessions, isMockMode } = useSelector((state) => state.auth);
-  const [showLangMenu, setShowLangMenu] = useState(false);
+  const { user, isMockMode } = useSelector((state) => state.auth);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifyMenu, setShowNotifyMenu] = useState(false);
   const [showSpotlight, setShowSpotlight] = useState(false);
   const [spotlightQuery, setSpotlightQuery] = useState('');
-  const [currentLang, setCurrentLang] = useState('en');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const navigate = useNavigate();
+
+  // Sync fullscreen state with document state change
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error entering fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // Listen for Ctrl+K command shortcut
   useEffect(() => {
@@ -35,11 +49,10 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
   }, []);
 
   const COMMAND_ITEMS = [
-    { label: 'Go to Dashboard', action: () => onViewChange('dashboard'), desc: 'Overview statistics and analytics summaries' },
-    { label: 'Manage Contestants / Users', action: () => onViewChange('users'), desc: 'Search and inspect registered users' },
-    { label: 'Explore Contests & Challenges', action: () => onViewChange('contests'), desc: 'View active syndicates and entry stages' },
-    { label: 'Check Wallet & Deposit Funds', action: () => onViewChange('wallet'), desc: 'Credit simulation parameters' },
-    { label: 'Platform Security Settings', action: () => onViewChange('settings'), desc: 'Toggle MFA, view device sessions' },
+    { label: 'Go to Dashboard', action: () => navigate('/'), desc: 'Overview statistics and updates' },
+    { label: 'Explore Contests & Challenges', action: () => navigate('/contests'), desc: 'View active syndicates and entry stages' },
+    { label: 'Check Wallet & Deposit Funds', action: () => navigate('/wallet'), desc: 'Credit simulation parameters' },
+    { label: 'Platform Security Settings', action: () => navigate('/settings'), desc: 'Toggle MFA, view device sessions' },
     { label: 'Switch to Dark Mode', action: () => setTheme('dark'), desc: 'Sleek dark theme' },
     { label: 'Switch to Light Mode', action: () => setTheme('light'), desc: 'Vibrant clean theme' }
   ];
@@ -48,8 +61,6 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
     cmd.label.toLowerCase().includes(spotlightQuery.toLowerCase()) ||
     cmd.desc.toLowerCase().includes(spotlightQuery.toLowerCase())
   );
-
-  const activeLangLabel = LANGUAGES.find(l => l.code === currentLang)?.label || 'English';
 
   return (
     <>
@@ -80,7 +91,7 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
         {/* Right Section: Toggles, Notification, Profiles */}
         <div className="flex items-center gap-3">
           
-          {/* Simulator Role Selector Dropdown */}
+          {/* Simulator Role Selector Dropdown (Contestant, Judge, Sponsor only) */}
           <div className="hidden sm:flex items-center gap-1.5 bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 px-3 py-1.5 rounded-xl text-xs">
             <span className="text-white/45 dark:text-white/45 light:text-black/45">Simulator:</span>
             <select
@@ -91,8 +102,6 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
               <option value="Contestant" className="bg-darkCard text-white dark:bg-darkCard dark:text-white light:bg-white light:text-black">Contestant</option>
               <option value="Judge" className="bg-darkCard text-white dark:bg-darkCard dark:text-white light:bg-white light:text-black">Judge</option>
               <option value="Sponsor" className="bg-darkCard text-white dark:bg-darkCard dark:text-white light:bg-white light:text-black">Sponsor</option>
-              <option value="Admin" className="bg-darkCard text-white dark:bg-darkCard dark:text-white light:bg-white light:text-black">Admin</option>
-              <option value="Super Admin" className="bg-darkCard text-white dark:bg-darkCard dark:text-white light:bg-white light:text-black">Super Admin</option>
             </select>
           </div>
           
@@ -129,36 +138,14 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
             </button>
           </div>
 
-          {/* Language Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowLangMenu(!showLangMenu);
-                setShowUserMenu(false);
-                setShowNotifyMenu(false);
-              }}
-              className="p-2.5 bg-white/5 dark:bg-white/5 light:bg-black/5 hover:bg-white/10 rounded-xl border border-white/10 dark:border-white/10 light:border-black/10 text-white/60 dark:text-white/60 light:text-black/60 hover:text-white transition-colors"
-              title="Language"
-            >
-              <Globe className="w-4 h-4" />
-            </button>
-            {showLangMenu && (
-              <div className="absolute right-0 mt-2 w-40 glassmorphism rounded-xl border border-white/10 dark:border-white/5 light:border-black/15 shadow-2xl p-1 z-50">
-                {LANGUAGES.map(l => (
-                  <button
-                    key={l.code}
-                    onClick={() => {
-                      setCurrentLang(l.code);
-                      setShowLangMenu(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-brandPrimary/10 hover:text-brandPrimary transition-colors ${currentLang === l.code ? 'text-brandPrimary bg-brandPrimary/5' : 'text-white/70 dark:text-white/70 light:text-black/70'}`}
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Full Screen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2.5 bg-white/5 dark:bg-white/5 light:bg-black/5 hover:bg-white/10 rounded-xl border border-white/10 dark:border-white/10 light:border-black/10 text-white/60 dark:text-white/60 light:text-black/60 hover:text-white transition-colors"
+            title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
 
           {/* Notification Center */}
           <div className="relative">
@@ -166,7 +153,6 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
               onClick={() => {
                 setShowNotifyMenu(!showNotifyMenu);
                 setShowUserMenu(false);
-                setShowLangMenu(false);
               }}
               className="relative p-2.5 bg-white/5 dark:bg-white/5 light:bg-black/5 hover:bg-white/10 rounded-xl border border-white/10 dark:border-white/10 light:border-black/10 text-white/60 dark:text-white/60 light:text-black/60 hover:text-white transition-colors"
               title="Notifications"
@@ -194,6 +180,17 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
                     <p className="text-[10px] text-white/40 dark:text-white/40 light:text-black/40 mt-1">Logged in via Safari mobile agent ip 103.44.xx.</p>
                   </div>
                 </div>
+                <div className="p-2.5 border-t border-white/5 dark:border-white/5 light:border-black/5 text-center bg-white/5 dark:bg-white/5 light:bg-black/5">
+                  <button
+                    onClick={() => {
+                      navigate('/notifications');
+                      setShowNotifyMenu(false);
+                    }}
+                    className="w-full py-1 text-[11px] font-bold text-brandSecondary hover:text-brandSecondary/85 hover:underline transition-all"
+                  >
+                    View all in full screen →
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -203,7 +200,6 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
             <button
               onClick={() => {
                 setShowUserMenu(!showUserMenu);
-                setShowLangMenu(false);
                 setShowNotifyMenu(false);
               }}
               className="flex items-center gap-2 p-1 bg-white/5 dark:bg-white/5 light:bg-black/5 hover:bg-white/10 border border-white/10 dark:border-white/10 light:border-black/10 rounded-xl transition-all"
@@ -214,32 +210,32 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
                 alt="" 
               />
               <span className="hidden lg:block text-xs font-bold px-1 text-white dark:text-white light:text-black">
-                {user?.name || 'Raj Patel'}
+                {user?.name || 'Aarav Sharma'}
               </span>
             </button>
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-52 glassmorphism rounded-2xl border border-white/10 dark:border-white/5 light:border-black/15 shadow-2xl overflow-hidden p-1.5 z-50">
                 <div className="px-3.5 py-3 border-b border-white/5 text-left">
-                  <p className="text-xs font-bold text-white dark:text-white light:text-black">{user?.name || 'Raj Patel'}</p>
-                  <p className="text-[10px] text-white/40 dark:text-white/40 light:text-black/40 mt-0.5 truncate">{user?.email || 'raj.patel@realitycontest.in'}</p>
+                  <p className="text-xs font-bold text-white dark:text-white light:text-black">{user?.name || 'Aarav Sharma'}</p>
+                  <p className="text-[10px] text-white/40 dark:text-white/40 light:text-black/40 mt-0.5 truncate">{user?.email || 'aarav@rcp.in'}</p>
                 </div>
                 <div className="py-1">
                   <button
-                    onClick={() => { onViewChange('profile'); setShowUserMenu(false); }}
+                    onClick={() => { navigate('/profile'); setShowUserMenu(false); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-white/70 dark:text-white/70 light:text-black/70 hover:bg-brandPrimary/10 hover:text-brandPrimary transition-colors text-left"
                   >
                     <User className="w-3.5 h-3.5" />
                     <span>My profile overview</span>
                   </button>
                   <button
-                    onClick={() => { onViewChange('settings'); setShowUserMenu(false); }}
+                    onClick={() => { navigate('/settings'); setShowUserMenu(false); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-white/70 dark:text-white/70 light:text-black/70 hover:bg-brandPrimary/10 hover:text-brandPrimary transition-colors text-left"
                   >
                     <Settings className="w-3.5 h-3.5" />
                     <span>General settings</span>
                   </button>
                   <button
-                    onClick={() => { onViewChange('wallet'); setShowUserMenu(false); }}
+                    onClick={() => { navigate('/wallet'); setShowUserMenu(false); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-white/70 dark:text-white/70 light:text-black/70 hover:bg-brandPrimary/10 hover:text-brandPrimary transition-colors text-left"
                   >
                     <CreditCard className="w-3.5 h-3.5" />
@@ -261,18 +257,18 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
             className="fixed inset-0 z-0"
           />
           
-          <div className="relative w-full max-w-xl bg-[#0F1424] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-10 p-2 animate-scale-in">
-            <div className="flex items-center gap-3 px-3 py-2.5 border-b border-white/5 mb-2">
-              <Search className="w-4 h-4 text-white/30" />
+          <div className="relative w-full max-w-xl bg-[#0F1424] light:bg-white border border-white/10 light:border-black/10 rounded-2xl shadow-2xl overflow-hidden z-10 p-2 animate-scale-in">
+            <div className="flex items-center gap-3 px-3 py-2.5 border-b border-white/5 light:border-black/5 mb-2">
+              <Search className="w-4 h-4 text-white/30 light:text-slate-400" />
               <input
                 type="text"
                 placeholder="What do you want to open?"
                 value={spotlightQuery}
                 onChange={(e) => setSpotlightQuery(e.target.value)}
-                className="w-full bg-transparent text-white text-xs placeholder-white/30 focus:outline-none"
+                className="w-full bg-transparent text-white light:text-slate-800 text-xs placeholder-white/30 light:placeholder-slate-400 focus:outline-none"
                 autoFocus
               />
-              <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[9px] text-white/40 font-mono">
+              <span className="bg-white/5 light:bg-black/5 border border-white/10 light:border-black/10 px-2 py-0.5 rounded text-[9px] text-white/40 light:text-slate-500 font-mono">
                 ESC
               </span>
             </div>
@@ -289,11 +285,11 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
                       setShowSpotlight(false);
                       setSpotlightQuery('');
                     }}
-                    className="w-full flex items-start justify-between px-3 py-2.5 rounded-xl hover:bg-white/5 text-left group"
+                    className="w-full flex items-start justify-between px-3 py-2.5 rounded-xl hover:bg-white/5 light:hover:bg-black/5 text-left group"
                   >
                     <div>
-                      <p className="text-xs font-semibold text-white group-hover:text-brandPrimary transition-colors">{cmd.label}</p>
-                      <p className="text-[10px] text-white/40 mt-0.5">{cmd.desc}</p>
+                      <p className="text-xs font-semibold text-white light:text-slate-800 group-hover:text-brandPrimary transition-colors">{cmd.label}</p>
+                      <p className="text-[10px] text-white/40 light:text-slate-400 mt-0.5">{cmd.desc}</p>
                     </div>
                     <span className="text-[10px] text-brandSecondary opacity-0 group-hover:opacity-100 transition-opacity">
                       Open →
@@ -308,4 +304,5 @@ export const Navbar = ({ activeView, onViewChange, onOpenMobileMenu, selectedRol
     </>
   );
 };
+
 export default Navbar;

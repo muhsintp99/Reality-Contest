@@ -2,19 +2,26 @@
 node_modules/
 /backend/node_modules/
 /frontend/node_modules/
+/admin-dashboard/node_modules/
 
 # Environment files (sensitive credentials)
-.env
+# .env
 # /backend/.env
 # /frontend/.env
+# /admin-dashboard/.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+/admin-dashboard/.env.local
+/admin-dashboard/.env.development.local
+/admin-dashboard/.env.test.local
+/admin-dashboard/.env.production.local
 
 # Build/Compilation outputs
 /backend/dist/
 /frontend/dist/
+/admin-dashboard/dist/
 /build/
 /out/
 

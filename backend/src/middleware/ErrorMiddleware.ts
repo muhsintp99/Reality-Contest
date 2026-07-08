@@ -10,9 +10,15 @@ export const errorHandler = (
   next: NextFunction
 ): void => {
   const isProduction = config.NODE_ENV === 'production';
+  const isOperational = err instanceof AppError && err.isOperational;
+  const isClientValidationError = err.name === 'ValidationError';
 
   // Log error via Winston
-  logger.error(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip} \nStack: ${err.stack}`);
+  if (isOperational || isClientValidationError) {
+    logger.warn(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
+  } else {
+    logger.error(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip} \nStack: ${err.stack}`);
+  }
 
   if (err instanceof AppError) {
     res.status(err.statusCode).json({

@@ -70,17 +70,24 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     cluster.fork();
   });
 } else {
-  // Initialize Background Queue Workers
-  initEmailWorker();
-  initSMSWorker();
-  initKycWorker();
-  initWalletWorker();
+  const startServer = async () => {
+    // Wait for Redis connection to resolve or timeout before initializing components
+    await redisService.waitForConnection();
 
-  const app = express();
-  const server = http.createServer(app);
+    // Initialize Queues
+    queueService.initialize();
 
-  // Initialize Real-time Socket sync
-  socketService.initialize(server);
+    // Initialize Background Queue Workers
+    initEmailWorker();
+    initSMSWorker();
+    initKycWorker();
+    initWalletWorker();
+
+    const app = express();
+    const server = http.createServer(app);
+
+    // Initialize Real-time Socket sync
+    socketService.initialize(server);
 
   // Serve API documentation via Swagger UI
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -95,40 +102,42 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
 
   app.use(
     cors({
-      origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: ['http://localhost:10001', 'http://127.0.0.1:10001'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization']
     })
   );
 
-  // Rate Limiting Store Selection (Redis Cluster vs Memory)
-  const redisClient = redisService.getClient();
-  const rateLimitStore = redisService.getIsConnected() && redisClient
-    ? new RedisStore({
-      sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as Promise<any>,
-      prefix: 'rl:'
-    })
-    : undefined; // Defaults to memory store inside express-rate-limit
+    // Rate Limiting Store Selection (Redis Cluster vs Memory)
+    const redisClient = redisService.getClient();
+    const createRedisStore = (prefix: string) => {
+      return redisService.getIsConnected() && redisClient
+        ? new RedisStore({
+          sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as Promise<any>,
+          prefix
+        })
+        : undefined; // Defaults to memory store inside express-rate-limit
+    };
 
-  // Rate Limiters
-  const authLimiter = rateLimit({
-    store: rateLimitStore,
-    windowMs: 15 * 60 * 1000, // 15 mins
-    max: 30, // Limit to 30 requests per window
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, message: 'Too many authentication attempts. Please try again later.' }
-  });
+    // Rate Limiters
+    const authLimiter = rateLimit({
+      store: createRedisStore('rl:auth:'),
+      windowMs: 15 * 60 * 1000, // 15 mins
+      max: 30, // Limit to 30 requests per window
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message: 'Too many authentication attempts. Please try again later.' }
+    });
 
-  const generalApiLimiter = rateLimit({
-    store: rateLimitStore,
-    windowMs: 15 * 60 * 1000, // 15 mins
-    max: 1000, // Limit to 1000 requests per window
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, message: 'Too many requests. Please try again later.' }
-  });
+    const generalApiLimiter = rateLimit({
+      store: createRedisStore('rl:gen:'),
+      windowMs: 15 * 60 * 1000, // 15 mins
+      max: 1000000, // Limit to 1000 requests per window
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message: 'Too many requests. Please try again later.' }
+    });
 
   // Apply general API rate limiting to all standard APIs
   app.use('/api/', generalApiLimiter);
@@ -189,17 +198,21 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
   app.get('/api/wallet/transactions', authenticate, walletController.getTransactions);
 
   // Question & Quiz Builder routes
-  app.post('/api/question-pools', authenticate, authorize('Admin', 'Super Admin'), questionController.createPool);
-  app.get('/api/question-pools', authenticate, authorize('Admin', 'Super Admin'), questionController.listPools);
-  app.post('/api/question-pools/:poolId/questions', authenticate, authorize('Admin', 'Super Admin'), questionController.addQuestion);
+  app.post('/api/question-pools', authenticate, authorize('Super Admin'), questionController.createPool);
+  app.get('/api/question-pools', authenticate, authorize('Super Admin'), questionController.listPools);
+  app.post('/api/question-pools/:poolId/questions', authenticate, authorize('Super Admin'), questionController.addQuestion);
   app.get('/api/question-pools/:poolId/questions', authenticate, questionController.listQuestions);
-  app.post('/api/question-pools/:poolId/import', authenticate, authorize('Admin', 'Super Admin'), questionController.importQuestions);
+  app.post('/api/question-pools/:poolId/import', authenticate, authorize('Super Admin'), questionController.importQuestions);
 
   // Admin Audit & Overrides
   app.get('/api/admin/audit-logs', authenticate, authorize('Super Admin'), adminController.getAuditLogs);
   app.put('/api/admin/results/override', authenticate, authorize('Super Admin'), adminController.manualApproveQualification);
   app.put('/api/admin/users/role', authenticate, authorize('Super Admin'), adminController.promoteUser);
   app.get('/api/admin/users/:role', authenticate, authorize('Admin', 'Super Admin'), adminController.listUsersByRole);
+  app.post('/api/admin/users', authenticate, authorize('Admin', 'Super Admin'), adminController.createUser);
+  app.put('/api/admin/users/:id', authenticate, authorize('Admin', 'Super Admin'), adminController.updateUser);
+  app.delete('/api/admin/users/:id', authenticate, authorize('Admin', 'Super Admin'), adminController.deleteUser);
+  app.put('/api/admin/users/:id/status', authenticate, authorize('Admin', 'Super Admin'), adminController.toggleUserStatus);
 
   // 5. Health Check Endpoint
   app.get('/health', (req, res) => {
@@ -239,8 +252,13 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       logger.warn('======================================================\n');
     });
 
-  const PORT = config.PORT;
-  server.listen(PORT, () => {
-    logger.info(`Reality Contest Platform Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
+    const PORT = config.PORT;
+    server.listen(PORT, () => {
+      logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
+    });
+  };
+
+  startServer().catch((err) => {
+    logger.error(`Critical server startup failure: ${err.message}`);
   });
 }

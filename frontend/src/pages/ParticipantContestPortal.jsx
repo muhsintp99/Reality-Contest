@@ -7,7 +7,7 @@ import { QuizEngine } from './QuizEngine';
 
 export const ParticipantContestPortal = () => {
   const dispatch = useDispatch();
-  const { user, isMockMode } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const [contests, setContests] = useState([]);
   const [selectedContest, setSelectedContest] = useState(null);
   const [groups, setGroups] = useState([]);
@@ -23,13 +23,6 @@ export const ParticipantContestPortal = () => {
   const [acceptedCheckbox, setAcceptedCheckbox] = useState(false);
 
   const fetchContests = async () => {
-    if (isMockMode) {
-      setContests([
-        { _id: 'ct-1', title: 'India Creator Showdown 2026', entryFee: 499, prizePool: '10,00,000', status: 'Registration Open' },
-        { _id: 'ct-2', title: 'National Tech & AI Quiz Arena', entryFee: 199, prizePool: '2,50,000', status: 'Registration Open' }
-      ]);
-      return;
-    }
     try {
       const res = await axios.get('/api/contests', { withCredentials: true });
       setContests(res.data.contests || []);
@@ -40,18 +33,11 @@ export const ParticipantContestPortal = () => {
 
   useEffect(() => {
     fetchContests();
-  }, [isMockMode]);
+  }, []);
 
   const handleRegister = async (c) => {
     if (user.walletBalance < c.entryFee) {
       alert('Insufficient wallet balance to register.');
-      return;
-    }
-
-    if (isMockMode) {
-      dispatch(updateWalletBalance(-c.entryFee));
-      alert('Registered successfully in mock mode!');
-      handleSelectContest(c);
       return;
     }
 
@@ -69,18 +55,6 @@ export const ParticipantContestPortal = () => {
 
   const handleSelectContest = async (c) => {
     setSelectedContest(c);
-    if (isMockMode) {
-      const mockG = { _id: 'g-1', name: 'Group A (Qualifier)', participants: [user?.id] };
-      setSelectedGroup(mockG);
-      // Fetch mock stages
-      const mockS = [
-        { _id: 'st-1', name: 'Stage 1: GK Quiz Arena', type: 'Quiz', timeLimit: 300, passingPercentage: 60, rules: { rules: 'Strict anti-cheat in effect.', instructions: 'Answer all questions.', regulations: 'Fullscreen required.', attemptPolicy: '1 attempt allowed.', disqualificationPolicy: 'Tab switch = fail.' } },
-        { _id: 'st-2', name: 'Stage 2: Video Pitch Deck', type: 'VideoUpload', timeLimit: 0, passingPercentage: 0, rules: { rules: 'Original content only.', instructions: 'Upload MP4.', regulations: 'Max size 50MB.', attemptPolicy: '1 attempt allowed.', disqualificationPolicy: 'Plagiarism = fail.' } }
-      ];
-      setStages(mockS);
-      setStageUnlockMap({ 'st-1': true, 'st-2': false });
-      return;
-    }
 
     try {
       // Find which group contestant is in
@@ -123,12 +97,6 @@ export const ParticipantContestPortal = () => {
   const handleAcceptRulesSubmit = async () => {
     if (!acceptedCheckbox) return;
 
-    if (isMockMode) {
-      setActiveAttemptStage(rulesStage);
-      setRulesStage(null);
-      return;
-    }
-
     try {
       // Accept rules call
       const res = await axios.post(`/api/stages/${rulesStage._id}/accept-rules`, {
@@ -160,7 +128,6 @@ export const ParticipantContestPortal = () => {
       return (
         <FileUploadStage
           stage={activeAttemptStage}
-          isMockMode={isMockMode}
           onBack={() => {
             setActiveAttemptStage(null);
             handleSelectContest(selectedContest);
@@ -319,7 +286,7 @@ export const ParticipantContestPortal = () => {
   );
 };
 
-const FileUploadStage = ({ stage, isMockMode, onBack }) => {
+const FileUploadStage = ({ stage, onBack }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -337,16 +304,6 @@ const FileUploadStage = ({ stage, isMockMode, onBack }) => {
     setSelectedFile(file);
     setProgress(10);
     setUploading(true);
-
-    if (isMockMode) {
-      for (let p = 20; p <= 100; p += 20) {
-        await new Promise((resolve) => setTimeout(resolve, 250));
-        setProgress(p);
-      }
-      setFileUrl(`https://storage.realitycontest.in/uploads/${Date.now()}_${file.name}`);
-      setUploading(false);
-      return;
-    }
 
     const formData = new FormData();
     formData.append('file', file);
@@ -373,12 +330,6 @@ const FileUploadStage = ({ stage, isMockMode, onBack }) => {
     e.preventDefault();
     if (!fileUrl) {
       alert('Please upload a file first.');
-      return;
-    }
-
-    if (isMockMode) {
-      setSubmitted(true);
-      alert('Submission recorded successfully in Sandbox!');
       return;
     }
 

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { Milestone, Plus, Info, Clock, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
 export const StageManagement = () => {
-  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const [groups, setGroups] = useState([]);
   const [pools, setPools] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -26,17 +24,6 @@ export const StageManagement = () => {
   const [instText, setInstText] = useState('Complete all questions before submitting.');
 
   const fetchGroupsAndPools = async () => {
-    if (isMockMode) {
-      setGroups([
-        { _id: 'g-1', name: 'Group A (National Auditions)' },
-        { _id: 'g-2', name: 'Group B (Regional Auditions)' }
-      ]);
-      setPools([
-        { _id: 'pool-1', name: 'National GK Qualifier Pool' },
-        { _id: 'pool-2', name: 'Software Development Core' }
-      ]);
-      return;
-    }
     try {
       const gRes = await axios.get('/api/contests', { withCredentials: true });
       // Build a flat list of groups in all contests for visual selection
@@ -60,13 +47,6 @@ export const StageManagement = () => {
   };
 
   const fetchStages = async (groupId) => {
-    if (isMockMode) {
-      setStages([
-        { _id: 'st-1', name: 'Stage 1: GK Qualifier Quiz', type: 'Quiz', timeLimit: 1800, passingPercentage: 60 },
-        { _id: 'st-2', name: 'Stage 2: Video Interview Upload', type: 'VideoUpload', timeLimit: 0, passingPercentage: 0 }
-      ]);
-      return;
-    }
     try {
       const res = await axios.get(`/api/groups/${groupId}/stages`, { withCredentials: true });
       setStages(res.data.stages || []);
@@ -77,7 +57,7 @@ export const StageManagement = () => {
 
   useEffect(() => {
     fetchGroupsAndPools();
-  }, [isMockMode]);
+  }, []);
 
   const handleSelectGroup = (g) => {
     setSelectedGroup(g);
@@ -109,14 +89,6 @@ export const StageManagement = () => {
         questionPoolId: stageType === 'Quiz' ? poolId : undefined
       }
     };
-
-    if (isMockMode) {
-      setStages(prev => [...prev, { _id: `st-${Date.now()}`, ...data }]);
-      setStageName('');
-      setStageDesc('');
-      alert('Mock Stage Created.');
-      return;
-    }
 
     try {
       const res = await axios.post(`/api/groups/${selectedGroup._id}/stages`, data, { withCredentials: true });

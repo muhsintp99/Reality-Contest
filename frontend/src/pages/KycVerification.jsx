@@ -6,7 +6,7 @@ import axios from 'axios';
 
 export const KycVerification = () => {
   const dispatch = useDispatch();
-  const { user, currentKyc, loading, isMockMode } = useSelector((state) => state.auth);
+  const { user, currentKyc, loading } = useSelector((state) => state.auth);
   const [docType, setDocType] = useState('Aadhaar');
   const [docNum, setDocNum] = useState('');
   const [docFileSelected, setDocFileSelected] = useState(false);
@@ -24,12 +24,7 @@ export const KycVerification = () => {
   }, [dispatch]);
 
   const handleSelectDocClick = () => {
-    if (isMockMode) {
-      setDocFileSelected(true);
-      setDocFileName(`${docType.toLowerCase()}_identity_scan.jpg`);
-    } else {
-      fileInputRef.current?.click();
-    }
+    fileInputRef.current?.click();
   };
 
   const handleFileChange = async (e) => {
@@ -58,7 +53,7 @@ export const KycVerification = () => {
     }
   };
 
-  const handleCaptureMockSelfie = () => {
+  const handleCaptureSelfie = () => {
     setSelfieCaptured(true);
     const rand = Math.floor(Math.random() * 100);
     setSelfieUrl(`https://api.dicebear.com/7.x/avataaars/svg?seed=Selfie-${rand}`);
@@ -76,7 +71,7 @@ export const KycVerification = () => {
       data: {
         documentType: docType,
         documentNumber: docNum,
-        documentFrontUrl: isMockMode ? `https://storage.realitycontest.in/uploads/${docFileName}` : realDocUrl,
+        documentFrontUrl: realDocUrl,
         selfieUrl: selfieUrl
       },
       callback: (success) => {
@@ -96,11 +91,11 @@ export const KycVerification = () => {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold font-poppins text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold font-poppins text-slate-800 dark:text-white flex items-center gap-2">
             <Shield className="w-5 h-5 text-purple-400" />
             <span>KYC Verification Dashboard</span>
           </h2>
-          <p className="text-xs text-white/50">View your identity verification status and AI matching analytics.</p>
+          <p className="text-xs text-slate-500 dark:text-white/50">View your identity verification status and AI matching analytics.</p>
         </div>
 
         <div className="glassmorphism p-8 rounded-2xl border border-white/10 relative overflow-hidden">
@@ -131,22 +126,22 @@ export const KycVerification = () => {
             <div className="space-y-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-purple-400">AI Verification Ledger</h3>
               
-              <div className="p-4 bg-[#080b12]/50 border border-white/5 rounded-xl space-y-3.5">
+              <div className="p-4 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/5 rounded-xl space-y-3.5">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-white/60">Biometric Liveness Index:</span>
+                  <span className="text-slate-600 dark:text-white/60">Biometric Liveness Index:</span>
                   <span className={`font-bold ${currentKyc.livenessScore >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {currentKyc.livenessScore}% Matching
                   </span>
                 </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-1.5 w-full bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full" 
                     style={{ width: `${currentKyc.livenessScore}%` }}
                   ></div>
                 </div>
 
-                <div className="flex justify-between items-center text-xs border-t border-white/5 pt-3.5">
-                  <span className="text-white/60">AI Facial Match Verdict:</span>
+                <div className="flex justify-between items-center text-xs border-t border-slate-200 dark:border-white/5 pt-3.5">
+                  <span className="text-slate-600 dark:text-white/60">AI Facial Match Verdict:</span>
                   <span className={`font-semibold px-2 py-0.5 rounded text-[11px] font-bold ${
                     currentKyc.aiMatchResult === 'PASSED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
                   }`}>
@@ -166,19 +161,19 @@ export const KycVerification = () => {
             <div className="space-y-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-cyan-400">Uploaded Credentials</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-white/5 border border-white/5 rounded-xl text-center space-y-2">
-                  <span className="text-[10px] text-white/50 block font-semibold uppercase">{currentKyc.documentType} Card</span>
-                  <div className="w-full h-24 bg-black/40 rounded-lg flex items-center justify-center border border-white/5 text-xs text-white/40">
+                <div className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl text-center space-y-2">
+                  <span className="text-[10px] text-slate-500 dark:text-white/50 block font-semibold uppercase">{currentKyc.documentType} Card</span>
+                  <div className="w-full h-24 bg-slate-100 dark:bg-black/40 rounded-lg flex items-center justify-center border border-slate-200 dark:border-white/5 text-xs text-slate-400 dark:text-white/40">
                     Scan Uploaded
                   </div>
-                  <span className="text-[11px] font-semibold text-white/60 block truncate">
+                  <span className="text-[11px] font-semibold text-slate-600 dark:text-white/60 block truncate">
                     Number: ••••{currentKyc.documentNumber.slice(-4)}
                   </span>
                 </div>
-                <div className="p-3 bg-white/5 border border-white/5 rounded-xl text-center space-y-2">
-                  <span className="text-[10px] text-white/50 block font-semibold uppercase">Liveness Selfie</span>
-                  <img src={currentKyc.selfieUrl} className="w-full h-24 object-cover rounded-lg border border-white/5" alt="" />
-                  <span className="text-[11px] text-white/60 block font-medium">Selfie Captured</span>
+                <div className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-xl text-center space-y-2">
+                  <span className="text-[10px] text-slate-500 dark:text-white/50 block font-semibold uppercase">Liveness Selfie</span>
+                  <img src={currentKyc.selfieUrl} className="w-full h-24 object-cover rounded-lg border border-slate-200 dark:border-white/5" alt="" />
+                  <span className="text-[11px] text-slate-600 dark:text-white/60 block font-medium">Selfie Captured</span>
                 </div>
               </div>
             </div>
@@ -191,36 +186,36 @@ export const KycVerification = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold font-poppins text-white flex items-center gap-2">
+        <h2 className="text-xl font-bold font-poppins text-slate-800 dark:text-white flex items-center gap-2">
           <Shield className="w-5 h-5 text-purple-400" />
           <span>Identity KYC Center</span>
         </h2>
-        <p className="text-xs text-white/50">Submit government IDs and liveness selfies. Required for contestant smart-contract payouts.</p>
+        <p className="text-xs text-slate-500 dark:text-white/50">Submit government IDs and liveness selfies. Required for contestant smart-contract payouts.</p>
       </div>
 
-      <div className="glassmorphism p-8 rounded-2xl border border-white/10">
+      <div className="glassmorphism p-8 rounded-2xl border border-slate-200 dark:border-white/10">
         <form onSubmit={handleSubmitKyc} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/60 mb-2">
                   Document Type Selection
                 </label>
                 <select
                   value={docType}
                   onChange={(e) => setDocType(e.target.value)}
-                  className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
-                  <option value="Aadhaar">Aadhaar Card (India)</option>
-                  <option value="PAN">PAN Card (India)</option>
-                  <option value="Passport">Passport</option>
-                  <option value="Driving License">Driving License</option>
+                  <option value="Aadhaar" className="bg-white text-slate-800 dark:bg-darkCard dark:text-white">Aadhaar Card (India)</option>
+                  <option value="PAN" className="bg-white text-slate-800 dark:bg-darkCard dark:text-white">PAN Card (India)</option>
+                  <option value="Passport" className="bg-white text-slate-800 dark:bg-darkCard dark:text-white">Passport</option>
+                  <option value="Driving License" className="bg-white text-slate-800 dark:bg-darkCard dark:text-white">Driving License</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/60 mb-2">
                   Document Registration Number
                 </label>
                 <input
@@ -229,12 +224,12 @@ export const KycVerification = () => {
                   value={docNum}
                   onChange={(e) => setDocNum(e.target.value)}
                   placeholder={`Enter your ${docType} number`}
-                  className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none"
+                  className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-sm focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/60 mb-2">
                   Upload Document Scan (Front Page)
                 </label>
                 <input
@@ -246,14 +241,14 @@ export const KycVerification = () => {
                 />
                 <div 
                   onClick={handleSelectDocClick}
-                  className="border-2 border-dashed border-white/10 hover:border-purple-500/50 bg-[#080b12]/30 rounded-2xl p-6 text-center cursor-pointer transition-all space-y-2.5"
+                  className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-purple-500/50 bg-slate-50 dark:bg-[#080b12]/30 rounded-2xl p-6 text-center cursor-pointer transition-all space-y-2.5"
                 >
-                  <UploadCloud className="w-8 h-8 text-white/40 mx-auto" />
+                  <UploadCloud className="w-8 h-8 text-slate-400 dark:text-white/40 mx-auto" />
                   <div>
-                    <span className="text-xs text-purple-400 font-semibold hover:text-purple-300">
+                    <span className="text-xs text-purple-500 font-semibold hover:text-purple-400">
                       {uploadingFile ? 'Uploading file...' : 'Click to import files'}
                     </span>
-                    <p className="text-[10px] text-white/40">JPEG, PNG or PDF up to 5MB</p>
+                    <p className="text-[10px] text-slate-400 dark:text-white/40">JPEG, PNG or PDF up to 5MB</p>
                   </div>
                   {docFileSelected && (
                     <div className="text-xs bg-purple-500/10 text-purple-400 p-2 rounded-lg border border-purple-500/20 font-bold truncate">
@@ -265,24 +260,24 @@ export const KycVerification = () => {
             </div>
 
             <div className="space-y-5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/60 mb-2">
                 Biometric Selfie Capture (Liveness Check)
               </label>
               
-              <div className="bg-black/50 border border-white/5 rounded-2xl p-6 text-center space-y-4 flex flex-col justify-center items-center min-h-[250px]">
+              <div className="bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/5 rounded-2xl p-6 text-center space-y-4 flex flex-col justify-center items-center min-h-[250px]">
                 {selfieCaptured ? (
                   <div className="space-y-4">
-                    <img src={selfieUrl} className="w-28 h-28 rounded-full object-cover border-2 border-cyan-400 bg-surfaceDark mx-auto animate-fade-in" alt="" />
+                    <img src={selfieUrl} className="w-28 h-28 rounded-full object-cover border-2 border-cyan-400 bg-slate-200 dark:bg-surfaceDark mx-auto animate-fade-in" alt="" />
                     <span className="text-xs text-cyan-400 font-bold bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
                       ✓ Snapshot Recorded
                     </span>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center text-white/30 border border-white/10 mx-auto">
+                    <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-white/30 border border-slate-200 dark:border-white/10 mx-auto">
                       <Camera className="w-7 h-7" />
                     </div>
-                    <p className="text-xs text-white/50 max-w-xs mx-auto">
+                    <p className="text-xs text-slate-500 dark:text-white/50 max-w-xs mx-auto">
                       AI facial scanners will match your selfie against the document photograph. Please ensure adequate lighting.
                     </p>
                   </div>
@@ -290,8 +285,8 @@ export const KycVerification = () => {
 
                 <button
                   type="button"
-                  onClick={handleCaptureMockSelfie}
-                  className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5"
+                  onClick={handleCaptureSelfie}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 text-xs font-semibold rounded-xl text-slate-700 dark:text-white transition-colors flex items-center gap-1.5"
                 >
                   <Camera className="w-3.5 h-3.5" />
                   <span>{selfieCaptured ? 'Retake Selfie' : 'Capture Live Snap'}</span>

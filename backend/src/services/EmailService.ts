@@ -26,7 +26,7 @@ class EmailService {
   async sendMail(to: string, subject: string, body: string): Promise<boolean> {
     if (this.transporter) {
       try {
-        const from = process.env.SMTP_FROM || 'Reality Contest Platform <noreply@realitycontest.com>';
+        const from = process.env.SMTP_FROM || 'Haka <noreply@realitycontest.com>';
         await this.transporter.sendMail({
           from,
           to,
@@ -34,7 +34,7 @@ class EmailService {
           text: body,
           html: `
             <div style="font-family: sans-serif; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 500px; margin: 0 auto; background-color: #0b1120; color: #ffffff;">
-              <h2 style="color: #6366f1; margin-top: 0;">Reality Contest Platform</h2>
+              <h2 style="color: #6366f1; margin-top: 0;">Haka</h2>
               <p style="font-size: 14px; line-height: 1.5; color: #cbd5e1;">${body}</p>
               <br/>
               <hr style="border: 0; border-top: 1px solid #334155; margin-bottom: 16px;"/>

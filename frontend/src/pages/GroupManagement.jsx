@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { Milestone, Plus, Settings, ChevronRight, Layers, Users } from 'lucide-react';
 import axios from 'axios';
 
 export const GroupManagement = () => {
-  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const [contests, setContests] = useState([]);
   const [selectedContest, setSelectedContest] = useState(null);
   const [groups, setGroups] = useState([]);
@@ -14,13 +12,6 @@ export const GroupManagement = () => {
   const [maxPart, setMaxPart] = useState('100');
 
   const fetchContests = async () => {
-    if (isMockMode) {
-      setContests([
-        { _id: 'ct-1', title: 'India Creator Showdown 2026' },
-        { _id: 'ct-2', title: 'National Tech & AI Quiz Arena' }
-      ]);
-      return;
-    }
     try {
       const res = await axios.get('/api/contests', { withCredentials: true });
       setContests(res.data.contests || []);
@@ -30,13 +21,6 @@ export const GroupManagement = () => {
   };
 
   const fetchGroups = async (contestId) => {
-    if (isMockMode) {
-      setGroups([
-        { _id: 'g-1', name: 'Group A (Mumbai Zone)', participants: [1, 2, 3, 4], maxParticipants: 100, stageSequence: [] },
-        { _id: 'g-2', name: 'Group B (Bengaluru Zone)', participants: [1, 2], maxParticipants: 100, stageSequence: [] }
-      ]);
-      return;
-    }
     try {
       // In our design, group is managed directly or via contest collections
       // Fetch groups from API
@@ -51,7 +35,7 @@ export const GroupManagement = () => {
 
   useEffect(() => {
     fetchContests();
-  }, [isMockMode]);
+  }, []);
 
   const handleSelectContest = (c) => {
     setSelectedContest(c);
@@ -61,13 +45,6 @@ export const GroupManagement = () => {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!selectedContest || !groupName) return;
-
-    if (isMockMode) {
-      setGroups(prev => [...prev, { _id: `g-${Date.now()}`, name: groupName, participants: [], maxParticipants: parseInt(maxPart), stageSequence: [] }]);
-      setGroupName('');
-      alert('Mock Group created.');
-      return;
-    }
 
     try {
       // We have route: POST /api/contests/:id/groups

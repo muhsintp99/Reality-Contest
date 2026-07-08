@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { Layers, Plus, Upload, Play, Check, Clock, Trash, FileText, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 
 export const QuizBuilder = () => {
-  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const [pools, setPools] = useState([]);
   const [selectedPool, setSelectedPool] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -32,13 +30,6 @@ export const QuizBuilder = () => {
   const [csvContent, setCsvContent] = useState('');
 
   const fetchPools = async () => {
-    if (isMockMode) {
-      setPools([
-        { _id: 'pool-1', name: 'National GK Qualifier Pool', category: 'Knowledge', description: 'Qualifier General Knowledge Pool' },
-        { _id: 'pool-2', name: 'Software Development Core', category: 'Coding', description: 'MERN & Fullstack topics' }
-      ]);
-      return;
-    }
     try {
       const res = await axios.get('/api/question-pools', { withCredentials: true });
       setPools(res.data.pools || []);
@@ -48,13 +39,6 @@ export const QuizBuilder = () => {
   };
 
   const fetchQuestions = async (poolId) => {
-    if (isMockMode) {
-      setQuestions([
-        { _id: 'q-1', text: 'Which framework uses Virtual DOM?', type: 'Single Choice', difficulty: 'Medium', marks: 1, options: [{ text: 'React', isCorrect: true }, { text: 'Angular', isCorrect: false }] },
-        { _id: 'q-2', text: 'MongoDB is a SQL Database.', type: 'True False', difficulty: 'Easy', marks: 1, options: [{ text: 'True', isCorrect: false }, { text: 'False', isCorrect: true }] }
-      ]);
-      return;
-    }
     setLoading(true);
     try {
       const res = await axios.get(`/api/question-pools/${poolId}/questions`, { withCredentials: true });
@@ -68,19 +52,11 @@ export const QuizBuilder = () => {
 
   useEffect(() => {
     fetchPools();
-  }, [isMockMode]);
+  }, []);
 
   const handleCreatePool = async (e) => {
     e.preventDefault();
     if (!poolName) return;
-
-    if (isMockMode) {
-      const p = { _id: `pool-${Date.now()}`, name: poolName, category: poolCategory, description: poolDesc };
-      setPools(prev => [...prev, p]);
-      setPoolName('');
-      alert('Mock Pool Created.');
-      return;
-    }
 
     try {
       const res = await axios.post('/api/question-pools', { name: poolName, category: poolCategory, description: poolDesc }, { withCredentials: true });
@@ -109,14 +85,6 @@ export const QuizBuilder = () => {
       questionTimer: parseInt(qTimer, 10),
       options
     };
-
-    if (isMockMode) {
-      const q = { _id: `q-${Date.now()}`, ...data };
-      setQuestions(prev => [...prev, q]);
-      setQText('');
-      alert('Mock Question added.');
-      return;
-    }
 
     try {
       const res = await axios.post(`/api/question-pools/${selectedPool._id}/questions`, data, { withCredentials: true });
@@ -152,12 +120,6 @@ export const QuizBuilder = () => {
         difficulty: parts[5]?.trim(),
         explanation: parts[6]?.trim()
       });
-    }
-
-    if (isMockMode) {
-      alert(`Simulated: Imported ${rows.length} questions successfully into pool.`);
-      setCsvContent('');
-      return;
     }
 
     try {

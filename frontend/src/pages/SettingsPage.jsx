@@ -100,21 +100,21 @@ export const SettingsPage = () => {
             
             <form onSubmit={handleUpdate} className="space-y-4 max-w-lg">
               <div>
-                <label className="block text-xs font-semibold text-white/65 uppercase tracking-wider mb-2">Display Name</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-white/65 uppercase tracking-wider mb-2">Display Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 dark:border-white/10 light:border-black/15 rounded-xl text-white dark:text-white light:text-black text-sm focus:outline-none"
+                  className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-sm focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-white/65 uppercase tracking-wider mb-2">Mobile Phone</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-white/65 uppercase tracking-wider mb-2">Mobile Phone</label>
                 <input
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 dark:border-white/10 light:border-black/15 rounded-xl text-white dark:text-white light:text-black text-sm focus:outline-none"
+                  className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-sm focus:outline-none"
                 />
               </div>
               <button
@@ -136,16 +136,16 @@ export const SettingsPage = () => {
             </div>
 
             {/* Simulated MFA configuration */}
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between gap-4 max-w-lg">
+            <div className="p-4 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 flex items-center justify-between gap-4 max-w-lg">
               <div>
-                <h4 className="text-xs font-bold text-white">Two-Factor Authentication (2FA)</h4>
-                <p className="text-[10px] text-white/40 mt-0.5">Require verification codes sent to mobile number on login attempt.</p>
+                <h4 className="text-xs font-bold text-slate-800 dark:text-white">Two-Factor Authentication (2FA)</h4>
+                <p className="text-[10px] text-slate-500 dark:text-white/40 mt-0.5">Require verification codes sent to mobile number on login attempt.</p>
               </div>
               <button
                 onClick={() => setTwoFactor(!twoFactor)}
-                className="text-white/70 hover:text-white transition-colors"
+                className="text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-colors"
               >
-                {twoFactor ? <ToggleRight className="w-9 h-9 text-brandSecondary" /> : <ToggleLeft className="w-9 h-9 text-white/30" />}
+                {twoFactor ? <ToggleRight className="w-9 h-9 text-brandSecondary" /> : <ToggleLeft className="w-9 h-9 text-slate-350 dark:text-white/30" />}
               </button>
             </div>
 
@@ -164,23 +164,23 @@ export const SettingsPage = () => {
             </div>
 
             <div className="max-w-lg space-y-3.5">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between gap-4">
+              <div className="p-4 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 flex items-center justify-between gap-4">
                 <div>
-                  <h4 className="text-xs font-bold text-white">Email biometrics update notifications</h4>
-                  <p className="text-[10px] text-white/40 mt-0.5">Receive alert logs when face match audits run.</p>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-white">Email biometrics update notifications</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-white/40 mt-0.5">Receive alert logs when face match audits run.</p>
                 </div>
                 <button onClick={() => setEmailAlerts(!emailAlerts)}>
-                  {emailAlerts ? <ToggleRight className="w-8 h-8 text-brandPrimary" /> : <ToggleLeft className="w-8 h-8 text-white/30" />}
+                  {emailAlerts ? <ToggleRight className="w-8 h-8 text-brandPrimary" /> : <ToggleLeft className="w-8 h-8 text-slate-350 dark:text-white/30" />}
                 </button>
               </div>
               
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between gap-4">
+              <div className="p-4 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 flex items-center justify-between gap-4">
                 <div>
-                  <h4 className="text-xs font-bold text-white">SMS balance transaction notifications</h4>
-                  <p className="text-[10px] text-white/40 mt-0.5">Receive message logs when wallet balance increments or deducts.</p>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-white">SMS balance transaction notifications</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-white/40 mt-0.5">Receive message logs when wallet balance increments or deducts.</p>
                 </div>
                 <button onClick={() => setSmsAlerts(!smsAlerts)}>
-                  {smsAlerts ? <ToggleRight className="w-8 h-8 text-brandPrimary" /> : <ToggleLeft className="w-8 h-8 text-white/30" />}
+                  {smsAlerts ? <ToggleRight className="w-8 h-8 text-brandPrimary" /> : <ToggleLeft className="w-8 h-8 text-slate-350 dark:text-white/30" />}
                 </button>
               </div>
             </div>
@@ -195,15 +195,15 @@ export const SettingsPage = () => {
               <p className="text-xs text-white/50 dark:text-white/50 light:text-black/50 mt-0.5">Secure client keys used for programmatically syndicating contests or fetching stats.</p>
             </div>
 
-            <div className="p-4 bg-[#080b12]/50 border border-white/10 dark:border-white/10 light:border-black/15 rounded-2xl max-w-lg space-y-4">
+            <div className="p-4 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-2xl max-w-lg space-y-4">
               <div>
-                <span className="block text-[10px] text-white/40 font-bold uppercase tracking-wider mb-2">Live Secret Token</span>
+                <span className="block text-[10px] text-slate-400 dark:text-white/40 font-bold uppercase tracking-wider mb-2">Live Secret Token</span>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     disabled
                     value={apiKey}
-                    className="w-full bg-black/60 border border-white/5 text-[11px] font-mono text-cyan-400 font-semibold px-3 py-2 rounded-xl focus:outline-none truncate"
+                    className="w-full bg-slate-200 dark:bg-black/60 border border-slate-350 dark:border-white/5 text-[11px] font-mono text-cyan-600 dark:text-cyan-400 font-semibold px-3 py-2 rounded-xl focus:outline-none truncate"
                   />
                   <button
                     onClick={handleCopyKey}

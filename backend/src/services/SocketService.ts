@@ -26,7 +26,7 @@ class SocketService {
         logger.warn(`Failed to set up Redis Socket.IO adapter: ${err.message}. Using standard adapter.`);
       }
     } else {
-      logger.warn('Redis offline. Socket.IO using default local memory adapter.');
+      logger.info('Redis offline. Socket.IO using default local memory adapter.');
     }
 
     this.io.on('connection', (socket: Socket) => {

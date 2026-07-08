@@ -1,13 +1,13 @@
 export const swaggerDocument = {
   openapi: '3.0.0',
   info: {
-    title: 'Reality Contest Platform Auth & KYC API',
+    title: 'Haka Auth & KYC API',
     version: '1.0.0',
-    description: 'Production-ready scalable Authentication & KYC system API documentation for Reality Contest Platform.',
+    description: 'Production-ready scalable Authentication & KYC system API documentation for Haka.',
   },
   servers: [
     {
-      url: 'http://localhost:5000',
+      url: 'http://localhost:10000',
       description: 'Development server',
     },
   ],

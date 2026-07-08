@@ -8,16 +8,12 @@ const initialState = {
   currentKyc: null,
   loading: false,
   error: null,
-  isMockMode: true,
 };
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    toggleMockMode: (state, action) => {
-      state.isMockMode = action.payload;
-    },
     updateWalletBalance: (state, action) => {
       if (state.user) {
         state.user.walletBalance += action.payload;
@@ -241,7 +237,6 @@ const authSlice = createSlice({
 });
 
 export const {
-  toggleMockMode,
   updateWalletBalance,
   loginRequest,
   loginSuccess,

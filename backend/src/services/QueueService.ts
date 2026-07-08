@@ -10,6 +10,10 @@ class QueueService {
   private isBullMqActive = false;
 
   constructor() {
+    // Queues will be initialized manually during startServer after Redis connects
+  }
+
+  public initialize() {
     this.initQueues();
   }
 
@@ -35,7 +39,7 @@ class QueueService {
       }
     } else {
       this.isBullMqActive = false;
-      logger.warn('Redis is offline. BullMQ Queues running in direct-simulated mode.');
+      logger.info('Redis is offline. BullMQ Queues running in direct-simulated mode.');
     }
   }
 

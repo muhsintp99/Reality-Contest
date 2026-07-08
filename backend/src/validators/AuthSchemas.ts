@@ -6,6 +6,7 @@ export const registerSchema = z.object({
   email: z.string().email('Invalid email address').toLowerCase(),
   phone: z.string().min(10, 'Invalid phone number format'),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
+  role: z.enum(['Contestant', 'Sponsor']).default('Contestant'),
   referralCode: z.string().optional(),
   dob: z.string().optional().transform((val) => val ? new Date(val) : undefined),
   gender: z.enum(['Male', 'Female', 'Other']).default('Male'),

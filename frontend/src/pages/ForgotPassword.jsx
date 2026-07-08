@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { forgotPasswordRequest, resetPasswordRequest } from '../store/authSlice';
 import { Shield, KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { HakaLogo } from '../components/HakaLogo';
 
 export const ForgotPassword = ({ onBackToLogin }) => {
   const dispatch = useDispatch();
-  const { isMockMode } = useSelector((state) => state.auth);
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
   const [otp, setOtp] = useState('');
-  const [mockOtp, setMockOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
@@ -26,9 +25,6 @@ export const ForgotPassword = ({ onBackToLogin }) => {
         setLoading(false);
         if (res && res.success) {
           setUserId(res.userId);
-          if (res.mockOtp) {
-            setMockOtp(res.mockOtp);
-          }
           setStep(2);
         } else {
           setError(res?.message || 'Failed to request reset OTP.');
@@ -40,10 +36,6 @@ export const ForgotPassword = ({ onBackToLogin }) => {
   const handleVerifyOtp = (e) => {
     e.preventDefault();
     setError(null);
-    if (isMockMode && otp !== mockOtp) {
-      setError('Incorrect OTP validation code.');
-      return;
-    }
     setStep(3);
   };
 
@@ -75,11 +67,9 @@ export const ForgotPassword = ({ onBackToLogin }) => {
 
       <div className="max-w-md w-full mx-auto z-10 space-y-8">
         <div className="flex justify-center items-center gap-2.5">
-          <div className="p-2 bg-purple-600/20 border border-purple-500/30 rounded-xl">
-            <Shield className="w-5 h-5 text-purple-400" />
-          </div>
-          <span className="font-poppins font-extrabold text-lg tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-            Reality Contest Platform
+          <HakaLogo size={40} showText={false} showTagline={false} className="w-10 h-10" />
+          <span className="font-poppins font-extrabold text-2xl tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent uppercase font-extrabold">
+            Haka
           </span>
         </div>
 
@@ -133,12 +123,6 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                 <h3 className="text-xl font-bold font-poppins mb-1">Verify Code</h3>
                 <p className="text-xs text-white/50">Enter the recovery code sent to {email}.</p>
               </div>
-
-              {mockOtp && isMockMode && (
-                <div className="p-3.5 bg-purple-600/10 border border-purple-500/20 text-purple-400 rounded-xl text-xs font-medium">
-                  Simulated Recovery OTP is: <span className="bg-purple-500/20 px-2 py-0.5 rounded font-bold">{mockOtp}</span>
-                </div>
-              )}
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">

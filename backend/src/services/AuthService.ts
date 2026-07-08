@@ -49,13 +49,13 @@ export class AuthService {
     // Queue Notifications using BullMQ instead of doing them in-thread
     await queueService.addJob('email-queue', 'send-verify-email', {
       email: user.email,
-      subject: 'Verify your Reality Contest Platform Account',
+      subject: 'Verify your Haka Account',
       body: `Your registration OTP code is: ${emailOtpValue}`
     });
 
     await queueService.addJob('sms-queue', 'send-verify-sms', {
       phone: user.phone,
-      message: `Your Reality Contest Platform OTP code is: ${phoneOtpValue}`
+      message: `Your Haka OTP code is: ${phoneOtpValue}`
     });
 
     return {

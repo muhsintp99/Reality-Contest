@@ -19,7 +19,7 @@ const CONTESTS_LIST = [
 
 export const Dashboard = ({ onLogoutClick }) => {
   const dispatch = useDispatch();
-  const { user, pendingKycs, isMockMode } = useSelector((state) => state.auth);
+  const { user, pendingKycs } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('panels');
   const [selectedRole, setSelectedRole] = useState(user?.role || 'Contestant');
 

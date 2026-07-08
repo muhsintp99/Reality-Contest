@@ -6,7 +6,7 @@ import axios from 'axios';
 
 export const WalletDashboard = () => {
   const dispatch = useDispatch();
-  const { user, isMockMode } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const [balance, setBalance] = useState(user?.walletBalance || 0);
   const [amount, setAmount] = useState('500');
   const [desc, setDesc] = useState('User Deposit');
@@ -14,16 +14,6 @@ export const WalletDashboard = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchWalletData = async () => {
-    if (isMockMode) {
-      // Mock transactions
-      setTransactions([
-        { _id: 'txn-1', amount: 500, type: 'Deposit', status: 'Completed', description: 'Promo Bonus', createdAt: new Date().toISOString() },
-        { _id: 'txn-2', amount: -199, type: 'Entry Fee', status: 'Completed', description: 'Tech Quiz entry', createdAt: new Date(Date.now() - 86400000).toISOString() }
-      ]);
-      setBalance(user?.walletBalance || 0);
-      return;
-    }
-
     setLoading(true);
     try {
       const res = await axios.get('/api/wallet/transactions', { withCredentials: true });
@@ -42,20 +32,12 @@ export const WalletDashboard = () => {
 
   useEffect(() => {
     fetchWalletData();
-  }, [isMockMode, user?.walletBalance]);
+  }, [user?.walletBalance]);
 
   const handleDeposit = async (e) => {
     e.preventDefault();
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) return;
-
-    if (isMockMode) {
-      dispatch(updateWalletBalance(val));
-      setAmount('');
-      alert(`₹${val} loaded in mock mode.`);
-      fetchWalletData();
-      return;
-    }
 
     try {
       const res = await axios.post('/api/wallet/deposit', { amount: val, description: desc }, { withCredentials: true });

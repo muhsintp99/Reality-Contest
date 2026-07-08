@@ -6,7 +6,7 @@ import { emailService } from '../services/EmailService';
 export const initEmailWorker = () => {
   const connection = redisService.getClient();
   if (!connection) {
-    logger.warn('Skipping Email Worker initialization (Redis is offline).');
+    logger.info('Skipping Email Worker initialization (Redis is offline).');
     return;
   }
 

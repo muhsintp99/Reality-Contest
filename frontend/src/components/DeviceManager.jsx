@@ -31,11 +31,11 @@ export const DeviceManager = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold font-poppins text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold font-poppins text-slate-800 dark:text-white flex items-center gap-2">
             <Monitor className="w-5 h-5 text-purple-400" />
             <span>Active Login Sessions</span>
           </h2>
-          <p className="text-xs text-white/50">Monitor and revoke devices currently authorized to access your platform assets.</p>
+          <p className="text-xs text-slate-500 dark:text-white/50">Monitor and revoke devices currently authorized to access your platform assets.</p>
         </div>
         
         {sessions.length > 1 && (
@@ -50,9 +50,9 @@ export const DeviceManager = () => {
         )}
       </div>
 
-      <div className="glassmorphism rounded-2xl border border-white/10 overflow-hidden divide-y divide-white/5 shadow-xl">
+      <div className="glassmorphism rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden divide-y divide-slate-200 dark:divide-white/5 shadow-xl">
         {sessions.length === 0 ? (
-          <div className="p-8 text-center text-white/40 text-xs">
+          <div className="p-8 text-center text-slate-400 dark:text-white/40 text-xs">
             Loading active sessions...
           </div>
         ) : (
@@ -62,19 +62,19 @@ export const DeviceManager = () => {
             return (
               <div key={sess._id} className="p-5 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-white/70">
+                  <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5 text-slate-600 dark:text-white/70">
                     {isMobile ? <Smartphone className="w-5 h-5 text-cyan-400" /> : <Monitor className="w-5 h-5 text-purple-400" />}
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-slate-800 dark:text-white flex items-center gap-2">
                       <span>{sess.device}</span>
-                      <span className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded font-normal">
+                      <span className="text-[10px] bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/60 px-2 py-0.5 rounded font-normal">
                         {sess.browser}
                       </span>
                     </h4>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/40 mt-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 dark:text-white/40 mt-1">
                       <span className="flex items-center gap-1">
-                        <Globe className="w-3 h-3 text-white/30" /> {sess.ip}
+                        <Globe className="w-3 h-3 text-slate-400 dark:text-white/30" /> {sess.ip}
                       </span>
                       <span>•</span>
                       <span>Logged in: {new Date(sess.createdAt).toLocaleString()}</span>
@@ -85,7 +85,7 @@ export const DeviceManager = () => {
                 <button
                   onClick={() => handleRevoke(sess._id)}
                   disabled={loadingId === sess._id}
-                  className="p-2 border border-white/10 hover:border-red-500/20 bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-400 disabled:opacity-50 rounded-xl transition-all"
+                  className="p-2 border border-slate-200 dark:border-white/10 hover:border-red-500/20 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 text-slate-400 hover:text-red-400 disabled:opacity-50 rounded-xl transition-all"
                   title="Terminate Session"
                 >
                   <LogOut className="w-4 h-4" />

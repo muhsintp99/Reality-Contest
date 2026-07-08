@@ -6,7 +6,7 @@ import { User } from '../models/User';
 export const initWalletWorker = () => {
   const connection = redisService.getClient();
   if (!connection) {
-    logger.warn('Skipping Wallet Worker initialization (Redis is offline).');
+    logger.info('Skipping Wallet Worker initialization (Redis is offline).');
     return;
   }
 

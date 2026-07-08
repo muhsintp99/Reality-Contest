@@ -6,7 +6,7 @@ import { firebaseSmsService } from '../services/FirebaseSmsService';
 export const initSMSWorker = () => {
   const connection = redisService.getClient();
   if (!connection) {
-    logger.warn('Skipping SMS Worker initialization (Redis is offline).');
+    logger.info('Skipping SMS Worker initialization (Redis is offline).');
     return;
   }
 

@@ -7,7 +7,7 @@ import { User } from '../models/User';
 export const initKycWorker = () => {
   const connection = redisService.getClient();
   if (!connection) {
-    logger.warn('Skipping KYC Worker initialization (Redis is offline).');
+    logger.info('Skipping KYC Worker initialization (Redis is offline).');
     return;
   }
 

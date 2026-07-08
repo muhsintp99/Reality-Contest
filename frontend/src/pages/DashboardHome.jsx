@@ -16,7 +16,7 @@ const STATS_DATA = [
 
 export const DashboardHome = ({ onViewChange, selectedRole }) => {
   const dispatch = useDispatch();
-  const { user, pendingKycs, isMockMode } = useSelector((state) => state.auth);
+  const { user, pendingKycs } = useSelector((state) => state.auth);
   const [depositAmount, setDepositAmount] = useState('1000');
 
   // React state elements for dynamic lists
@@ -40,14 +40,6 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
   const [manualStatus, setManualStatus] = useState('Qualified');
 
   const fetchAuditLogs = async () => {
-    if (isMockMode) {
-      setAuditLogs([
-        { _id: 'log-1', action: 'Promote User', details: 'Promoted contestant@rcp.com to Judge.', ipAddress: '127.0.0.1', createdAt: new Date().toISOString() },
-        { _id: 'log-2', action: 'Manual Override', details: 'Overrode stage qualification status to Qualified for result ID res-105.', ipAddress: '127.0.0.1', createdAt: new Date(Date.now() - 3600000).toISOString() },
-        { _id: 'log-3', action: 'KYC Verified', details: 'User biometrics check passed.', ipAddress: '127.0.0.1', createdAt: new Date(Date.now() - 7200000).toISOString() }
-      ]);
-      return;
-    }
     try {
       const res = await axios.get('/api/admin/audit-logs', { withCredentials: true });
       setAuditLogs(res.data.logs || []);
@@ -59,11 +51,6 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
   const handlePromoteRole = async (e) => {
     e.preventDefault();
     if (!promotionEmail) return;
-    if (isMockMode) {
-      alert(`[MOCK MODE] User ${promotionEmail} promoted to role: ${promotionRole}`);
-      setPromotionEmail('');
-      return;
-    }
     try {
       const res = await axios.put('/api/admin/users/role', {
         email: promotionEmail,
@@ -82,11 +69,6 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
   const handleManualOverride = async (e) => {
     e.preventDefault();
     if (!manualResultId) return;
-    if (isMockMode) {
-      alert(`[MOCK MODE] Manually set qualification status to: ${manualStatus} for result ID: ${manualResultId}`);
-      setManualResultId('');
-      return;
-    }
     try {
       const res = await axios.put('/api/admin/results/override', {
         resultId: manualResultId,
@@ -261,17 +243,17 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
                   {contestsList.map(c => {
                     const joined = joinedContests.includes(c.id);
                     return (
-                      <div key={c.id} className="p-5 bg-white/5 rounded-2xl border border-white/5 flex flex-col justify-between h-44 hover:border-brandPrimary/30 transition-all">
+                      <div key={c.id} className="p-5 bg-white/5 light:bg-black/5 rounded-2xl border border-white/5 light:border-black/5 flex flex-col justify-between h-44 hover:border-brandPrimary/30 transition-all">
                         <div>
-                          <div className="flex justify-between items-center text-[9px] text-white/40 font-bold uppercase mb-2">
+                          <div className="flex justify-between items-center text-[9px] text-white/40 light:text-slate-400 font-bold uppercase mb-2">
                             <span>{c.sponsor}</span>
                             <span>Fee: ₹{c.fee}</span>
                           </div>
                           <h4 className="text-xs font-bold text-white dark:text-white light:text-black">{c.title}</h4>
                         </div>
                         <div className="space-y-3 mt-3">
-                          <div className="flex justify-between items-center text-[11px] border-t border-white/5 pt-3">
-                            <span className="text-white/40">Prize Pool:</span>
+                          <div className="flex justify-between items-center text-[11px] border-t border-white/5 light:border-black/5 pt-3">
+                            <span className="text-slate-400 dark:text-white/40">Prize Pool:</span>
                             <span className="font-extrabold text-brandSecondary">{c.prizePool}</span>
                           </div>
                           <button
@@ -299,12 +281,12 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
                 
                 <div className="flex gap-3 max-w-sm">
                   <div className="relative flex-1">
-                    <span className="absolute left-3.5 top-2 text-xs text-white/40">₹</span>
+                    <span className="absolute left-3.5 top-2 text-xs text-slate-400 dark:text-white/40">₹</span>
                     <input
                       type="number"
                       value={depositAmount}
                       onChange={(e) => setDepositAmount(e.target.value)}
-                      className="w-full bg-[#080b12]/50 border border-white/10 rounded-xl pl-8 pr-4 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-brandPrimary/40"
+                      className="w-full bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl pl-8 pr-4 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-brandPrimary/40"
                     />
                   </div>
                   <button
@@ -329,8 +311,8 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
                 <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full font-bold">Awaiting Scoring</span>
               </div>
 
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <h4 className="text-xs font-bold">dance_remix_mumbai.mp4</h4>
+              <div className="bg-slate-100 dark:bg-white/5 p-4 rounded-xl border border-slate-200 dark:border-white/5">
+                <h4 className="text-xs font-bold text-slate-800 dark:text-white">dance_remix_mumbai.mp4</h4>
                 <p className="text-[10px] text-brandSecondary mt-1">Contestant: Aarav Sharma</p>
               </div>
 
@@ -403,7 +385,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
                     value={newCampaignName}
                     onChange={(e) => setNewCampaignName(e.target.value)}
                     placeholder="Zeb-Sound Master Contest"
-                    className="w-full bg-[#080b12]/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white"
+                    className="w-full bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-800 dark:text-white placeholder-slate-400"
                   />
                 </div>
                 <button
@@ -431,148 +413,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
             </div>
           )}
 
-          {/* Admin: KYC review checklists */}
-          {selectedRole === 'Admin' && (
-            <div className="space-y-4 animate-fade-in">
-              <h3 className="text-xs font-extrabold text-brandPrimary uppercase tracking-widest">Pending KYC Approvals</h3>
-              {pendingKycs.length === 0 ? (
-                <div className="p-6 bg-white/5 rounded-2xl text-center text-xs text-white/40">No pending verification queues.</div>
-              ) : (
-                <div className="space-y-4">
-                  {pendingKycs.map((k, idx) => (
-                    <div key={idx} className="p-5 bg-white/5 rounded-2xl border border-white/5 flex flex-col sm:flex-row justify-between gap-4">
-                      <div>
-                        <h4 className="text-xs font-bold text-white">{k.userDetail?.name || 'Contestant'}</h4>
-                        <p className="text-[10px] text-white/40 mt-0.5">{k.userDetail?.email} • {k.documentType}</p>
-                        <div className="flex gap-4 mt-2 text-[10px] text-brandSecondary font-bold">
-                          <span>Doc: {k.documentNumber}</span>
-                          <span>AI: {k.livenessScore}% Match</span>
-                        </div>
-                      </div>
-                      <div className="flex sm:flex-col justify-end gap-2">
-                        <button
-                          onClick={() => handleReviewKycSubmit(k.userId, 'Approved')}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-[10px] font-bold text-white flex items-center gap-1"
-                        >
-                          <Check className="w-3.5 h-3.5" /> Approve
-                        </button>
-                        <button
-                          onClick={() => handleReviewKycSubmit(k.userId, 'Rejected')}
-                          className="px-3.5 py-1.5 bg-red-600/10 border border-red-500/20 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-bold text-red-400 flex items-center gap-1"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
-          {/* Super Admin Panels */}
-          {selectedRole === 'Super Admin' && (
-            <div className="space-y-6 animate-fade-in">
-              
-              {/* User Promotion Panel */}
-              <div className="glassmorphism p-5 rounded-2xl border border-white/10 dark:border-white/5 light:border-black/10">
-                <h3 className="text-xs font-bold uppercase text-brandPrimary tracking-wider mb-3">Elevate User Role</h3>
-                <form onSubmit={handlePromoteRole} className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase mb-1">User Email Address</label>
-                    <input
-                      type="email"
-                      value={promotionEmail}
-                      onChange={(e) => setPromotionEmail(e.target.value)}
-                      placeholder="e.g. user@domain.com"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brandPrimary"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase mb-1">Target Account Role</label>
-                    <select
-                      value={promotionRole}
-                      onChange={(e) => setPromotionRole(e.target.value)}
-                      className="w-full bg-darkCard border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandPrimary"
-                    >
-                      <option value="Contestant">Contestant</option>
-                      <option value="Judge">Judge</option>
-                      <option value="Sponsor">Sponsor</option>
-                      <option value="Admin">Admin</option>
-                      <option value="Super Admin">Super Admin</option>
-                    </select>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all"
-                  >
-                    Promote Role
-                  </button>
-                </form>
-              </div>
-
-              {/* Manual Result Override Panel */}
-              <div className="glassmorphism p-5 rounded-2xl border border-white/10 dark:border-white/5 light:border-black/10">
-                <h3 className="text-xs font-bold uppercase text-brandSecondary tracking-wider mb-3">Manual Result Override</h3>
-                <form onSubmit={handleManualOverride} className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase mb-1">Result ID (MongoDB ObjectId)</label>
-                    <input
-                      type="text"
-                      value={manualResultId}
-                      onChange={(e) => setManualResultId(e.target.value)}
-                      placeholder="e.g. 64fc3a79bc..."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brandPrimary"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase mb-1">Override Status</label>
-                    <select
-                      value={manualStatus}
-                      onChange={(e) => setManualStatus(e.target.value)}
-                      className="w-full bg-darkCard border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandPrimary"
-                    >
-                      <option value="Qualified">Qualified (Pass)</option>
-                      <option value="Failed">Failed (Fail)</option>
-                    </select>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full py-2 bg-brandSecondary hover:bg-brandSecondary/90 text-white rounded-xl text-xs font-bold transition-all"
-                  >
-                    Override Result Status
-                  </button>
-                </form>
-              </div>
-
-              {/* Platform Audit Logs Ledger */}
-              <div className="glassmorphism p-5 rounded-2xl border border-white/10 dark:border-white/5 light:border-black/10">
-                <h3 className="text-xs font-bold uppercase text-white dark:text-white light:text-black tracking-wider mb-3">Security Audit Trail Logs</h3>
-                {auditLogs.length === 0 ? (
-                  <div className="p-4 bg-white/5 rounded-xl text-center text-xs text-white/40">No audit logs scanned in system.</div>
-                ) : (
-                  <div className="space-y-2.5 max-h-60 overflow-y-auto">
-                    {auditLogs.map((log) => (
-                      <div key={log._id} className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-left">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-bold text-brandPrimary">{log.action}</span>
-                          <span className="text-[9px] text-white/30">{new Date(log.createdAt).toLocaleTimeString()}</span>
-                        </div>
-                        <p className="text-[10px] text-white/70">{log.details}</p>
-                        <div className="mt-1.5 flex gap-3 text-[9px] text-white/40">
-                          <span>IP: {log.ipAddress || '127.0.0.1'}</span>
-                          <span>Device: {log.deviceInfo || 'System'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
-          ) }
 
 
           {/* Real-time Anti-Cheat Feed */}
@@ -600,10 +441,10 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
             <h3 className="text-xs font-bold uppercase text-white dark:text-white light:text-black tracking-wider mb-4">Recent Auditions Submissions</h3>
             <div className="space-y-3.5">
               {recentSubmissions.map(sub => (
-                <div key={sub.id} className="flex items-center justify-between gap-3 text-xs p-3 bg-white/5 rounded-xl border border-white/5">
+                <div key={sub.id} className="flex items-center justify-between gap-3 text-xs p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5">
                   <div>
-                    <h4 className="font-bold text-white dark:text-white light:text-black">{sub.name}</h4>
-                    <p className="text-[10px] text-white/40 dark:text-white/40 light:text-black/40 mt-0.5 truncate max-w-[160px]">{sub.contest}</p>
+                    <h4 className="font-bold text-slate-800 dark:text-white">{sub.name}</h4>
+                    <p className="text-[10px] text-slate-400 dark:text-white/40 mt-0.5 truncate max-w-[160px]">{sub.contest}</p>
                   </div>
                   <div className="text-right">
                     <span className={`inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-semibold ${
@@ -612,7 +453,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
                       {sub.status === 'Approved' ? <Check className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5 animate-spin" />}
                       {sub.status}
                     </span>
-                    <span className="block text-[10px] text-white/40 mt-1">{sub.time}</span>
+                    <span className="block text-[10px] text-slate-400 dark:text-white/40 mt-1">{sub.time}</span>
                   </div>
                 </div>
               ))}

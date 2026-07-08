@@ -4,6 +4,7 @@ import { registerRequest, verifyOtpRequest } from '../store/authSlice';
 import { ArrowRight, ArrowLeft, Shield, CheckCircle, Sparkles, AlertCircle, Camera, Check } from 'lucide-react';
 import { auth as firebaseAuth } from '../config/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { HakaLogo } from '../components/HakaLogo';
 
 const AVAILABLE_CATEGORIES = ['Knowledge', 'Arts', 'Content Creation', 'Entrepreneurship', 'Sports', 'Science', 'Social Impact'];
 const AVAILABLE_SKILLS = ['Public Speaking', 'Video Editing', 'Cognitive Analysis', 'Coding', 'UI Design', 'Music Composition', 'Business Modeling'];
@@ -11,7 +12,7 @@ const AVAILABLE_INTERESTS = ['E-Sports', 'Indie SaaS', 'Short Film Making', 'Fin
 
 export const Register = ({ onLoginClick, onRegisterSuccess }) => {
   const dispatch = useDispatch();
-  const { error, loading, isMockMode } = useSelector((state) => state.auth);
+  const { error, loading } = useSelector((state) => state.auth);
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState('');
   const [formErr, setFormErr] = useState(null);
@@ -28,6 +29,7 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
     phone: '',
     password: '',
     confirmPassword: '',
+    role: 'Contestant',
     referralCode: '',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Onboarding',
     dob: '',
@@ -81,6 +83,7 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        role: formData.role,
         referralCode: formData.referralCode,
         dob: formData.dob,
         gender: formData.gender,
@@ -129,7 +132,7 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
   const handleVerifyOtp = (type) => {
     setFormErr(null);
     
-    if (type === 'phone_verify' && !isMockMode && confirmationResult) {
+    if (type === 'phone_verify' && confirmationResult) {
       setFormErr(null);
       confirmationResult.confirm(phoneOtp).then(async (result) => {
         const idToken = await result.user.getIdToken();
@@ -205,11 +208,9 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
 
       <div className="max-w-2xl w-full mx-auto z-10">
         <div className="flex justify-center items-center gap-2.5 mb-8">
-          <div className="p-2 bg-purple-600/20 border border-purple-500/30 rounded-xl">
-            <Shield className="w-5 h-5 text-purple-400" />
-          </div>
-          <span className="font-poppins font-extrabold text-lg tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-            Reality Contest Platform
+          <HakaLogo size={40} showText={false} showTagline={false} className="w-10 h-10" />
+          <span className="font-poppins font-extrabold text-2xl tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent uppercase font-extrabold">
+            Haka
           </span>
         </div>
 
@@ -326,15 +327,28 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/50 mb-1.5 font-semibold">Referral Code (Optional)</label>
-                <input
-                  type="text"
-                  value={formData.referralCode}
-                  onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
-                  placeholder="Unlock ₹100 registration bonus"
-                  className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-white/50 mb-1.5 font-semibold">Referral Code (Optional)</label>
+                  <input
+                    type="text"
+                    value={formData.referralCode}
+                    onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+                    placeholder="Unlock ₹100 registration bonus"
+                    className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-white/50 mb-1.5 font-semibold">Account Role *</label>
+                  <select
+                    value={formData.role || 'Contestant'}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    className="block w-full px-4 py-2.5 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none"
+                  >
+                    <option value="Contestant" className="bg-[#080b12] text-white">Contestant (Creator)</option>
+                    <option value="Sponsor" className="bg-[#080b12] text-white">Sponsor (Brand Support)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end pt-4">
@@ -569,13 +583,6 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
                 <p className="text-sm text-white/60">We sent 6-digit OTP codes to activate your contestant account profiles.</p>
               </div>
 
-              {mockOtps && (
-                <div className="p-3.5 bg-purple-600/10 border border-purple-500/20 text-purple-400 rounded-xl text-xs font-medium space-y-1">
-                  <div>Simulated Email OTP code is: <span className="bg-purple-500/25 px-2 py-0.5 rounded font-bold">{mockOtps.emailOtp}</span></div>
-                  <div>Simulated Mobile OTP code is: <span className="bg-purple-500/25 px-2 py-0.5 rounded font-bold">{mockOtps.phoneOtp}</span></div>
-                </div>
-              )}
-
               <div className="p-5 bg-white/5 border border-white/5 rounded-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -639,7 +646,7 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
                       <p className="text-[11px] text-red-400 font-semibold">{firebaseError}</p>
                     )}
 
-                    {(!isMockMode && !confirmationResult) ? (
+                    {!confirmationResult ? (
                       <button
                         type="button"
                         onClick={handleSendFirebaseSms}

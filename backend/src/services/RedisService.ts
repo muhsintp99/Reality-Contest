@@ -6,15 +6,65 @@ class RedisService {
   private client: Redis | null = null;
   private memoryDb = new Map<string, { value: string; expiry?: number }>();
   private isConnected = false;
+  private connectionPromise: Promise<boolean> | null = null;
+  private errorLogged = false;
 
   constructor() {
-    this.connect();
+    this.connectionPromise = this.connect();
   }
 
-  private connect() {
-    // Redis is temporarily disabled to prevent startup delays and docker requirements.
-    this.isConnected = false;
-    logger.info('Redis connection bypassed. Using in-memory fallback cache.');
+  private connect(): Promise<boolean> {
+    return new Promise((resolve) => {
+      try {
+        this.client = new Redis(config.REDIS_URL, {
+          maxRetriesPerRequest: null, // Required by BullMQ
+          connectTimeout: 2000,       // Connection timeout (2s to avoid blocking server startup)
+          retryStrategy: (times) => {
+            // Retrying connection up to a maximum interval of 30 seconds
+            return Math.min(times * 2000, 30000);
+          }
+        });
+
+        const timeout = setTimeout(() => {
+          if (!this.isConnected && !this.errorLogged) {
+            logger.info('Redis connection timed out. Running in fallback in-memory mode.');
+            this.errorLogged = true;
+          }
+          resolve(false);
+        }, 2500);
+
+        this.client.on('connect', () => {
+          clearTimeout(timeout);
+          this.isConnected = true;
+          this.errorLogged = false;
+          logger.info('Redis client connected successfully.');
+          resolve(true);
+        });
+
+        this.client.on('error', (err) => {
+          clearTimeout(timeout);
+          this.isConnected = false;
+          
+          if (!this.errorLogged) {
+            logger.info(`Redis is offline: ${err.message}. Running in fallback in-memory mode.`);
+            this.errorLogged = true;
+          }
+          
+          resolve(false);
+        });
+      } catch (error: any) {
+        this.isConnected = false;
+        logger.error(`Failed to initialize Redis: ${error.message}`);
+        resolve(false);
+      }
+    });
+  }
+
+  public async waitForConnection(): Promise<boolean> {
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+    return this.isConnected;
   }
 
   public getClient(): Redis | null {

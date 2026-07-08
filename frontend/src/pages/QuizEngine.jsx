@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
 import { ShieldAlert, Clock, Play, Check, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import axios from 'axios';
 
 export const QuizEngine = ({ stage, onBack }) => {
-  const isMockMode = useSelector((state) => state.auth.isMockMode);
   const containerRef = useRef(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -24,15 +22,6 @@ export const QuizEngine = ({ stage, onBack }) => {
 
   // Load questions
   const startAttempt = async () => {
-    if (isMockMode) {
-      setQuestions([
-        { _id: 'q-1', text: 'Which hooks is used to perform side effects in React?', type: 'Single Choice', options: [{ text: 'useState' }, { text: 'useEffect' }, { text: 'useContext' }, { text: 'useRef' }] },
-        { _id: 'q-2', text: 'Which database is document-based NoSQL?', type: 'Single Choice', options: [{ text: 'PostgreSQL' }, { text: 'MySQL' }, { text: 'MongoDB' }, { text: 'Redis' }] },
-        { _id: 'q-3', text: 'Identify fullstack frameworks (Select all)', type: 'Multiple Choice', options: [{ text: 'Next.js' }, { text: 'Vite' }, { text: 'Nuxt.js' }, { text: 'Tailwind' }] }
-      ]);
-      return;
-    }
-
     try {
       const res = await axios.post(`/api/stages/${stage._id}/start`, {
         deviceInfo: navigator.userAgent,
@@ -57,7 +46,7 @@ export const QuizEngine = ({ stage, onBack }) => {
 
   useEffect(() => {
     startAttempt();
-  }, [stage._id, isMockMode]);
+  }, [stage._id]);
 
   // Overall Timer Countdown
   useEffect(() => {
@@ -171,17 +160,6 @@ export const QuizEngine = ({ stage, onBack }) => {
       cheatAlerts.push({ type: 'fullscreen_exit', timestamp: new Date(), details: `${fullscreenExits} occurrences` });
     }
 
-    if (isMockMode) {
-      setResult({
-        score: 2,
-        passed: true,
-        maxScore: 3,
-        status: 'Qualified',
-        remarks: 'Passed Quiz in simulation mode.'
-      });
-      return;
-    }
-
     try {
       const res = await axios.post(`/api/stages/${stage._id}/submit`, {
         answers,
@@ -241,7 +219,7 @@ export const QuizEngine = ({ stage, onBack }) => {
   }
 
   // Require Fullscreen Cover
-  if (!isFullscreen && !isMockMode) {
+  if (!isFullscreen) {
     return (
       <div className="fixed inset-0 bg-[#080b12] z-50 flex items-center justify-center p-6 text-white text-center">
         <div className="max-w-sm space-y-5">
