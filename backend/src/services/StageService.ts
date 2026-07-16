@@ -228,7 +228,25 @@ export class StageService {
   }
 
   async getStagesByGroup(groupId: string): Promise<IStage[]> {
-    return this.stageRepo.findByGroup(groupId);
+    return this.stageRepo.find({ groupId });
+  }
+
+  // New Contest Workflow helpers
+  async getStagesByContest(contestId: string): Promise<IStage[]> {
+    const groups = await this.groupRepo.find({ contestId });
+    const defaultGroup = groups.find(g => g.name === 'Default Group') || groups[0];
+    if (!defaultGroup) return [];
+    return this.stageRepo.find({ groupId: defaultGroup._id });
+  }
+
+  async createStageForContest(contestId: string, data: Partial<IStage>): Promise<IStage> {
+    const groups = await this.groupRepo.find({ contestId });
+    const defaultGroup = groups.find(g => g.name === 'Default Group') || groups[0];
+    if (!defaultGroup) {
+      throw new NotFoundError('No default group found for this contest.');
+    }
+    data.groupId = defaultGroup._id;
+    return this.createStage(data);
   }
 }
 export const stageService = new StageService();

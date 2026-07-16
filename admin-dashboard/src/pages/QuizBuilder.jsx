@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Plus, Upload, Play, Check, Clock, Trash, FileText, ChevronRight } from 'lucide-react';
+import { Layers, Plus, Upload, Play, Check, Clock, Trash, FileText, ChevronRight, Edit, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { CustomSelect } from '../components/CustomSelect';
+import { useAlert } from '../context/AlertContext';
+import { RightDrawer } from '../components/RightDrawer';
 
 export const QuizBuilder = () => {
+  const { showAlert, showSnackbar, showConfirm } = useAlert();
   const [pools, setPools] = useState([]);
   const [selectedPool, setSelectedPool] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Pool form states
   const [poolName, setPoolName] = useState('');
@@ -32,7 +37,9 @@ export const QuizBuilder = () => {
   const fetchPools = async () => {
     try {
       const res = await axios.get('/api/question-pools', { withCredentials: true });
-      setPools(res.data.pools || []);
+      let data = res.data.pools || [];
+      data.sort((a, b) => new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime());
+      setPools(data);
     } catch (err) {
       console.error(err);
     }
@@ -42,7 +49,9 @@ export const QuizBuilder = () => {
     setLoading(true);
     try {
       const res = await axios.get(`/api/question-pools/${poolId}/questions`, { withCredentials: true });
-      setQuestions(res.data.questions || []);
+      let data = res.data.questions || [];
+      data.sort((a, b) => new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime());
+      setQuestions(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -63,11 +72,12 @@ export const QuizBuilder = () => {
       if (res.data.success) {
         setPoolName('');
         setPoolDesc('');
-        alert('Question Pool created successfully.');
+        showSnackbar('Pool created successfully.', 'success');
+        setIsDrawerOpen(false);
         fetchPools();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create pool');
+      showAlert(err.response?.data?.message || 'Failed to create pool', 'error');
     }
   };
 
@@ -91,11 +101,12 @@ export const QuizBuilder = () => {
       if (res.data.success) {
         setQText('');
         setQExpl('');
-        alert('Question added successfully.');
+        showSnackbar('Question added successfully.', 'success');
+        setIsDrawerOpen(false);
         fetchQuestions(selectedPool._id);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add question');
+      showAlert(err.response?.data?.message || 'Failed to add question', 'error');
     }
   };
 
@@ -125,11 +136,12 @@ export const QuizBuilder = () => {
       const res = await axios.post(`/api/question-pools/${selectedPool._id}/import`, { rows }, { withCredentials: true });
       if (res.data.success) {
         setCsvContent('');
-        alert(`Successfully imported ${res.data.count} questions.`);
+        showSnackbar(`Successfully imported ${res.data.count} questions.`, 'success');
+        setIsDrawerOpen(false);
         fetchQuestions(selectedPool._id);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Import failed');
+      showAlert(err.response?.data?.message || 'Import failed', 'error');
     }
   };
 
@@ -153,11 +165,20 @@ export const QuizBuilder = () => {
       </div>
 
       {!selectedPool ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="flex flex-col gap-6">
           {/* Pools List */}
-          <div className="lg:col-span-8 space-y-4">
-            <h3 className="text-xs font-bold uppercase text-brandPrimary tracking-wider">Question Repositories Pools</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold uppercase text-brandPrimary tracking-wider">Question Repositories Pools</h3>
+              <button
+                onClick={() => setIsDrawerOpen(true)}
+                className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-brandPrimary/20 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Initialize Pool
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {pools.map(p => (
                 <div
                   key={p._id}
@@ -183,58 +204,75 @@ export const QuizBuilder = () => {
             </div>
           </div>
 
-          {/* Create Pool Form */}
-          <form onSubmit={handleCreatePool} className="lg:col-span-4 glassmorphism p-5 rounded-2xl border border-white/10 space-y-4 h-fit">
-            <h3 className="text-xs font-bold uppercase text-white tracking-wider">New Pool Blueprint</h3>
-            <div>
-              <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Pool Name</label>
-              <input
-                type="text"
-                required
-                value={poolName}
-                onChange={(e) => setPoolName(e.target.value)}
-                placeholder="National General Knowledge"
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Category</label>
-              <select
-                value={poolCategory}
-                onChange={(e) => setPoolCategory(e.target.value)}
-                className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-              >
-                <option value="Knowledge">Knowledge</option>
-                <option value="Science">Science</option>
-                <option value="Coding">Coding Challenge</option>
-                <option value="Arts">Arts</option>
-                <option value="Audition">General Audition</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Description</label>
-              <textarea
-                value={poolDesc}
-                onChange={(e) => setPoolDesc(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white h-20 resize-none"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors"
-            >
-              Initialize Pool
-            </button>
-          </form>
+          {/* Create Pool Form Drawer */}
+          <RightDrawer
+            isOpen={isDrawerOpen && !selectedPool}
+            onClose={() => setIsDrawerOpen(false)}
+            title="New Pool Blueprint"
+          >
+            <form onSubmit={handleCreatePool} className="flex flex-col h-full">
+              <div className="flex-1 space-y-4">
+              <div>
+                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Pool Name</label>
+                <input
+                  type="text"
+                  required
+                  value={poolName}
+                  onChange={(e) => setPoolName(e.target.value)}
+                  placeholder="National General Knowledge"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Category</label>
+                <CustomSelect
+                  value={poolCategory}
+                  onChange={setPoolCategory}
+                  options={[
+                    { value: 'Knowledge', label: 'Knowledge' },
+                    { value: 'Science', label: 'Science' },
+                    { value: 'Coding', label: 'Coding Challenge' },
+                    { value: 'Arts', label: 'Arts' },
+                    { value: 'Audition', label: 'General Audition' }
+                  ]}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Description</label>
+                <textarea
+                  value={poolDesc}
+                  onChange={(e) => setPoolDesc(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white h-20 resize-none"
+                />
+              </div>
+              </div>
+              <div className="mt-8 pt-4 border-t border-white/5">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Initialize Pool
+                </button>
+              </div>
+            </form>
+          </RightDrawer>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+        <div className="flex flex-col gap-6 animate-fade-in">
           {/* Questions inside Pool */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-xs font-bold uppercase text-brandPrimary tracking-wider">
                 Pool: {selectedPool.name} ({questions.length} questions)
               </h3>
+              <button
+                onClick={() => setIsDrawerOpen(true)}
+                className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-brandPrimary/20 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Questions
+              </button>
             </div>
 
             <div className="space-y-3.5 max-h-[500px] overflow-y-auto pr-2">
@@ -247,13 +285,28 @@ export const QuizBuilder = () => {
                   <div key={q._id || idx} className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
                     <div className="flex justify-between items-start">
                       <h4 className="text-xs font-bold text-white flex-1">{q.text}</h4>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
                         <span className="bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary px-2 py-0.5 rounded text-[8px] font-bold">
                           {q.type}
                         </span>
                         <span className="bg-brandSecondary/10 border border-brandSecondary/20 text-brandSecondary px-2 py-0.5 rounded text-[8px] font-bold">
                           {q.difficulty}
                         </span>
+                        <div className="flex gap-1 ml-2">
+                          <button title="Edit Question" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-full transition-all">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            title="Delete Question" 
+                            onClick={() => showConfirm({
+                              title: 'Delete Question',
+                              message: 'Are you sure you want to remove this question?',
+                              onConfirm: () => showAlert('Delete endpoint not implemented', 'info')
+                            })}
+                            className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                     {q.options && (
@@ -271,100 +324,123 @@ export const QuizBuilder = () => {
             </div>
           </div>
 
-          {/* Right Section: Add or CSV Import tabs */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Add Question */}
-            <form onSubmit={handleAddQuestion} className="glassmorphism p-5 rounded-2xl border border-white/10 space-y-4">
-              <h3 className="text-xs font-bold uppercase text-white tracking-wider">Add Single Question</h3>
-              <div>
-                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Question Prompt</label>
-                <input
-                  type="text"
-                  required
-                  value={qText}
-                  onChange={(e) => setQText(e.target.value)}
-                  placeholder="What is the output of 1 + 1?"
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                />
+          {/* Right Section: Add or CSV Import tabs in Drawer */}
+          <RightDrawer
+            isOpen={isDrawerOpen && selectedPool}
+            onClose={() => setIsDrawerOpen(false)}
+            title="Add Questions"
+          >
+            <div className="space-y-8">
+              {/* Add Question */}
+              <form onSubmit={handleAddQuestion} className="space-y-6">
+                <div>
+                  <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Question Setup</div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Question Prompt</label>
+                      <input
+                        type="text"
+                        required
+                        value={qText}
+                        onChange={(e) => setQText(e.target.value)}
+                        placeholder="What is the output of 1 + 1?"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Type</label>
+                        <CustomSelect
+                          value={qType}
+                          onChange={setQType}
+                          options={[
+                            { value: 'Single Choice', label: 'Single Choice' },
+                            { value: 'Multiple Choice', label: 'Multiple Choice' },
+                            { value: 'True False', label: 'True / False' }
+                          ]}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Difficulty</label>
+                        <CustomSelect
+                          value={qDiff}
+                          onChange={setQDiff}
+                          options={[
+                            { value: 'Easy', label: 'Easy' },
+                            { value: 'Medium', label: 'Medium' },
+                            { value: 'Hard', label: 'Hard' }
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Scoring & Timing</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Marks</label>
+                      <input
+                        type="number"
+                        value={qMarks}
+                        onChange={(e) => setQMarks(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Negative Marks</label>
+                      <input
+                        type="number"
+                        value={qNeg}
+                        onChange={(e) => setQNeg(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+              <div className="mt-8 pt-4 border-t border-white/5 flex gap-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Add Question
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Type</label>
-                  <select
-                    value={qType}
-                    onChange={(e) => setQType(e.target.value)}
-                    className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                  >
-                    <option value="Single Choice">Single Choice</option>
-                    <option value="Multiple Choice">Multiple Choice</option>
-                    <option value="True False">True / False</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Difficulty</label>
-                  <select
-                    value={qDiff}
-                    onChange={(e) => setQDiff(e.target.value)}
-                    className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Marks</label>
-                  <input
-                    type="number"
-                    value={qMarks}
-                    onChange={(e) => setQMarks(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Negative Marks</label>
-                  <input
-                    type="number"
-                    value={qNeg}
-                    onChange={(e) => setQNeg(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors"
-              >
-                Add Question
-              </button>
             </form>
 
-            {/* CSV Import */}
-            <form onSubmit={handleCsvImport} className="glassmorphism p-5 rounded-2xl border border-white/10 space-y-4">
-              <div className="flex items-center gap-2">
-                <Upload className="w-4 h-4 text-brandPrimary" />
-                <h3 className="text-xs font-bold uppercase text-white tracking-wider">CSV/Excel Copy-paste importer</h3>
-              </div>
-              <p className="text-[10px] text-white/40">
-                Paste comma-separated rows. Format: <br />
-                <code className="text-brandSecondary">text,type,options_with_correct_tag,marks,negative,difficulty,explanation</code>
-              </p>
-              <textarea
-                value={csvContent}
-                onChange={(e) => setCsvContent(e.target.value)}
-                placeholder="text,type,options,marks,negativeMarks,difficulty,explanation&#10;What is React?,Single Choice,Library (Correct); Framework,2,0.5,Easy,Explanation details"
-                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white h-24 font-mono resize-none"
-              />
-              <button
-                type="submit"
-                className="w-full py-2 bg-brandSecondary hover:bg-brandSecondary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors"
-              >
-                Execute Bulk Import
-              </button>
-            </form>
-          </div>
+              <hr className="border-white/10" />
+
+              {/* CSV Import */}
+              <form onSubmit={handleCsvImport} className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-brandPrimary" />
+                  <h3 className="text-xs font-bold uppercase text-white tracking-wider">CSV/Excel Copy-paste importer</h3>
+                </div>
+                <p className="text-[10px] text-white/40">
+                  Paste comma-separated rows. Format: <br />
+                  <code className="text-brandSecondary">text,type,options_with_correct_tag,marks,negative,difficulty,explanation</code>
+                </p>
+                <textarea
+                  value={csvContent}
+                  onChange={(e) => setCsvContent(e.target.value)}
+                  placeholder="text,type,options,marks,negativeMarks,difficulty,explanation&#10;What is React?,Single Choice,Library (Correct); Framework,2,0.5,Easy,Explanation details"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white h-24 font-mono resize-none"
+                />
+                <div className="mt-8 pt-4 border-t border-white/5">
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-brandSecondary hover:bg-brandSecondary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    Execute Bulk Import
+                  </button>
+                </div>
+              </form>
+            </div>
+          </RightDrawer>
         </div>
       )}
     </div>

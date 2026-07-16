@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { loadCurrentUserRequest, logoutRequest } from './store/authSlice';
 import { ThemeProvider } from './context/ThemeContext';
+import { AlertProvider } from './context/AlertContext';
 import { AdminDashboardLayout } from './layouts/AdminDashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PermissionGuard } from './components/PermissionGuard';
@@ -16,6 +17,10 @@ import { QuizBuilder } from './pages/QuizBuilder';
 import { StageManagement } from './pages/StageManagement';
 import { UsersDirectory } from './pages/UsersDirectory';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { CategoryManagement } from './pages/CategoryManagement';
+import { ContestDetails } from './pages/ContestDetails';
+import { StageBuilder } from './pages/StageBuilder';
+
 
 const AppContent = () => {
   const dispatch = useDispatch();
@@ -39,8 +44,8 @@ const AppContent = () => {
 
   // Sync activeView with the route path
   useEffect(() => {
-    const path = location.pathname.split('/').pop();
-    const validViews = ['dashboard', 'users', 'contests', 'categories', 'stages', 'analytics', 'settings', 'profile', 'notifications'];
+    const path = location.pathname.split('/')[2];
+    const validViews = ['dashboard', 'users', 'contests', 'categories', 'quiz-builder', 'stages', 'analytics', 'settings', 'notifications'];
     if (validViews.includes(path)) {
       setActiveView(path);
     }
@@ -78,7 +83,7 @@ const AppContent = () => {
       <Route path="/" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
       <Route path="/admin-dashboard" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
       
-      <Route path="/admin-dashboard/:view" element={
+      <Route path="/admin-dashboard/*" element={
         <ProtectedRoute>
           <AdminDashboardLayout
             activeView={activeView}
@@ -86,46 +91,20 @@ const AppContent = () => {
             selectedRole={selectedRole}
             setSelectedRole={setSelectedRole}
           >
-            {/* View router condition */}
-            {activeView === 'dashboard' && (
-              <DashboardHome onViewChange={(view) => navigate(`/admin-dashboard/${view}`)} selectedRole={selectedRole} />
-            )}
-            
-            {activeView === 'analytics' && (
-              <PermissionGuard requiredRole="Super Admin">
-                <AnalyticsPage />
-              </PermissionGuard>
-            )}
-            
-            {activeView === 'settings' && (
-              <SettingsPage />
-            )}
-            
-            {activeView === 'profile' && (
-              <SettingsPage />
-            )}
-            
-            {activeView === 'users' && (
-              <UsersDirectory />
-            )}
-            
-            {activeView === 'contests' && (
-              <ContestManagement />
-            )}
-            
-            {activeView === 'stages' && (
-              <StageManagement />
-            )}
-            
-            {activeView === 'categories' && (
-              <PermissionGuard requiredRole="Super Admin">
-                <QuizBuilder />
-              </PermissionGuard>
-            )}
-            
-            {activeView === 'notifications' && (
-              <NotificationsPage />
-            )}
+            <Routes>
+              <Route path="dashboard" element={<DashboardHome onViewChange={(view) => navigate(`/admin-dashboard/${view}`)} selectedRole={selectedRole} />} />
+              <Route path="analytics" element={<PermissionGuard requiredRole="Super Admin"><AnalyticsPage /></PermissionGuard>} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="users" element={<UsersDirectory />} />
+              <Route path="contests" element={<ContestManagement />} />
+              <Route path="contests/:contestId" element={<ContestDetails />} />
+              <Route path="contests/:contestId/stages/:stageId" element={<StageBuilder />} />
+              <Route path="stages" element={<StageManagement />} />
+              <Route path="categories" element={<PermissionGuard requiredRole="Super Admin"><CategoryManagement /></PermissionGuard>} />
+              <Route path="quiz-builder" element={<PermissionGuard requiredRole="Super Admin"><QuizBuilder /></PermissionGuard>} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="*" element={<Navigate to="dashboard" replace />} />
+            </Routes>
           </AdminDashboardLayout>
         </ProtectedRoute>
       } />
@@ -138,7 +117,9 @@ const AppContent = () => {
 
 export const App = () => (
   <ThemeProvider>
-    <AppContent />
+    <AlertProvider>
+      <AppContent />
+    </AlertProvider>
   </ThemeProvider>
 );
 

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { forgotPasswordRequest, resetPasswordRequest } from '../store/authSlice';
-import { Shield, KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { HakaLogo } from '../components/HakaLogo';
+import { motion } from 'framer-motion';
 
 export const ForgotPassword = ({ onBackToLogin }) => {
   const dispatch = useDispatch();
@@ -62,37 +63,34 @@ export const ForgotPassword = ({ onBackToLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b12] text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="absolute top-[-10%] right-[-10%] w-[350px] h-[350px] rounded-full bg-purple-600/10 blur-[80px] pointer-events-none"></div>
+    <div className="min-h-screen bg-[#F7F8FA] dark:bg-[#080b12] text-slate-800 dark:text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300">
+      <div className="absolute top-[-10%] right-[-10%] w-[350px] h-[350px] rounded-full bg-brandPrimary/5 blur-[80px] pointer-events-none"></div>
 
       <div className="max-w-md w-full mx-auto z-10 space-y-8">
-        <div className="flex justify-center items-center gap-2.5">
-          <HakaLogo size={40} showText={false} showTagline={false} className="w-10 h-10" />
-          <span className="font-poppins font-extrabold text-2xl tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent uppercase font-extrabold">
-            Haka
-          </span>
+        <div className="flex justify-center items-center gap-2">
+          <HakaLogo variant="horizontal" size={110} />
         </div>
 
-        <div className="glassmorphism p-8 rounded-2xl border border-white/10 shadow-2xl relative">
+        <div className="glassmorphism p-8 rounded-[24px] border border-slate-200/50 dark:border-white/10 shadow-premium relative bg-white/80 dark:bg-slate-900/40">
           {error && (
-            <div className="mb-6 p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
+            <div className="mb-6 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-450 rounded-xl text-xs font-semibold">
               {error}
             </div>
           )}
 
           {step === 1 && (
             <form onSubmit={handleSendOtp} className="space-y-6">
-              <div>
-                <h3 className="text-xl font-bold font-poppins mb-1">Forgot Password?</h3>
-                <p className="text-xs text-white/50">Enter your registered email address to receive a recovery OTP.</p>
+              <div className="text-left">
+                <h3 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Forgot Password?</h3>
+                <p className="text-xs text-slate-450 dark:text-white/40 mt-1 font-medium leading-relaxed">Enter your registered email address to receive a recovery OTP.</p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+              <div className="space-y-1.5 text-left">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
                   Email Address
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-white/30">
                     <Mail className="w-4 h-4" />
                   </div>
                   <input
@@ -101,7 +99,7 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@domain.com"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs transition-all"
                   />
                 </div>
               </div>
@@ -109,9 +107,9 @@ export const ForgotPassword = ({ onBackToLogin }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white text-sm font-semibold transition-all flex justify-center items-center gap-2"
+                className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98] flex justify-center items-center gap-1.5"
               >
-                <span>{loading ? 'Sending...' : 'Send Recovery OTP'}</span>
+                <span>{loading ? 'Sending OTP...' : 'Send Recovery OTP'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -119,17 +117,17 @@ export const ForgotPassword = ({ onBackToLogin }) => {
 
           {step === 2 && (
             <form onSubmit={handleVerifyOtp} className="space-y-6">
-              <div>
-                <h3 className="text-xl font-bold font-poppins mb-1">Verify Code</h3>
-                <p className="text-xs text-white/50">Enter the recovery code sent to {email}.</p>
+              <div className="text-left">
+                <h3 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Verify Reset OTP</h3>
+                <p className="text-xs text-slate-450 dark:text-white/40 mt-1 font-medium leading-relaxed">Please input the OTP sent to <span className="font-semibold text-brandPrimary dark:text-brandSecondary">{email}</span>.</p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-                  Verification OTP
+              <div className="space-y-1.5 text-left">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
+                  Verification Code
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-white/30">
                     <KeyRound className="w-4 h-4" />
                   </div>
                   <input
@@ -138,114 +136,111 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                     maxLength={6}
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
-                    placeholder="6-digit code"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm tracking-widest text-center font-bold"
+                    placeholder="6-digit reset OTP"
+                    className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs tracking-widest text-center font-extrabold"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-all flex justify-center items-center gap-2"
+                className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98]"
               >
-                <span>Verify OTP Code</span>
-                <ArrowRight className="w-4 h-4" />
+                Verify Reset Code
               </button>
             </form>
           )}
 
           {step === 3 && (
             <form onSubmit={handleResetPasswordSubmit} className="space-y-6">
-              <div>
-                <h3 className="text-xl font-bold font-poppins mb-1">Reset Password</h3>
-                <p className="text-xs text-white/50">Declare a secure new password for your platform profile.</p>
+              <div className="text-left">
+                <h3 className="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Set New Password</h3>
+                <p className="text-xs text-slate-450 dark:text-white/40 mt-1 font-medium leading-relaxed">Establish a secure credentials password to login.</p>
               </div>
 
-               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-                  New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
-                    <Lock className="w-4 h-4" />
+              <div className="space-y-4">
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
+                    New Security Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-white/30">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs transition-all"
+                    />
                   </div>
-                  <input
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder="••••••••"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm"
-                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
-                    <Lock className="w-4 h-4" />
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-white/30">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs transition-all"
+                    />
                   </div>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder="••••••••"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm"
-                  />
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white text-sm font-semibold transition-all flex justify-center items-center gap-2"
+                className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98]"
               >
-                <span>{loading ? 'Updating...' : 'Save New Password'}</span>
-                <ArrowRight className="w-4 h-4" />
+                {loading ? 'Updating Password...' : 'Save New Password'}
               </button>
             </form>
           )}
 
           {step === 4 && (
-            <div className="text-center py-6 space-y-6">
-              <div className="inline-flex p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full">
-                <CheckCircle className="w-10 h-10 animate-bounce" />
+            <div className="text-center space-y-5 py-4">
+              <div className="inline-flex p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500 animate-bounce">
+                <CheckCircle className="w-8 h-8" />
               </div>
               <div>
-                <h4 className="text-lg font-bold">Password Reset Successful!</h4>
-                <p className="text-xs text-white/50 mt-1">Your credentials are updated. Active device logins have been revoked.</p>
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-white leading-tight">Credentials Reset Complete</h3>
+                <p className="text-xs text-slate-450 dark:text-white/40 mt-2 leading-relaxed font-semibold">Your password has been securely updated in the database. You can now login with your new credentials.</p>
               </div>
               <button
-                type="button"
                 onClick={onBackToLogin}
-                className="px-6 py-2.5 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl text-xs font-semibold transition-colors w-full"
+                className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98]"
               >
-                Go Back to Sign In
+                Sign In Now
+              </button>
+            </div>
+          )}
+
+          {step !== 4 && (
+            <div className="mt-6 pt-4 border-t border-slate-200/60 dark:border-white/5 text-center">
+              <button
+                onClick={onBackToLogin}
+                className="inline-flex items-center gap-1.5 text-xs text-slate-505 dark:text-white/50 hover:text-brandPrimary dark:hover:text-white font-bold"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to Login screen</span>
               </button>
             </div>
           )}
         </div>
-
-        {step < 4 && (
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={onBackToLogin}
-              className="text-xs text-white/40 hover:text-white/60 font-semibold flex items-center gap-1.5 mx-auto"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Cancel and return to Login</span>
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
 };
+
 export default ForgotPassword;

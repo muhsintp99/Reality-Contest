@@ -1,8 +1,35 @@
 import { User } from '../models/User';
+import { Category } from '../models/Category';
 import { logger } from '../core/logger';
 
 export async function seedDatabase() {
   try {
+    // 1. Seed Categories
+    const defaultCategories = [
+      { title: 'Knowledge', icon: 'Brain', description: 'Quizzes, tech trivia, cognitive tests, and subject expertise challenge arenas.' },
+      { title: 'Arts', icon: 'Palette', description: 'Creative expression, drawing, painting, craftsmanship, and performance arts.' },
+      { title: 'Content Creation', icon: 'Video', description: 'Vlogging, cinematography, video editing, storytelling, and digital influence.' },
+      { title: 'Entrepreneurship', icon: 'Briefcase', description: 'Startup pitches, SaaS models, business strategy, and venture modeling.' },
+      { title: 'Sports', icon: 'Trophy', description: 'Athletics, e-sports gaming, physical fitness milestones, and sports analysis.' },
+      { title: 'Science', icon: 'Atom', description: 'Scientific experiments, academic research, innovation prototypes, and tech builds.' },
+      { title: 'Social Impact', icon: 'Heart', description: 'Eco campaigns, social volunteering, community development, and charity drives.' }
+    ];
+
+    for (const cat of defaultCategories) {
+      const exists = await Category.findOne({ title: cat.title });
+      if (!exists) {
+        // Generate a basic slug
+        const slug = cat.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
+        await Category.create({
+          ...cat,
+          slug,
+          status: 'Active'
+        });
+        logger.info(`Seeded default category: ${cat.title}`);
+      }
+    }
+
+    // 2. Seed Users
     const roles: Array<{
       name: string;
       username: string;
@@ -37,3 +64,4 @@ export async function seedDatabase() {
   }
 }
 export default seedDatabase;
+

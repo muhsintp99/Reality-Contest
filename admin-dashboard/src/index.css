@@ -114,3 +114,154 @@
 .light ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.15);
 }
+
+/* Luxury SaaS Typography & Card Utilities */
+.font-outfit {
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+
+.font-jakarta {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+}
+
+.luxury-card {
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.light .luxury-card {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+}
+
+.luxury-card-premium {
+  border-radius: 28px;
+  background: radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%), rgba(11, 17, 32, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.3);
+}
+
+.light .luxury-card-premium {
+  background: radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%), rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.04);
+}
+
+.luxury-text-gradient-green {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.luxury-text-gradient-purple {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes slow-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-slow-rotate {
+  animation: slow-rotate 20s linear infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+/* Premium Custom Select Dropdowns styling */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394A3B8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25rem;
+  padding-right: 2.5rem !important;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+select:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+select:focus {
+  border-color: rgba(124, 58, 237, 0.8);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
+
+.light select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+}
+
+/* Fix option tag dropdown list visibility issues & add premium styling */
+select option {
+  background-color: #ffffff;
+  color: #1e293b;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px;
+}
+
+.dark select option {
+  background-color: #111827; /* darkCard */
+  color: #f8fafc;
+}
+
+/* Custom styles for select option hover and checked states */
+select option:hover,
+select option:focus,
+select option:active,
+select option:checked {
+  background-color: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+.dark select option:hover,
+.dark select option:focus,
+.dark select option:active,
+.dark select option:checked {
+  background-color: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+

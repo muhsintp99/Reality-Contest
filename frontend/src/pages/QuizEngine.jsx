@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, Clock, Play, Check, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { ShieldAlert, Clock, Check, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Badge } from '../components/common/Badges';
 
 export const QuizEngine = ({ stage, onBack }) => {
   const containerRef = useRef(null);
@@ -32,7 +34,7 @@ export const QuizEngine = ({ stage, onBack }) => {
         setQuestions(res.data.questions || []);
         setTimeLeft(res.data.timeLimit || stage.timeLimit || 300);
         
-        // Restore from local storage if available
+        // Restore cached answers
         const cached = localStorage.getItem(`quiz_answers_${stage._id}`);
         if (cached) {
           setAnswers(JSON.parse(cached));
@@ -64,7 +66,7 @@ export const QuizEngine = ({ stage, onBack }) => {
     return () => clearInterval(timer);
   }, [timeLeft, isSubmitted]);
 
-  // Auto-Save locally every 5 seconds
+  // Auto-Save locally
   useEffect(() => {
     if (Object.keys(answers).length > 0 && !isSubmitted) {
       localStorage.setItem(`quiz_answers_${stage._id}`, JSON.stringify(answers));
@@ -78,7 +80,7 @@ export const QuizEngine = ({ stage, onBack }) => {
       setIsFullscreen(active);
       if (!active && !isSubmitted) {
         setFullscreenExits(prev => prev + 1);
-        triggerLogAlert('Fullscreen exited. Please return to fullscreen mode.');
+        triggerLogAlert('Fullscreen mode exited by user.');
       }
     };
 
@@ -86,12 +88,12 @@ export const QuizEngine = ({ stage, onBack }) => {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, [isSubmitted]);
 
-  // Tab Switch / Visibility Change detection
+  // Tab Switch detection
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden && !isSubmitted) {
         setTabSwitches(prev => prev + 1);
-        triggerLogAlert('Tab switch detected. Flagged for review.');
+        triggerLogAlert('Tab switch / background navigation detected.');
       }
     };
 
@@ -99,7 +101,7 @@ export const QuizEngine = ({ stage, onBack }) => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isSubmitted]);
 
-  // Prevent Refresh / Exit alert
+  // Prevent Exit alert
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (!isSubmitted) {
@@ -147,7 +149,6 @@ export const QuizEngine = ({ stage, onBack }) => {
     setIsSubmitted(true);
     localStorage.removeItem(`quiz_answers_${stage._id}`);
 
-    // Exit fullscreen
     if (document.fullscreenElement) {
       document.exitFullscreen();
     }
@@ -184,22 +185,22 @@ export const QuizEngine = ({ stage, onBack }) => {
 
   if (isSubmitted && result) {
     return (
-      <div className="py-16 text-center space-y-6 animate-scale-in text-white">
-        <div className="inline-flex p-5 bg-emerald-500/10 border border-emerald-500/25 rounded-full text-emerald-400">
+      <div className="py-20 text-center space-y-6 max-w-md mx-auto animate-scale-in text-slate-800 dark:text-white pb-10">
+        <div className="inline-flex p-5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-500">
           <Check className="w-10 h-10 animate-bounce" />
         </div>
-        <div className="max-w-md mx-auto space-y-4">
-          <h3 className="text-xl font-extrabold font-poppins">Lobby Assessment Complete</h3>
-          <p className="text-xs text-white/50">{result.remarks}</p>
+        <div className="space-y-4">
+          <h3 className="text-xl font-extrabold font-sans">Lobby Assessment Complete</h3>
+          <p className="text-xs text-slate-500 dark:text-white/50">{result.remarks}</p>
 
-          <div className="glassmorphism p-5 rounded-2xl border border-white/10 grid grid-cols-2 gap-4 text-left">
+          <div className="glassmorphism p-5 rounded-[24px] border border-slate-200/50 dark:border-white/5 grid grid-cols-2 gap-4 text-left bg-white/70 dark:bg-slate-900/40">
             <div>
-              <span className="text-[10px] text-white/40 uppercase block">Obtained Score</span>
-              <span className="text-xl font-extrabold font-mono text-brandPrimary">{result.score} / {result.maxScore}</span>
+              <span className="text-[10px] text-slate-400 dark:text-white/35 uppercase block">Obtained Score</span>
+              <span className="text-xl font-extrabold font-mono text-brandPrimary dark:text-brandSecondary">{result.score} / {result.maxScore}</span>
             </div>
             <div>
-              <span className="text-[10px] text-white/40 uppercase block">Verdict Status</span>
-              <span className={`text-sm font-bold uppercase ${result.passed ? 'text-emerald-400' : 'text-red-400'}`}>
+              <span className="text-[10px] text-slate-400 dark:text-white/35 uppercase block">Verdict Status</span>
+              <span className={`text-sm font-extrabold uppercase ${result.passed ? 'text-emerald-500' : 'text-rose-500'}`}>
                 {result.status}
               </span>
             </div>
@@ -208,7 +209,7 @@ export const QuizEngine = ({ stage, onBack }) => {
           <div className="pt-4 flex gap-3">
             <button
               onClick={onBack}
-              className="flex-1 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-lg"
+              className="flex-1 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all active:scale-[0.98] shadow-sm"
             >
               Return to Tournament Hub
             </button>
@@ -218,21 +219,23 @@ export const QuizEngine = ({ stage, onBack }) => {
     );
   }
 
-  // Require Fullscreen Cover
+  // Enforced Fullscreen View
   if (!isFullscreen) {
     return (
-      <div className="fixed inset-0 bg-[#080b12] z-50 flex items-center justify-center p-6 text-white text-center">
-        <div className="max-w-sm space-y-5">
-          <div className="inline-flex p-4 bg-brandSecondary/15 border border-brandSecondary/25 rounded-full text-brandSecondary animate-pulse">
+      <div className="fixed inset-0 bg-slate-50 dark:bg-[#080b12] z-50 flex items-center justify-center p-6 text-slate-800 dark:text-white text-center">
+        <div className="max-w-sm space-y-5 glassmorphism bg-white dark:bg-slate-900/50 p-8 rounded-[24px] border border-slate-200/60 dark:border-white/10 shadow-2xl">
+          <div className="inline-flex p-4 bg-brandSecondary/10 border border-brandSecondary/20 rounded-full text-brandSecondary animate-pulse">
             <ShieldAlert className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-base font-bold font-poppins">Fullscreen Mode Enforcement</h3>
-            <p className="text-xs text-white/45 mt-1.5">This stage requires locked full-screen mode to prevent copy cheating, screen shares, and resource checks.</p>
+            <h3 className="text-base font-extrabold font-sans">Fullscreen Mode Enforced</h3>
+            <p className="text-xs text-slate-500 dark:text-white/45 mt-2.5 leading-relaxed">
+              This stage requires locked full-screen mode to prevent copy-pasting, screen shares, and resource checks.
+            </p>
           </div>
           <button
             onClick={toggleFullscreen}
-            className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold shadow-lg transition-colors flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
             <Maximize2 className="w-4 h-4" />
             <span>Enter Fullscreen Lobbies</span>
@@ -248,31 +251,31 @@ export const QuizEngine = ({ stage, onBack }) => {
     <div
       ref={containerRef}
       onCopy={(e) => e.preventDefault()}
-      className="select-none min-h-screen bg-[#080b12] text-white p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 select-none"
+      className="select-none min-h-screen bg-slate-50 dark:bg-[#080b12] text-slate-800 dark:text-white p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 select-none"
       style={{ userSelect: 'none' }}
     >
       {/* Quiz Engine Main Frame */}
       <div className="lg:col-span-8 flex flex-col justify-between space-y-6">
         
         {/* Header Console */}
-        <div className="flex justify-between items-center bg-white/5 border border-white/5 p-4 rounded-xl">
+        <div className="flex justify-between items-center glassmorphism bg-white dark:bg-slate-900/40 border border-slate-200/50 dark:border-white/5 p-4 rounded-2xl shadow-sm">
           <div>
-            <h4 className="text-xs font-bold text-white">{stage.name}</h4>
-            <span className="text-[10px] text-white/40">Question {currentIdx + 1} of {questions.length}</span>
+            <h4 className="text-xs font-bold text-slate-850 dark:text-white">{stage.name}</h4>
+            <span className="text-[10px] text-slate-400 dark:text-white/40">Question {currentIdx + 1} of {questions.length}</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-brandSecondary/15 border border-brandSecondary/25 text-brandSecondary rounded-lg text-xs font-mono font-extrabold">
-            <Clock className="w-4 h-4 animate-pulse" />
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-brandSecondary/10 border border-brandSecondary/20 text-brandSecondary rounded-xl text-xs font-mono font-extrabold">
+            <Clock className="w-3.5 h-3.5 animate-pulse" />
             <span>{formatTime(timeLeft)}</span>
           </div>
         </div>
 
         {/* Question Board */}
         {activeQ && (
-          <div className="bg-white/5 border border-white/5 p-6 rounded-2xl space-y-6 flex-1 flex flex-col justify-center">
-            <h3 className="text-sm font-bold leading-relaxed">{activeQ.text}</h3>
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200/50 dark:border-white/5 p-6 rounded-[24px] space-y-6 flex-1 flex flex-col justify-center shadow-sm">
+            <h3 className="text-sm font-extrabold leading-relaxed text-slate-800 dark:text-white">{activeQ.text}</h3>
             
             {activeQ.mediaUrl && (
-              <img src={activeQ.mediaUrl} alt="Question Graphic" className="max-h-48 rounded-xl object-contain" />
+              <img src={activeQ.mediaUrl} alt="Question Graphic" className="max-h-48 rounded-xl object-contain border border-slate-100" />
             )}
 
             <div className="space-y-3">
@@ -287,13 +290,13 @@ export const QuizEngine = ({ stage, onBack }) => {
                   <div
                     key={oIdx}
                     onClick={() => handleSelectOption(activeQ._id, oIdx, isMulti)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center gap-3 ${
+                    className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center gap-3 select-none ${
                       selected 
-                        ? 'bg-brandPrimary/10 border-brandPrimary text-white font-bold' 
-                        : 'bg-black/25 border-white/5 text-white/70 hover:bg-white/5'
+                        ? 'bg-brandPrimary/10 border-brandPrimary text-brandPrimary font-bold' 
+                        : 'bg-white dark:bg-slate-800/10 border-slate-200/50 dark:border-white/5 text-slate-650 dark:text-white/70 hover:bg-slate-50 dark:hover:bg-white/5'
                     }`}
                   >
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center text-[8px] ${selected ? 'border-brandPrimary bg-brandPrimary text-white' : 'border-white/20'}`}>
+                    <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center text-[9px] font-bold ${selected ? 'border-brandPrimary bg-brandPrimary text-white' : 'border-slate-200 dark:border-white/20'}`}>
                       {selected && '✓'}
                     </div>
                     <span className="text-xs">{opt.text}</span>
@@ -305,11 +308,11 @@ export const QuizEngine = ({ stage, onBack }) => {
         )}
 
         {/* Bottom Navigator */}
-        <div className="flex justify-between items-center border-t border-white/5 pt-4">
+        <div className="flex justify-between items-center border-t border-slate-200/60 dark:border-white/5 pt-4">
           <button
             onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
             disabled={currentIdx === 0}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-30 border border-white/10 rounded-xl text-xs flex items-center gap-1.5"
+            className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 disabled:opacity-30 border border-slate-200 dark:border-white/10 rounded-xl text-xs flex items-center gap-1.5 font-bold transition-all"
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Prev</span>
@@ -318,14 +321,14 @@ export const QuizEngine = ({ stage, onBack }) => {
           {currentIdx === questions.length - 1 ? (
             <button
               onClick={handleSubmit}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg"
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md active:scale-[0.98] transition-all"
             >
               Submit Quiz
             </button>
           ) : (
             <button
               onClick={() => setCurrentIdx(prev => Math.min(questions.length - 1, prev + 1))}
-              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs flex items-center gap-1.5"
+              className="px-4 py-2 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-xs flex items-center gap-1.5 font-bold transition-all"
             >
               <span>Next</span>
               <ChevronRight className="w-4 h-4" />
@@ -336,29 +339,29 @@ export const QuizEngine = ({ stage, onBack }) => {
       </div>
 
       {/* Telemetry log Side panel */}
-      <div className="lg:col-span-4 glassmorphism p-5 rounded-2xl border border-white/10 flex flex-col justify-between h-[calc(100vh-3rem)]">
+      <div className="lg:col-span-4 glassmorphism bg-white dark:bg-slate-900/40 p-5 rounded-[24px] border border-slate-200/50 dark:border-white/5 flex flex-col justify-between h-[calc(100vh-3rem)] shadow-sm">
         <div>
           <h4 className="text-xs font-bold uppercase text-brandSecondary tracking-wider mb-2 flex items-center gap-1.5">
-            <ShieldAlert className="w-4 h-4 animate-pulse" />
+            <ShieldAlert className="w-4 h-4 text-brandSecondary animate-pulse" />
             <span>Security Anti-Cheat Logs</span>
           </h4>
-          <p className="text-[10px] text-white/40 mb-4">Integrity checks are logged in real-time. Flagged events persist to evaluations.</p>
+          <p className="text-[10px] text-slate-400 dark:text-white/35 mb-4 font-medium">Integrity checks are logged in real-time. Flagged events persist to evaluations.</p>
           
           <div className="space-y-3.5 mb-4">
             <div className="flex justify-between items-center text-xs">
-              <span className="text-white/60">Tab Switches:</span>
-              <span className={`font-mono font-bold ${tabSwitches > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{tabSwitches}</span>
+              <span className="text-slate-500 dark:text-white/60 font-semibold">Tab Switches:</span>
+              <span className={`font-mono font-extrabold ${tabSwitches > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{tabSwitches}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-white/60">Fullscreen Exits:</span>
-              <span className={`font-mono font-bold ${fullscreenExits > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{fullscreenExits}</span>
+              <span className="text-slate-500 dark:text-white/60 font-semibold">Fullscreen Exits:</span>
+              <span className={`font-mono font-extrabold ${fullscreenExits > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{fullscreenExits}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-black/50 border border-white/5 rounded-xl p-3 flex-1 overflow-y-auto max-h-[300px] font-mono text-[9px] text-brandSecondary space-y-1.5">
+        <div className="bg-slate-50 dark:bg-black/40 border border-slate-200/50 dark:border-white/5 rounded-2xl p-4 flex-1 overflow-y-auto max-h-[300px] font-mono text-[9px] text-brandPrimary dark:text-brandSecondary space-y-1.5">
           {logs.length === 0 ? (
-            <div className="text-white/30 text-center py-8">Integrity daemon running...</div>
+            <div className="text-slate-400 dark:text-white/20 text-center py-8 font-semibold">Integrity daemon running...</div>
           ) : (
             logs.map((l, i) => <div key={i}>{l}</div>)
           )}
@@ -366,7 +369,7 @@ export const QuizEngine = ({ stage, onBack }) => {
 
         <button
           onClick={onBack}
-          className="mt-4 w-full py-2 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition-all"
+          className="mt-4 w-full py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-450 hover:bg-rose-500 hover:text-white rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
         >
           Forfeit Attempt
         </button>
@@ -375,4 +378,5 @@ export const QuizEngine = ({ stage, onBack }) => {
     </div>
   );
 };
+
 export default QuizEngine;

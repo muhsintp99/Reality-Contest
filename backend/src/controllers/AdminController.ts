@@ -46,6 +46,7 @@ export class AdminController {
         role, 
         _id: { $ne: loggedInUserId } 
       }).select('-password');
+      console.log(`[AdminController] listUsersByRole called with role: "${role}". Found ${users.length} users. Sample roles:`, users.slice(0,2).map(u => u.role));
       
       res.status(200).json({ success: true, users });
     } catch (err) {

@@ -52,8 +52,16 @@ export const Login = ({ onForgotClick, onLoginSuccess }) => {
 
           <form onSubmit={handleSubmit} className="w-full space-y-6">
             {error && (
-              <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold text-left">
-                {error}
+              <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold text-left flex flex-col gap-2 w-full">
+                <span>{error}</span>
+                {error.includes('not authorized to access the Admin Dashboard') && (
+                  <a
+                    href="http://localhost:10001"
+                    className="inline-flex items-center justify-center py-2 px-3 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-lg text-[10px] font-bold mt-1.5 transition-all text-center w-full"
+                  >
+                    Go to Main Website
+                  </a>
+                )}
               </div>
             )}
 
@@ -71,6 +79,7 @@ export const Login = ({ onForgotClick, onLoginSuccess }) => {
                   required
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
+                  autoComplete="username"
                   placeholder="name@domain.com or +91..."
                   className="block w-full pl-10 pr-4 py-3 bg-[#0c1322] border border-white/10 rounded-xl text-white placeholder-white/20 text-xs focus:outline-none focus:border-brandPrimary/65 transition-colors"
                 />
@@ -100,6 +109,7 @@ export const Login = ({ onForgotClick, onLoginSuccess }) => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   placeholder="••••••••"
                   className="block w-full pl-10 pr-12 py-3 bg-[#0c1322] border border-white/10 rounded-xl text-white placeholder-white/20 text-xs focus:outline-none focus:border-brandPrimary/65 transition-colors"
                 />

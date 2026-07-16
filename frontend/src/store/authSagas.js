@@ -41,7 +41,7 @@ function* handleLogin(action) {
     const user = response.data.user;
 
     if (['Admin', 'Super Admin'].includes(user.role)) {
-      yield put(loginFailure('Access Denied: Administrative accounts can only log in from the Admin Portal (Port 10002).'));
+      yield put(loginFailure('This account is only allowed to access the Admin Dashboard.'));
       if (callback) callback(false);
       try {
         yield call(api.post, '/auth/logout');
@@ -256,7 +256,18 @@ function* handleReviewKyc(action) {
 function* handleLoadCurrentUser() {
   try {
     const res = yield call(api.get, '/auth/me');
-    yield put(loadCurrentUserSuccess(res.data.user));
+    const user = res.data.user;
+    if (user && ['Admin', 'Super Admin'].includes(user.role)) {
+      yield put(loadCurrentUserFailure());
+      try {
+        yield call(api.post, '/auth/logout');
+      } catch (e) {}
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/login';
+      return;
+    }
+    yield put(loadCurrentUserSuccess(user));
   } catch (err) {
     yield put(loadCurrentUserFailure());
   }

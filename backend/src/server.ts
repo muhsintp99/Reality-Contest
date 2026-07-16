@@ -26,33 +26,11 @@ import { initSMSWorker } from './queues/SMSWorker';
 import { initKycWorker } from './queues/KycWorker';
 import { initWalletWorker } from './queues/WalletWorker';
 
-// Import Controllers
-import { authController } from './controllers/AuthController';
-import { userController } from './controllers/UserController';
-import { kycController } from './controllers/KycController';
-import { uploadController, upload } from './controllers/UploadController';
-import { contestController } from './controllers/ContestController';
-import { stageController } from './controllers/StageController';
-import { walletController } from './controllers/WalletController';
-import { questionController } from './controllers/QuestionController';
-import { adminController } from './controllers/AdminController';
-
 // Import Middlewares
-import { authenticate, authorize } from './middleware/AuthMiddleware';
-import { validateRequest } from './middleware/ValidationMiddleware';
 import { errorHandler } from './middleware/ErrorMiddleware';
 
-// Import Zod validation schemas
-import {
-  registerSchema,
-  loginSchema,
-  sendOtpSchema,
-  verifyOtpSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema
-} from './validators/AuthSchemas';
-import { updateProfileSchema, updateAvatarSchema, updatePasswordSchema } from './validators/UserSchemas';
-import { submitKycSchema, reviewKycSchema } from './validators/KycSchemas';
+// Import Router
+import { createApiRouter } from './routes';
 
 const isProduction = config.NODE_ENV === 'production';
 
@@ -102,7 +80,10 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
 
   app.use(
     cors({
-      origin: ['http://localhost:10001', 'http://127.0.0.1:10001'],
+      origin: [
+        'http://localhost:10001', 'http://127.0.0.1:10001',
+        'http://localhost:10002', 'http://127.0.0.1:10002'
+      ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization']
@@ -139,80 +120,8 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       message: { success: false, message: 'Too many requests. Please try again later.' }
     });
 
-  // Apply general API rate limiting to all standard APIs
-  app.use('/api/', generalApiLimiter);
-
-  // 1. Auth routes
-  app.post('/api/auth/register', authLimiter, validateRequest(registerSchema), authController.register);
-  app.post('/api/auth/login', authLimiter, validateRequest(loginSchema), authController.login);
-  app.post('/api/auth/logout', authController.logout);
-  app.post('/api/auth/refresh-token', authController.refreshToken);
-  app.post('/api/auth/send-otp', authLimiter, validateRequest(sendOtpSchema), authController.sendOtp);
-  app.post('/api/auth/verify-otp', authLimiter, validateRequest(verifyOtpSchema), authController.verifyOtp);
-  app.post('/api/auth/forgot-password', authLimiter, validateRequest(forgotPasswordSchema), authController.forgotPassword);
-  app.post('/api/auth/reset-password', authLimiter, validateRequest(resetPasswordSchema), authController.resetPassword);
-  app.post('/api/auth/oauth', authController.oauthLogin);
-  app.get('/api/auth/me', authenticate, authController.me);
-
-  // 2. User profile routes
-  app.get('/api/users/profile', authenticate, userController.getProfile);
-  app.put('/api/users/profile', authenticate, validateRequest(updateProfileSchema), userController.updateProfile);
-  app.put('/api/users/avatar', authenticate, validateRequest(updateAvatarSchema), userController.updateAvatar);
-  app.put('/api/users/password', authenticate, validateRequest(updatePasswordSchema), userController.updatePassword);
-  app.delete('/api/users/account', authenticate, userController.deleteAccount);
-
-  // Active Device sessions routes
-  app.get('/api/users/sessions', authenticate, userController.getActiveSessions);
-  app.delete('/api/users/sessions/all', authenticate, userController.logoutAllDevices);
-  app.delete('/api/users/sessions/:sessionId', authenticate, userController.revokeSession);
-
-  // 3. KYC routes
-  app.post('/api/kyc/upload', authenticate, validateRequest(submitKycSchema), kycController.submitKYC);
-  app.get('/api/kyc/status', authenticate, kycController.getKYCStatus);
-
-  // Admin review workflows
-  app.get('/api/kyc/pending', authenticate, authorize('Admin', 'Super Admin'), kycController.getPendingKYCs);
-  app.put('/api/kyc/review', authenticate, authorize('Admin', 'Super Admin'), validateRequest(reviewKycSchema), kycController.reviewKYC);
-
-
-
-  // 6. Reality Contest Platform routes
-
-  // Contest routes
-  app.post('/api/contests', authenticate, authorize('Admin', 'Super Admin'), contestController.createContest);
-  app.get('/api/contests', authenticate, contestController.listContests);
-  app.get('/api/contests/:id', authenticate, contestController.getContestDetail);
-  app.post('/api/contests/:id/join', authenticate, contestController.joinContest);
-
-  // Stage & Attempt routes
-  app.post('/api/groups/:groupId/stages', authenticate, authorize('Admin', 'Super Admin'), stageController.createStage);
-  app.get('/api/groups/:groupId/stages', authenticate, stageController.getStagesByGroup);
-  app.get('/api/stages/:id/unlock-status', authenticate, stageController.checkUnlockStatus);
-  app.post('/api/stages/:id/accept-rules', authenticate, stageController.acceptRules);
-  app.post('/api/stages/:id/start', authenticate, stageController.startAttempt);
-  app.post('/api/stages/:id/submit', authenticate, stageController.submitAttempt);
-  app.post('/api/upload', authenticate, upload.single('file'), uploadController.uploadFile);
-
-  // Wallet routes
-  app.post('/api/wallet/deposit', authenticate, walletController.deposit);
-  app.get('/api/wallet/transactions', authenticate, walletController.getTransactions);
-
-  // Question & Quiz Builder routes
-  app.post('/api/question-pools', authenticate, authorize('Super Admin'), questionController.createPool);
-  app.get('/api/question-pools', authenticate, authorize('Super Admin'), questionController.listPools);
-  app.post('/api/question-pools/:poolId/questions', authenticate, authorize('Super Admin'), questionController.addQuestion);
-  app.get('/api/question-pools/:poolId/questions', authenticate, questionController.listQuestions);
-  app.post('/api/question-pools/:poolId/import', authenticate, authorize('Super Admin'), questionController.importQuestions);
-
-  // Admin Audit & Overrides
-  app.get('/api/admin/audit-logs', authenticate, authorize('Super Admin'), adminController.getAuditLogs);
-  app.put('/api/admin/results/override', authenticate, authorize('Super Admin'), adminController.manualApproveQualification);
-  app.put('/api/admin/users/role', authenticate, authorize('Super Admin'), adminController.promoteUser);
-  app.get('/api/admin/users/:role', authenticate, authorize('Admin', 'Super Admin'), adminController.listUsersByRole);
-  app.post('/api/admin/users', authenticate, authorize('Admin', 'Super Admin'), adminController.createUser);
-  app.put('/api/admin/users/:id', authenticate, authorize('Admin', 'Super Admin'), adminController.updateUser);
-  app.delete('/api/admin/users/:id', authenticate, authorize('Admin', 'Super Admin'), adminController.deleteUser);
-  app.put('/api/admin/users/:id/status', authenticate, authorize('Admin', 'Super Admin'), adminController.toggleUserStatus);
+  // Apply general API rate limiting and mount standard API routes
+  app.use('/api', generalApiLimiter, createApiRouter(authLimiter));
 
   // 5. Health Check Endpoint
   app.get('/health', (req, res) => {

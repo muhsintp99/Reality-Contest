@@ -16,7 +16,17 @@ export class ContestService {
     if (!data.title || !data.startDate || !data.endDate) {
       throw new BadRequestError('Title, start date, and end date are required.');
     }
-    return this.contestRepo.create(data);
+    const contest = await this.contestRepo.create(data);
+    
+    // Auto-create a default group for this contest to hold stages
+    await this.groupRepo.create({
+      contestId: contest._id,
+      name: 'Default Group',
+      maxParticipants: data.maxParticipants || 0,
+      participants: []
+    });
+
+    return contest;
   }
 
   async getContestById(id: string): Promise<IContest> {

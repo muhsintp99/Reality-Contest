@@ -4,7 +4,7 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('rcp_theme') || 'dark'; // default to dark as requested
+    return localStorage.getItem('rcp_theme') || 'light'; // default to light for SaaS dashboard
   });
 
   useEffect(() => {

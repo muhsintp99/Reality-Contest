@@ -7,7 +7,6 @@ import { Sidebar } from './components/sidebar/Sidebar';
 import { Navbar } from './components/navbar/Navbar';
 import { DashboardHome } from './pages/DashboardHome';
 import { SettingsPage } from './pages/SettingsPage';
-import { KycVerification } from './pages/KycVerification';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { ForgotPassword } from './pages/ForgotPassword';
@@ -15,7 +14,7 @@ import { ParticipantContestPortal } from './pages/ParticipantContestPortal';
 import { WalletDashboard } from './pages/WalletDashboard';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { RewardsBadgeCenter } from './pages/RewardsBadgeCenter';
-import { ShieldAlert, Layers } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 const AccessDeniedView = () => {
   const navigate = useNavigate();
@@ -49,13 +48,13 @@ const ProtectedMemberRoute = ({ allowedRoles, children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Auto-redirect administrative accounts to port 10002
+  // Auto-redirect administrative accounts to the dashboard port
   if (['Admin', 'Super Admin'].includes(user?.role)) {
     return (
       <div className="min-h-screen bg-[#080b12] text-white flex flex-col justify-center items-center p-6 text-center">
         <div className="max-w-md w-full glassmorphism p-8 rounded-2xl border border-white/10 space-y-6">
           <h3 className="text-xl font-bold font-poppins text-white">Redirecting to Admin Dashboard...</h3>
-          <p className="text-xs text-white/50">You are logged in as an administrator. Redirecting you to port 10002.</p>
+          <p className="text-xs text-white/50">You are logged in as an administrator. Redirecting you to the Admin Dashboard...</p>
         </div>
       </div>
     );
@@ -75,7 +74,7 @@ const AppContent = () => {
   const { isAuthenticated, user, isMockMode } = useSelector((state) => state.auth);
   const [activeView, setActiveView] = useState('dashboard');
   const [isOpenMobileMenu, setIsOpenMobileMenu] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('Contestant');
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     if (!isMockMode) {
@@ -83,16 +82,11 @@ const AppContent = () => {
     }
   }, [isMockMode, dispatch]);
 
-  useEffect(() => {
-    if (user?.role) {
-      setSelectedRole(user.role);
-    }
-  }, [user]);
-
   // Handle auto-redirection of Admin/Super Admin users
   useEffect(() => {
     if (isAuthenticated && user?.role && ['Admin', 'Super Admin'].includes(user.role)) {
-      window.location.href = window.location.protocol + '//' + window.location.hostname + ':10002';
+      const adminPort = String(Number(window.location.port || '10001') + 1);
+      window.location.href = window.location.protocol + '//' + window.location.hostname + ':' + adminPort;
     }
   }, [isAuthenticated, user]);
 
@@ -109,9 +103,11 @@ const AppContent = () => {
     dispatch(logoutRequest({ callback: () => navigate('/login') }));
   };
 
+  const userRole = user?.role || 'Contestant';
+
   if (isAuthenticated) {
     return (
-      <div className="flex min-h-screen bg-darkBg dark:bg-darkBg light:bg-lightBg text-white dark:text-white light:text-black transition-colors duration-300">
+      <div className="flex h-screen overflow-hidden bg-[#F7F8FA] dark:bg-[#0B1120] text-slate-800 dark:text-white transition-colors duration-305">
         
         {/* Sidebar Frame Navigation */}
         <Sidebar
@@ -119,7 +115,9 @@ const AppContent = () => {
           onLogout={handleLogout}
           isOpenMobile={isOpenMobileMenu}
           setIsOpenMobile={setIsOpenMobileMenu}
-          role={selectedRole}
+          role={userRole}
+          isCollapsed={isCollapsed}
+          setIsCollapsed={setIsCollapsed}
         />
 
         {/* Main Content frame */}
@@ -127,8 +125,8 @@ const AppContent = () => {
           <Navbar
             activeView={activeView}
             onOpenMobileMenu={() => setIsOpenMobileMenu(true)}
-            selectedRole={selectedRole}
-            setSelectedRole={setSelectedRole}
+            isCollapsed={isCollapsed}
+            setIsCollapsed={setIsCollapsed}
           />
 
           <main className="flex-1 p-6 overflow-y-auto aurora-bg">
@@ -136,7 +134,7 @@ const AppContent = () => {
               {/* Contestant Routes */}
               <Route path="/" element={
                 <ProtectedMemberRoute allowedRoles={['Contestant']}>
-                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} selectedRole={selectedRole} />
+                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
                 </ProtectedMemberRoute>
               } />
               
@@ -155,14 +153,14 @@ const AppContent = () => {
               {/* Judge Routes */}
               <Route path="/judge" element={
                 <ProtectedMemberRoute allowedRoles={['Judge']}>
-                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} selectedRole={selectedRole} />
+                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
                 </ProtectedMemberRoute>
               } />
 
               {/* Sponsor Routes */}
               <Route path="/sponsor" element={
                 <ProtectedMemberRoute allowedRoles={['Sponsor']}>
-                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} selectedRole={selectedRole} />
+                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
                 </ProtectedMemberRoute>
               } />
 
@@ -202,16 +200,7 @@ const AppContent = () => {
 
   // Not Authenticated Auth views
   return (
-    <div className="min-h-screen bg-[#080b12] text-white transition-colors duration-300">
-      {isMockMode && (
-        <div className="bg-purple-600/10 border-b border-purple-500/20 px-4 py-2 flex items-center justify-center gap-2 text-center text-xs font-semibold">
-          <ShieldAlert className="w-3.5 h-3.5 text-purple-400 shrink-0 animate-pulse" />
-          <span className="text-purple-300">
-            SANDBOX SIMULATION ACTIVE: Toggle roles using the selector bar in the portal.
-          </span>
-        </div>
-      )}
-
+    <div className="min-h-screen bg-[#F7F8FA] dark:bg-[#080b12] text-slate-800 dark:text-white transition-colors duration-300">
       <Routes>
         <Route path="/login" element={
           <Login
@@ -219,7 +208,8 @@ const AppContent = () => {
             onForgotClick={() => navigate('/forgot-password')}
             onLoginSuccess={() => {
               if (['Admin', 'Super Admin'].includes(user?.role)) {
-                window.location.href = window.location.protocol + '//' + window.location.hostname + ':10002';
+                const adminPort = String(Number(window.location.port || '10001') + 1);
+                window.location.href = window.location.protocol + '//' + window.location.hostname + ':' + adminPort;
               } else if (user?.role === 'Judge') {
                 navigate('/judge');
               } else if (user?.role === 'Sponsor') {

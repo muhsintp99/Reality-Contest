@@ -3,50 +3,11 @@ import React from 'react';
 export const HakaLogo = ({ variant = 'full', className = '', size = 120 }) => {
   // SVG paths for the H icon
   const iconSvg = (
-    <svg
-      viewBox="0 0 200 200"
-      className="w-full h-full"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        {/* Left leg: Purple to bright cyan gradient */}
-        <linearGradient id="hakaLeftGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8B5CF6" />
-          <stop offset="40%" stopColor="#3B82F6" />
-          <stop offset="100%" stopColor="#06B6D4" />
-        </linearGradient>
-        {/* Right leg: Spring green to purple gradient */}
-        <linearGradient id="hakaRightGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#10B981" />
-          <stop offset="100%" stopColor="#8B5CF6" />
-        </linearGradient>
-      </defs>
-      
-      {/* Left Leg Top Segment */}
-      <path
-        d="M57 93 C57 93 61 72 88 48 L88 102 L57 126 Z"
-        fill="url(#hakaLeftGrad)"
-      />
-      
-      {/* Left Leg Bottom Segment */}
-      <path
-        d="M57 126 L88 102 L88 152 C88 165 78 172 68 172 C58 172 57 165 57 152 Z"
-        fill="url(#hakaLeftGrad)"
-      />
-      
-      {/* Right Leg */}
-      <path
-        d="M112 68 C112 68 116 48 143 33 L143 108 C143 118 133 123 112 123 Z"
-        fill="url(#hakaRightGrad)"
-      />
-      
-      {/* Diagonal crossbar and wing */}
-      <path
-        d="M57 126 Q95 102 112 90 Q130 78 154 62 Q142 76 138 86 L112 105 Z"
-        fill="url(#hakaRightGrad)"
-      />
-    </svg>
+    <img
+      src="/haka_favicon.png"
+      className="w-full h-full object-contain"
+      alt="Haka"
+    />
   );
 
   // SVG paths for the HΛKΛ text

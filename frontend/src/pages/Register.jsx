@@ -202,21 +202,18 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b12] text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="absolute top-[-10%] left-[-15%] w-[400px] h-[400px] rounded-full bg-purple-600/10 blur-[80px] pointer-events-none"></div>
-      <div className="absolute bottom-[-15%] right-[-15%] w-[450px] h-[450px] rounded-full bg-cyan-600/10 blur-[90px] pointer-events-none"></div>
+    <div className="min-h-screen bg-[#F7F8FA] dark:bg-[#080b12] text-slate-800 dark:text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300">
+      <div className="absolute top-[-10%] left-[-15%] w-[400px] h-[400px] rounded-full bg-brandPrimary/5 blur-[80px] pointer-events-none"></div>
+      <div className="absolute bottom-[-15%] right-[-15%] w-[450px] h-[450px] rounded-full bg-brandSecondary/5 blur-[90px] pointer-events-none"></div>
 
       <div className="max-w-2xl w-full mx-auto z-10">
-        <div className="flex justify-center items-center gap-2.5 mb-8">
-          <HakaLogo size={40} showText={false} showTagline={false} className="w-10 h-10" />
-          <span className="font-poppins font-extrabold text-2xl tracking-tight bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent uppercase font-extrabold">
-            Haka
-          </span>
+        <div className="flex justify-center items-center gap-2 mb-8">
+          <HakaLogo variant="horizontal" size={110} />
         </div>
 
         {step < 5 && (
           <div className="mb-10 px-4">
-            <div className="flex items-center justify-between text-xs text-white/50 mb-3 font-semibold uppercase tracking-wider">
+            <div className="flex items-center justify-between text-xs text-slate-450 dark:text-white/50 mb-3 font-semibold uppercase tracking-wider">
               <span>Step {step} of 4</span>
               <span>
                 {step === 1 && 'Credentials & Basic Info'}
@@ -225,18 +222,18 @@ export const Register = ({ onLoginClick, onRegisterSuccess }) => {
                 {step === 4 && 'Communication Verification'}
               </span>
             </div>
-            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <div className="h-2 w-full bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden border border-slate-200/20 dark:border-white/5">
               <div
-                className="h-full bg-gradient-to-r from-purple-600 to-cyan-400 rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-gradient-to-r from-brandPrimary to-brandSecondary rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${(step / 4) * 100}%` }}
               ></div>
             </div>
           </div>
         )}
 
-        <div className="glassmorphism p-8 rounded-2xl border border-white/10 shadow-2xl relative overflow-hidden transition-all duration-305">
+        <div className="glassmorphism p-8 rounded-[24px] border border-slate-200/50 dark:border-white/10 shadow-premium relative overflow-hidden transition-all duration-305 bg-white/80 dark:bg-slate-900/40">
           {formErr && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/25 text-red-400 rounded-xl text-xs font-semibold flex items-start gap-2.5">
+            <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{formErr}</span>
             </div>

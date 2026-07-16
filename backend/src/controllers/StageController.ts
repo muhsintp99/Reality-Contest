@@ -97,6 +97,23 @@ export class StageController {
       next(err);
     }
   }
+  async getStagesByContest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const stages = await stageService.getStagesByContest(req.params.contestId);
+      res.status(200).json({ success: true, stages });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async createStageForContest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const stage = await stageService.createStageForContest(req.params.contestId, req.body);
+      res.status(201).json({ success: true, stage });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 export const stageController = new StageController();
 export default stageController;

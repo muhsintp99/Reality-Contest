@@ -10,7 +10,7 @@ const envSchema = z.object({
   REDIS_URL: z.string().default('redis://localhost:6379'),
   JWT_ACCESS_SECRET: z.string().default('your_super_secret_access_token_12345_rcp_prod_key'),
   JWT_REFRESH_SECRET: z.string().default('your_super_secret_refresh_token_67890_rcp_prod_key'),
-  ACCESS_TOKEN_EXPIRY: z.string().default('15m'),
+  ACCESS_TOKEN_EXPIRY: z.string().default('7d'),
   REFRESH_TOKEN_EXPIRY: z.string().default('7d'),
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),

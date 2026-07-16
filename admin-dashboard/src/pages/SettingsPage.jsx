@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { updateProfileRequest } from '../store/authSlice';
 import { DeviceManager } from '../components/DeviceManager';
+import { useAlert } from '../context/AlertContext';
 import { 
   Settings, User, Lock, Bell, KeyRound, 
   ToggleLeft, ToggleRight, Copy, Check, RefreshCw
@@ -15,6 +16,7 @@ const TABS = [
 ];
 
 export const SettingsPage = () => {
+  const { showAlert, showSnackbar, showConfirm } = useAlert();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('general');
@@ -36,7 +38,7 @@ export const SettingsPage = () => {
       data: { name, phone },
       callback: (success) => {
         if (success) {
-          alert('Configuration saved successfully.');
+          showSnackbar('Configuration saved successfully.', 'success');
         }
       }
     }));
@@ -93,37 +95,132 @@ export const SettingsPage = () => {
         {/* GENERAL TAB */}
         {activeTab === 'general' && (
           <div className="space-y-6">
+            {/* Profile Header Summary with Image */}
+            <div className="flex flex-col sm:flex-row items-center gap-5 p-5 bg-slate-50 dark:bg-[#080b12]/20 border border-slate-200/60 dark:border-white/5 rounded-2xl shadow-sm">
+              <img 
+                src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Raj'} 
+                className="w-20 h-20 rounded-full object-cover border border-slate-200 dark:border-white/10 shadow-md"
+                alt="Profile"
+              />
+              <div className="text-center sm:text-left space-y-1">
+                <h3 className="text-base font-extrabold text-slate-800 dark:text-white leading-tight">
+                  {user?.name || 'Aarav Sharma'}
+                </h3>
+                <p className="text-xs text-slate-450 dark:text-white/40 font-mono font-bold">
+                  @{user?.username || 'aaravsharma'}
+                </p>
+                <div className="pt-1">
+                  <span className="bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary border border-brandPrimary/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                    {user?.role || 'Administrator'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div>
-              <h2 className="text-base font-extrabold text-white dark:text-white light:text-black font-poppins uppercase tracking-wider">General Configurations</h2>
-              <p className="text-xs text-white/50 dark:text-white/50 light:text-black/50 mt-0.5">Manage your primary display credentials and email identifiers.</p>
+              <h2 className="text-sm font-extrabold text-slate-800 dark:text-white uppercase tracking-wider">General Configurations</h2>
+              <p className="text-xs text-slate-450 dark:text-white/35 mt-0.5">Manage your primary display credentials and email identifiers.</p>
             </div>
             
-            <form onSubmit={handleUpdate} className="space-y-4 max-w-lg">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-white/65 uppercase tracking-wider mb-2">Display Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-sm focus:outline-none"
-                />
+            <form onSubmit={handleUpdate} className="space-y-6 max-w-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-450 dark:text-white/35 uppercase tracking-wider">Display Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="block w-full px-4 py-2.5 bg-slate-55 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white text-xs focus:outline-none focus:border-brandPrimary/50"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-450 dark:text-white/35 uppercase tracking-wider">Mobile Phone</label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="block w-full px-4 py-2.5 bg-slate-55 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white text-xs focus:outline-none focus:border-brandPrimary/50"
+                  />
+                </div>
+
+                <div className="space-y-1.5 opacity-70">
+                  <label className="block text-xs font-bold text-slate-450 dark:text-white/35 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Email Address</span>
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  </label>
+                  <input
+                    type="email"
+                    disabled
+                    value={user?.email || 'name@domain.com'}
+                    className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-black/40 border border-slate-200/40 dark:border-white/5 rounded-xl text-slate-500 dark:text-white/50 text-xs focus:outline-none cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="space-y-1.5 opacity-70">
+                  <label className="block text-xs font-bold text-slate-450 dark:text-white/35 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Username</span>
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={user?.username || 'username'}
+                    className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-black/40 border border-slate-200/40 dark:border-white/5 rounded-xl text-slate-500 dark:text-white/50 text-xs focus:outline-none cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="space-y-1.5 opacity-70">
+                  <label className="block text-xs font-bold text-slate-450 dark:text-white/35 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Account Role</span>
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={user?.role || 'Admin'}
+                    className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-black/40 border border-slate-200/40 dark:border-white/5 rounded-xl text-slate-500 dark:text-white/50 text-xs focus:outline-none cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="space-y-1.5 opacity-70">
+                  <label className="block text-xs font-bold text-slate-450 dark:text-white/35 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>Identity Verification (KYC)</span>
+                    <Lock className="w-3 h-3 text-slate-400" />
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={user?.kycStatus || 'Approved'}
+                    className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-black/40 border border-slate-200/40 dark:border-white/5 rounded-xl text-slate-500 dark:text-white/50 text-xs focus:outline-none cursor-not-allowed"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-white/65 uppercase tracking-wider mb-2">Mobile Phone</label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="block w-full px-4 py-2.5 bg-slate-100 dark:bg-[#080b12]/50 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-sm focus:outline-none"
-                />
-              </div>
+
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-semibold shadow-lg hover:shadow-brandPrimary/10 transition-colors"
+                className="px-5 py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-[0.98]"
               >
                 Save General Profile
               </button>
             </form>
+
+            {/* System Info & Copyright (Footer Details shifted here) */}
+            <div className="border-t border-slate-200 dark:border-white/5 pt-6 mt-8 max-w-lg">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-3">System Information</h3>
+              <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl p-4 space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 dark:text-white/45 font-semibold">Platform Console</span>
+                  <span className="font-bold text-slate-700 dark:text-white/80">© {new Date().getFullYear()} Haka Platform. All rights reserved.</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400 dark:text-white/45 font-semibold">Console Version</span>
+                  <span className="font-mono text-[9px] bg-slate-200/50 dark:bg-white/5 px-2 py-0.5 rounded border border-slate-350 dark:border-white/5 text-slate-800 dark:text-white/80 font-bold">
+                    1.0.0 (Operator Console Mode)
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

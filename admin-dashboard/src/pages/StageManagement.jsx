@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Milestone, Plus, Info, Clock, CheckCircle } from 'lucide-react';
+import { Milestone, Plus, Info, Clock, CheckCircle, Edit, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { CustomSelect } from '../components/CustomSelect';
+import { useAlert } from '../context/AlertContext';
+import { RightDrawer } from '../components/RightDrawer';
 
 export const StageManagement = () => {
+  const { showAlert, showSnackbar, showConfirm } = useAlert();
   const [groups, setGroups] = useState([]);
   const [pools, setPools] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [stages, setStages] = useState([]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Form states
   const [stageName, setStageName] = useState('');
@@ -49,7 +54,9 @@ export const StageManagement = () => {
   const fetchStages = async (groupId) => {
     try {
       const res = await axios.get(`/api/groups/${groupId}/stages`, { withCredentials: true });
-      setStages(res.data.stages || []);
+      let data = res.data.stages || [];
+      data.sort((a, b) => new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime());
+      setStages(data);
     } catch (err) {
       console.error(err);
     }
@@ -95,11 +102,12 @@ export const StageManagement = () => {
       if (res.data.success) {
         setStageName('');
         setStageDesc('');
-        alert('Stage created successfully.');
+        showSnackbar('Stage created successfully.', 'success');
+        setIsDrawerOpen(false);
         fetchStages(selectedGroup._id);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create stage');
+      showSnackbar(err.response?.data?.message || 'Failed to create stage', 'error');
     }
   };
 
@@ -147,12 +155,21 @@ export const StageManagement = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+        <div className="flex flex-col gap-6 animate-fade-in">
           {/* Stages List */}
-          <div className="lg:col-span-7 space-y-4">
-            <h3 className="text-xs font-bold uppercase text-brandPrimary tracking-wider">
-              Cohort: {selectedGroup.name} (Timeline Stages)
-            </h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold uppercase text-brandPrimary tracking-wider">
+                Cohort: {selectedGroup.name} (Timeline Stages)
+              </h3>
+              <button
+                onClick={() => setIsDrawerOpen(true)}
+                className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-brandPrimary/20 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Stage
+              </button>
+            </div>
             <div className="space-y-3.5">
               {stages.length === 0 ? (
                 <div className="p-8 bg-white/5 rounded-2xl text-center text-xs text-white/40 border border-white/5">
@@ -173,8 +190,16 @@ export const StageManagement = () => {
                       <h4 className="text-xs font-bold text-white">{s.name}</h4>
                       <p className="text-[10px] text-white/45 mt-1">{s.description || 'No description provided.'}</p>
                     </div>
-                    <div className="flex sm:flex-col justify-end items-end text-[10px] text-brandSecondary font-bold mt-2">
+                    <div className="flex sm:flex-col justify-end items-end gap-2 text-[10px] text-brandSecondary font-bold mt-2">
                       <span>Pass Criteria: {s.passingPercentage > 0 ? `${s.passingPercentage}%` : `${s.passingScore} pts`}</span>
+                      <div className="flex gap-2">
+                        <button title="Edit Stage" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-full transition-all">
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button title="Delete Stage" className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -182,58 +207,67 @@ export const StageManagement = () => {
             </div>
           </div>
 
-          {/* Create Stage Form */}
-          <form onSubmit={handleCreateStage} className="lg:col-span-5 glassmorphism p-5 rounded-2xl border border-white/10 space-y-4 h-fit">
-            <h3 className="text-xs font-bold uppercase text-white tracking-wider font-poppins">Stage Configuration Builder</h3>
-            <div>
-              <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Stage Name</label>
-              <input
-                type="text"
-                required
-                value={stageName}
-                onChange={(e) => setStageName(e.target.value)}
-                placeholder="Stage 1: GK Assessment"
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          {/* Create Stage Form in Drawer */}
+          <RightDrawer
+            isOpen={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            title="Stage Configuration Builder"
+          >
+            <form onSubmit={handleCreateStage} className="flex flex-col h-full">
+            <div className="flex-1 space-y-6">
               <div>
-                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Stage Type</label>
-                <select
-                  value={stageType}
-                  onChange={(e) => setStageType(e.target.value)}
-                  className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                >
-                  <option value="Quiz">Quiz Engine</option>
-                  <option value="VideoUpload">Video Upload</option>
-                  <option value="Coding">Coding Challenge</option>
-                  <option value="Judge Review">Judge Review</option>
-                  <option value="AI Interview">AI Evaluation</option>
-                </select>
+                <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">General Information</div>
+                <div>
+                  <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Stage Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={stageName}
+                    onChange={(e) => setStageName(e.target.value)}
+                    placeholder="Stage 1: GK Assessment"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Time Limit (Sec)</label>
-                <input
-                  type="number"
-                  value={timeLimit}
-                  onChange={(e) => setTimeLimit(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                />
+                <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Configuration</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Stage Type</label>
+                    <CustomSelect
+                      value={stageType}
+                      onChange={setStageType}
+                      options={[
+                        { value: 'Quiz', label: 'Quiz Engine' },
+                        { value: 'VideoUpload', label: 'Video Upload' },
+                        { value: 'Coding', label: 'Coding Challenge' },
+                        { value: 'Judge Review', label: 'Judge Review' },
+                        { value: 'AI Interview', label: 'AI Evaluation' }
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Time Limit (Sec)</label>
+                    <input
+                      type="number"
+                      value={timeLimit}
+                      onChange={(e) => setTimeLimit(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
 
             {stageType === 'Quiz' && pools.length > 0 && (
               <div>
-                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Question Pool</label>
-                <select
+                <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4 mt-6">Question Pool</div>
+                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1">Select Question Pool</label>
+                <CustomSelect
                   value={poolId}
-                  onChange={(e) => setPoolId(e.target.value)}
-                  className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                >
-                  {pools.map(p => (
-                    <option key={p._id} value={p._id}>{p.name}</option>
-                  ))}
-                </select>
+                  onChange={setPoolId}
+                  options={pools.map(p => ({ value: p._id, label: p.name }))}
+                />
               </div>
             )}
 
@@ -266,14 +300,18 @@ export const StageManagement = () => {
                 className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white h-16 resize-none"
               />
             </div>
-
-            <button
-              type="submit"
-              className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors"
-            >
-              Publish Stage Phase
-            </button>
-          </form>
+            </div>
+            <div className="mt-8 pt-4 border-t border-white/5">
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Publish Stage
+              </button>
+            </div>
+            </form>
+          </RightDrawer>
         </div>
       )}
     </div>

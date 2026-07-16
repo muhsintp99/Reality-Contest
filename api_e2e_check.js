@@ -1,8 +1,8 @@
 const http = require('http');
 const mongoose = require('mongoose');
 
-const BASE_URL = 'http://localhost:5000';
-const MONGODB_URI = 'mongodb://localhost:27017/reality_contest';
+const BASE_URL = 'http://localhost:10000';
+const MONGODB_URI = 'mongodb+srv://muhsintpdevelop_db_user:Muhsintp925@reality-contest.xyxmmnq.mongodb.net/?appName=Reality-Contest';
 
 // Simple Cookie Jar
 const cookies = {
