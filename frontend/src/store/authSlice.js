@@ -8,6 +8,7 @@ const initialState = {
   currentKyc: null,
   loading: false,
   error: null,
+  initialized: false,
 };
 
 const authSlice = createSlice({
@@ -28,10 +29,12 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = true;
       state.loading = false;
+      state.initialized = true;
     },
     loginFailure: (state, action) => {
       state.error = action.payload;
       state.loading = false;
+      state.initialized = true;
     },
     // Register
     registerRequest: (state) => {
@@ -55,6 +58,7 @@ const authSlice = createSlice({
       state.sessions = [];
       state.currentKyc = null;
       state.loading = false;
+      state.initialized = true;
     },
     logoutFailure: (state, action) => {
       state.error = action.payload;
@@ -120,11 +124,13 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = true;
       state.loading = false;
+      state.initialized = true;
     },
     loadCurrentUserFailure: (state) => {
       state.user = null;
       state.isAuthenticated = false;
       state.loading = false;
+      state.initialized = true;
     },
     // Update Profile
     updateProfileRequest: (state) => {

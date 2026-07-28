@@ -15,14 +15,14 @@ export interface IUser extends Document {
   email: string;
   phone: string;
   password?: string;
-  role: 'Contestant' | 'Judge' | 'Sponsor' | 'Admin' | 'Super Admin';
+  role: 'Contestant' | 'Judge' | 'Sponsor' | 'Guest';
   avatar: string;
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   kycStatus: 'Pending' | 'Under Review' | 'Approved' | 'Rejected';
   referralCode: string;
   walletBalance: number;
-  status: 'Active' | 'Banned' | 'Locked';
+  status: 'Active' | 'Banned' | 'Locked' | 'Suspended';
   loginAttempts: number;
   lockUntil?: number;
   twoFactorEnabled: boolean;
@@ -31,6 +31,14 @@ export interface IUser extends Document {
   gender: 'Male' | 'Female' | 'Other';
   state: string;
   district: string;
+  city?: string;
+  preferredLanguage?: string;
+  pincode?: string;
+  occupation?: string;
+  education?: string;
+  employmentStatus?: 'Student' | 'Employed / Salaried' | 'Self Employed' | 'Unemployed';
+  notificationPermission?: boolean;
+  locationPermission?: boolean;
   country: string;
   favoriteCategories: string[];
   skills: string[];
@@ -58,7 +66,7 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin'],
+      enum: ['Contestant', 'Judge', 'Sponsor', 'Guest'],
       default: 'Contestant'
     },
     avatar: { type: String, default: '' },
@@ -74,7 +82,7 @@ const userSchema = new Schema<IUser>(
     walletBalance: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ['Active', 'Banned', 'Locked'],
+      enum: ['Active', 'Banned', 'Locked', 'Suspended'],
       default: 'Active',
       index: true
     },
@@ -86,6 +94,18 @@ const userSchema = new Schema<IUser>(
     gender: { type: String, enum: ['Male', 'Female', 'Other'], default: 'Male' },
     state: { type: String, default: '' },
     district: { type: String, default: '' },
+    city: { type: String, default: '' },
+    preferredLanguage: { type: String, default: '' },
+    pincode: { type: String, default: '' },
+    occupation: { type: String, default: '' },
+    education: { type: String, default: '' },
+    employmentStatus: {
+      type: String,
+      enum: ['Student', 'Employed / Salaried', 'Self Employed', 'Unemployed'],
+      default: 'Unemployed'
+    },
+    notificationPermission: { type: Boolean, default: false },
+    locationPermission: { type: Boolean, default: false },
     country: { type: String, default: 'India' },
     favoriteCategories: [{ type: String }],
     skills: [{ type: String }],

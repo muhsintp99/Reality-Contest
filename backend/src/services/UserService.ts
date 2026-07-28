@@ -16,7 +16,11 @@ export class UserService {
       return cachedProfile;
     }
 
-    const user = await this.userRepo.findById(userId, '-password');
+    let user = await this.userRepo.findById(userId, '-password');
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findById(userId, '-password');
+    }
     if (!user) throw new NotFoundError('User not found.');
 
     // Save back to Redis cache
@@ -26,42 +30,72 @@ export class UserService {
 
   // 2. UPDATE PROFILE (Invalidates Redis cache instantly to enforce consistency)
   async updateProfile(userId: string, updateData: { name?: string; phone?: string }): Promise<any> {
-    const user = await this.userRepo.findById(userId);
+    let user = await this.userRepo.findById(userId);
+    let isAdmin = false;
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findById(userId);
+      isAdmin = true;
+    }
     if (!user) throw new NotFoundError('User not found.');
-
+ 
     if (updateData.name) {
       user.name = updateData.name;
     }
-
+ 
     if (updateData.phone && updateData.phone !== user.phone) {
-      const phoneExists = await this.userRepo.findByPhone(updateData.phone);
+      let phoneExists = await this.userRepo.findByPhone(updateData.phone);
+      if (!phoneExists) {
+        const { Admin } = require('../models/Admin');
+        phoneExists = await Admin.findOne({ phone: updateData.phone });
+      }
       if (phoneExists) throw new ConflictError('Mobile number already registered.');
-
+ 
       user.phone = updateData.phone;
       user.isPhoneVerified = false;
     }
-
+ 
     await user.save();
-
+ 
     // Cache Invalidation
     await redisService.del(`user:profile:${userId}`);
-
-    return this.userRepo.findById(userId, '-password');
+ 
+    if (isAdmin) {
+      const { Admin } = require('../models/Admin');
+      return Admin.findById(userId, '-password');
+    } else {
+      return this.userRepo.findById(userId, '-password');
+    }
   }
 
   // 3. UPDATE AVATAR
   async updateAvatar(userId: string, avatarUrl: string): Promise<any> {
-    const user = await this.userRepo.update(userId, { avatar: avatarUrl });
+    let user = await this.userRepo.update(userId, { avatar: avatarUrl });
+    let isAdmin = false;
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findByIdAndUpdate(userId, { avatar: avatarUrl }, { new: true });
+      isAdmin = true;
+    }
     if (!user) throw new NotFoundError('User not found.');
-
+ 
     await redisService.del(`user:profile:${userId}`);
-    return this.userRepo.findById(userId, '-password');
+    if (isAdmin) {
+      const { Admin } = require('../models/Admin');
+      return Admin.findById(userId, '-password');
+    } else {
+      return this.userRepo.findById(userId, '-password');
+    }
   }
 
   // 4. UPDATE PASSWORD
   async updatePassword(userId: string, data: any): Promise<void> {
     const { currentPassword, newPassword } = data;
-    const user = await this.userRepo.findById(userId);
+    let user = await this.userRepo.findById(userId);
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findById(userId);
+    }
     if (!user) throw new NotFoundError('User not found.');
 
     const isMatch = await user.comparePassword(currentPassword);
@@ -78,7 +112,11 @@ export class UserService {
 
   // 5. DELETE ACCOUNT
   async deleteAccount(userId: string): Promise<void> {
-    const user = await this.userRepo.delete(userId);
+    let user = await this.userRepo.delete(userId);
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findByIdAndDelete(userId);
+    }
     if (!user) throw new NotFoundError('User not found.');
 
     await this.sessionRepo.deleteAllSessions(userId);

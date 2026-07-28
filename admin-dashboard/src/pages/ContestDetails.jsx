@@ -2,10 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
+import * as Icons from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
 import { ChevronRight, Plus, Clock, Play, Trash2, Edit, GripVertical } from 'lucide-react';
+
+const STAGE_ICON_OPTIONS = [
+  'Milestone', 'Trophy', 'Brain', 'Code', 'Video', 'Play', 'Users', 'Search', 'Shield', 'FileText', 'Star', 'Camera', 'Mic', 'HeartPulse', 'Globe', 'CheckCircle'
+];
+
+const DynamicIcon = ({ name, className }) => {
+  const IconComponent = Icons[name] || Icons.Milestone;
+  return <IconComponent className={className} />;
+};
 
 export const ContestDetails = () => {
   const { contestId } = useParams();
@@ -22,6 +32,9 @@ export const ContestDetails = () => {
   const [stageDesc, setStageDesc] = useState('');
   const [stageType, setStageType] = useState('Question & Answer');
   const [timeLimit, setTimeLimit] = useState('1800');
+  const [stageIcon, setStageIcon] = useState('Milestone');
+  const [uploading, setUploading] = useState(false);
+  const [iconType, setIconType] = useState('preset'); // 'preset' or 'upload'
 
   const fetchDetails = async () => {
     if (isMockMode) {
@@ -33,8 +46,8 @@ export const ContestDetails = () => {
         categories: ['cat-1', 'cat-2']
       });
       setStages([
-        { _id: 'st-1', name: 'Round 1: Screening', type: 'Question & Answer', timeLimit: 1800, description: 'Basic questions' },
-        { _id: 'st-2', name: 'Round 2: Video Pitch', type: 'VideoUpload', timeLimit: 0, description: 'Upload pitch video' }
+        { _id: 'st-1', name: 'Round 1: Screening', type: 'Question & Answer', timeLimit: 1800, description: 'Basic questions', icon: 'Brain' },
+        { _id: 'st-2', name: 'Round 2: Video Pitch', type: 'VideoUpload', timeLimit: 0, description: 'Upload pitch video', icon: 'Video' }
       ]);
       setLoading(false);
       return;
@@ -69,6 +82,7 @@ export const ContestDetails = () => {
       name: stageName,
       description: stageDesc,
       type: stageType,
+      icon: stageIcon,
       timeLimit: parseInt(timeLimit, 10) || 0,
       startDate: new Date(),
       endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
@@ -76,9 +90,7 @@ export const ContestDetails = () => {
 
     if (isMockMode) {
       setStages(prev => [...prev, { _id: `st-${Date.now()}`, ...data }]);
-      setStageName('');
-      setStageDesc('');
-      setIsDrawerOpen(false);
+      resetForm();
       showSnackbar('Mock stage created.', 'success');
       return;
     }
@@ -87,13 +99,35 @@ export const ContestDetails = () => {
       const res = await axios.post(`/api/contests/${contestId}/stages`, data, { withCredentials: true });
       if (res.data.success) {
         showSnackbar('Stage created successfully', 'success');
-        setIsDrawerOpen(false);
-        setStageName('');
-        setStageDesc('');
+        resetForm();
         fetchDetails();
       }
     } catch (err) {
       showAlert(err.response?.data?.message || 'Failed to create stage', 'error');
+    }
+  };
+
+  const handleUploadFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploading(true);
+    try {
+      const res = await axios.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+      if (res.data.success) {
+        setStageIcon(res.data.fileUrl);
+        showSnackbar('Icon image uploaded successfully.', 'success');
+      }
+    } catch (err) {
+      showAlert(err.response?.data?.message || 'Failed to upload icon image.', 'error');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -112,18 +146,28 @@ export const ContestDetails = () => {
     });
   };
 
+  const resetForm = () => {
+    setStageName('');
+    setStageDesc('');
+    setStageIcon('Milestone');
+    setStageType('Question & Answer');
+    setTimeLimit('1800');
+    setIconType('preset');
+    setIsDrawerOpen(false);
+  };
+
   if (loading) return <div className="p-8 text-white/50 text-center animate-pulse">Loading contest structure...</div>;
   if (!contest) return <div className="p-8 text-white/50 text-center">Contest not found.</div>;
 
   return (
     <div className="space-y-6 text-left animate-fade-in">
       {/* Breadcrumbs */}
-      <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-wider mb-2">
+      <div className="flex items-center gap-2 text-[10px] text-slate-600 dark:text-white/40 font-bold uppercase tracking-wider mb-2">
         <span className="hover:text-brandPrimary cursor-pointer transition-colors" onClick={() => navigate('/admin-dashboard/contests')}>Contests</span>
-        <ChevronRight className="w-3 h-3" />
-        <span className="text-white truncate max-w-[200px]">{contest.title}</span>
-        <ChevronRight className="w-3 h-3" />
-        <span className="text-brandPrimary">Stages</span>
+        <ChevronRight className="w-3 h-3 text-slate-400 dark:text-white/30 shrink-0" />
+        <span className="text-slate-800 dark:text-white truncate max-w-[200px]">{contest.title}</span>
+        <ChevronRight className="w-3 h-3 text-slate-400 dark:text-white/30 shrink-0" />
+        <span className="text-brandPrimary font-bold">Stages</span>
       </div>
 
       {/* Header */}
@@ -158,6 +202,14 @@ export const ContestDetails = () => {
               <div className="flex items-start gap-4">
                 <div className="cursor-grab active:cursor-grabbing p-1 mt-0.5 text-white/20 hover:text-white/60">
                   <GripVertical className="w-4 h-4" />
+                </div>
+                {/* Custom Stage Icon Badge */}
+                <div className="p-2 bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary rounded-xl flex items-center justify-center w-10 h-10 shrink-0 overflow-hidden">
+                  {stage.icon && (stage.icon.startsWith('http') || stage.icon.startsWith('/') || stage.icon.startsWith('data:')) ? (
+                    <img src={stage.icon} alt={stage.name} className="w-5.5 h-5.5 object-contain rounded-md animate-fade-in" />
+                  ) : (
+                    <DynamicIcon name={stage.icon || 'Milestone'} className="w-4.5 h-4.5" />
+                  )}
                 </div>
                 <div>
                   <div className="flex gap-2 items-center mb-1">
@@ -197,7 +249,7 @@ export const ContestDetails = () => {
         onClose={() => setIsDrawerOpen(false)}
         title="Create New Stage"
       >
-        <form onSubmit={handleCreateStage} className="flex flex-col h-full">
+        <form onSubmit={handleCreateStage} className="flex flex-col h-full text-left">
           <div className="flex-1 space-y-6">
             <div>
               <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">General Information</div>
@@ -223,6 +275,94 @@ export const ContestDetails = () => {
                   />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Representational Icon</div>
+              
+              {/* Tab Selector */}
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setIconType('preset')}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                    iconType === 'preset'
+                      ? 'bg-brandPrimary/15 border-brandPrimary/30 text-brandPrimary'
+                      : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  Lucide Preset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIconType('upload')}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                    iconType === 'upload'
+                      ? 'bg-brandPrimary/15 border-brandPrimary/30 text-brandPrimary'
+                      : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  Custom Upload
+                </button>
+              </div>
+
+              {iconType === 'preset' ? (
+                <div className="grid grid-cols-6 gap-2 max-h-36 overflow-y-auto p-1 scrollbar-hide">
+                  {STAGE_ICON_OPTIONS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setStageIcon(item)}
+                      className={`p-2 rounded-xl border flex items-center justify-center transition-all ${
+                        stageIcon === item
+                          ? 'bg-brandPrimary/20 border-brandPrimary text-brandPrimary shadow-lg shadow-brandPrimary/10'
+                          : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      <DynamicIcon name={item} className="w-4 h-4" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stageIcon && (stageIcon.startsWith('http') || stageIcon.startsWith('/') || stageIcon.startsWith('data:')) ? (
+                    <div className="relative border border-white/15 rounded-2xl p-4 bg-white/5 flex flex-col items-center justify-center gap-2 group/upload select-none">
+                      <img src={stageIcon} alt="Custom Stage Icon" className="w-14 h-14 object-contain rounded-xl animate-fade-in" />
+                      <span className="text-[10px] text-white/30 truncate max-w-full font-mono">{stageIcon.split('/').pop()}</span>
+                      <button
+                        type="button"
+                        onClick={() => setStageIcon('Milestone')}
+                        className="absolute top-2 right-2 p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-all"
+                        title="Remove Custom Image"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="border border-dashed border-white/20 hover:border-brandPrimary/50 rounded-2xl p-6 bg-white/[0.02] hover:bg-white/5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleUploadFile}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                      {uploading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-brandPrimary/30 border-t-brandPrimary rounded-full animate-spin" />
+                          <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Icons.Upload className="w-5 h-5 text-white/40" />
+                          <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Choose Custom Icon File</span>
+                          <span className="text-[9px] text-white/25">Supports PNG, JPG, WEBP (Max 5MB)</span>
+                        </>
+                      )}
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>

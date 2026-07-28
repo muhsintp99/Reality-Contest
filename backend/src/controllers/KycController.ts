@@ -51,7 +51,8 @@ export class KycController {
   // 4. ADMIN GET ALL PENDING
   async getPendingKYCs(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const kycs = await kycService.getPendingKycs();
+      const status = req.query.status as string || 'Under Review';
+      const kycs = await kycService.getPendingKycs(status);
       res.status(200).json({ success: true, kycs });
     } catch (err) {
       next(err);

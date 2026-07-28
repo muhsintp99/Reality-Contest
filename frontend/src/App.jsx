@@ -48,8 +48,20 @@ const ProtectedMemberRoute = ({ allowedRoles, children }) => {
     return <Navigate to="/login" replace />;
   }
 
+  const adminRoles = [
+    'Super Admin',
+    'Admin',
+    'Contest Manager',
+    'Finance Manager',
+    'Support Manager',
+    'Marketing Manager',
+    'Content Moderator',
+    'KYC Officer',
+    'Analytics Manager',
+    'Sponsor'
+  ];
   // Auto-redirect administrative accounts to the dashboard port
-  if (['Admin', 'Super Admin'].includes(user?.role)) {
+  if (adminRoles.includes(user?.role)) {
     return (
       <div className="min-h-screen bg-[#080b12] text-white flex flex-col justify-center items-center p-6 text-center">
         <div className="max-w-md w-full glassmorphism p-8 rounded-2xl border border-white/10 space-y-6">
@@ -71,7 +83,7 @@ const AppContent = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user, isMockMode } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, isMockMode, initialized } = useSelector((state) => state.auth);
   const [activeView, setActiveView] = useState('dashboard');
   const [isOpenMobileMenu, setIsOpenMobileMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -84,7 +96,19 @@ const AppContent = () => {
 
   // Handle auto-redirection of Admin/Super Admin users
   useEffect(() => {
-    if (isAuthenticated && user?.role && ['Admin', 'Super Admin'].includes(user.role)) {
+    const adminRoles = [
+      'Super Admin',
+      'Admin',
+      'Contest Manager',
+      'Finance Manager',
+      'Support Manager',
+      'Marketing Manager',
+      'Content Moderator',
+      'KYC Officer',
+      'Analytics Manager',
+      'Sponsor'
+    ];
+    if (isAuthenticated && user?.role && adminRoles.includes(user.role)) {
       const adminPort = String(Number(window.location.port || '10001') + 1);
       window.location.href = window.location.protocol + '//' + window.location.hostname + ':' + adminPort;
     }
@@ -105,9 +129,21 @@ const AppContent = () => {
 
   const userRole = user?.role || 'Contestant';
 
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-[#EDF6E5] dark:bg-[#080b12] text-slate-800 dark:text-white flex items-center justify-center p-6 text-center transition-colors duration-300">
+        <div className="max-w-md w-full glassmorphism p-8 rounded-3xl border border-[#C4E2A8]/70 dark:border-white/10 space-y-4 shadow-xl">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-brandPrimary/20 border-t-brandPrimary mx-auto"></div>
+          <h3 className="text-xl font-bold font-poppins text-slate-900 dark:text-white">Loading...</h3>
+          <p className="text-xs text-slate-500 dark:text-white/40 font-semibold">Initializing platform session...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isAuthenticated) {
     return (
-      <div className="flex h-screen overflow-hidden bg-[#F7F8FA] dark:bg-[#0B1120] text-slate-800 dark:text-white transition-colors duration-305">
+      <div className="flex h-screen overflow-hidden bg-[#EDF6E5] dark:bg-[#0B1120] text-slate-800 dark:text-white transition-colors duration-305">
         
         {/* Sidebar Frame Navigation */}
         <Sidebar
@@ -207,7 +243,19 @@ const AppContent = () => {
             onRegisterClick={() => navigate('/register')}
             onForgotClick={() => navigate('/forgot-password')}
             onLoginSuccess={() => {
-              if (['Admin', 'Super Admin'].includes(user?.role)) {
+              const adminRoles = [
+                'Super Admin',
+                'Admin',
+                'Contest Manager',
+                'Finance Manager',
+                'Support Manager',
+                'Marketing Manager',
+                'Content Moderator',
+                'KYC Officer',
+                'Analytics Manager',
+                'Sponsor'
+              ];
+              if (adminRoles.includes(user?.role)) {
                 const adminPort = String(Number(window.location.port || '10001') + 1);
                 window.location.href = window.location.protocol + '//' + window.location.hostname + ':' + adminPort;
               } else if (user?.role === 'Judge') {

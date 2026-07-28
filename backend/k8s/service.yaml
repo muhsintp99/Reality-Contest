@@ -10,7 +10,7 @@ spec:
   sessionAffinity: ClientIP # WebSockets require sticky clients
   ports:
     - port: 80
-      targetPort: 5000
+      targetPort: 10000
       protocol: TCP
   selector:
     app: reality-contest-backend

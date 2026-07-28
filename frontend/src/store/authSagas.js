@@ -40,7 +40,19 @@ function* handleLogin(action) {
     const response = yield call(api.post, '/auth/login', { loginId, password, isOtpLogin, otp });
     const user = response.data.user;
 
-    if (['Admin', 'Super Admin'].includes(user.role)) {
+    const adminRoles = [
+      'Super Admin',
+      'Admin',
+      'Contest Manager',
+      'Finance Manager',
+      'Support Manager',
+      'Marketing Manager',
+      'Content Moderator',
+      'KYC Officer',
+      'Analytics Manager',
+      'Sponsor'
+    ];
+    if (adminRoles.includes(user.role)) {
       yield put(loginFailure('This account is only allowed to access the Admin Dashboard.'));
       if (callback) callback(false);
       try {
@@ -257,7 +269,19 @@ function* handleLoadCurrentUser() {
   try {
     const res = yield call(api.get, '/auth/me');
     const user = res.data.user;
-    if (user && ['Admin', 'Super Admin'].includes(user.role)) {
+    const adminRoles = [
+      'Super Admin',
+      'Admin',
+      'Contest Manager',
+      'Finance Manager',
+      'Support Manager',
+      'Marketing Manager',
+      'Content Moderator',
+      'KYC Officer',
+      'Analytics Manager',
+      'Sponsor'
+    ];
+    if (user && adminRoles.includes(user.role)) {
       yield put(loadCurrentUserFailure());
       try {
         yield call(api.post, '/auth/logout');

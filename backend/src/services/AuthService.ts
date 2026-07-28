@@ -66,7 +66,16 @@ export class AuthService {
 
   // 2. LOGIN
   async login(loginId: string, password?: string, isOtpLogin = false, otp?: string, ip = '127.0.0.1', device = 'Desktop', browser = 'Chrome'): Promise<any> {
-    const user = await this.userRepo.findByEmailOrPhone(loginId);
+    let user = await this.userRepo.findByEmailOrPhone(loginId);
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findOne({
+        $or: [
+          { email: loginId.trim().toLowerCase() },
+          { phone: loginId.trim() }
+        ]
+      });
+    }
     if (!user) throw new NotFoundError('User account not found.');
 
     if (user.status === 'Banned') throw new ForbiddenError('Account suspended.');
@@ -166,7 +175,11 @@ export class AuthService {
     // Verify token cryptographically
     try {
       const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET) as any;
-      const user = await this.userRepo.findById(decoded.id);
+      let user = await this.userRepo.findById(decoded.id);
+      if (!user) {
+        const { Admin } = require('../models/Admin');
+        user = await Admin.findById(decoded.id);
+      }
       if (!user || user.status === 'Banned') {
         await session.deleteOne();
         throw new UnauthorizedError('User account suspended or not found.');
@@ -196,7 +209,16 @@ export class AuthService {
 
   // 5. SEND OTP
   async sendOtp(loginId: string, type: 'login' | 'reset_password' | 'email_verify' | 'phone_verify'): Promise<string> {
-    const user = await this.userRepo.findByEmailOrPhone(loginId);
+    let user = await this.userRepo.findByEmailOrPhone(loginId);
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findOne({
+        $or: [
+          { email: loginId.trim().toLowerCase() },
+          { phone: loginId.trim() }
+        ]
+      });
+    }
     if (!user) throw new NotFoundError('User account not found.');
 
     await this.otpRepo.invalidatePreviousOtps(user._id.toString(), type);
@@ -232,7 +254,11 @@ export class AuthService {
     if (type === 'phone_verify' && otp.length > 20) {
       const phoneNumber = await firebaseSmsService.verifyFirebaseToken(otp);
       if (phoneNumber) {
-        const user = await this.userRepo.findById(userId);
+        let user = await this.userRepo.findById(userId);
+        if (!user) {
+          const { Admin } = require('../models/Admin');
+          user = await Admin.findById(userId);
+        }
         if (user) {
           user.phone = phoneNumber;
           user.isPhoneVerified = true;
@@ -250,7 +276,11 @@ export class AuthService {
     activeOtp.verified = true;
     await activeOtp.save();
 
-    const user = await this.userRepo.findById(userId);
+    let user = await this.userRepo.findById(userId);
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findById(userId);
+    }
     if (user) {
       if (type === 'email_verify') user.isEmailVerified = true;
       if (type === 'phone_verify') user.isPhoneVerified = true;
@@ -265,7 +295,11 @@ export class AuthService {
 
   // 7. FORGOT PASSWORD
   async forgotPassword(email: string): Promise<any> {
-    const user = await this.userRepo.findByEmail(email);
+    let user = await this.userRepo.findByEmail(email);
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findOne({ email: email.toLowerCase() });
+    }
     if (!user) throw new NotFoundError('No user with this email exists.');
 
     const otp = await this.sendOtp(email, 'reset_password');
@@ -279,7 +313,11 @@ export class AuthService {
     const activeOtp = await this.otpRepo.findActiveOtp(userId, otp, 'reset_password');
     if (!activeOtp) throw new AppError('Invalid or expired password reset OTP.', 400);
 
-    const user = await this.userRepo.findById(userId);
+    let user = await this.userRepo.findById(userId);
+    if (!user) {
+      const { Admin } = require('../models/Admin');
+      user = await Admin.findById(userId);
+    }
     if (!user) throw new NotFoundError('User not found.');
 
     user.password = newPassword;

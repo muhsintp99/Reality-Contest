@@ -98,6 +98,10 @@ export class StageService {
     const user = await this.userRepo.findById(userId);
     if (!user) throw new NotFoundError('User not found.');
 
+    if (user.kycStatus !== 'Approved') {
+      throw new BadRequestError('You cannot accept stage rules or start attempts before KYC approval.');
+    }
+
     // Validate if user has remaining attempts
     await processor.validateStart(stage, user);
 
@@ -149,6 +153,10 @@ export class StageService {
     const user = await this.userRepo.findById(userId);
     if (!user) throw new NotFoundError('User not found.');
 
+    if (user.kycStatus !== 'Approved') {
+      throw new BadRequestError('You cannot start stage attempts before KYC approval.');
+    }
+
     // Retrieve stage questions or content stripped of correctness
     const startPayload = await processor.startAttempt(stage, user, payload);
 
@@ -174,6 +182,10 @@ export class StageService {
     const processor = stageProcessorFactory.getProcessor(stage.type);
     const user = await this.userRepo.findById(userId);
     if (!user) throw new NotFoundError('User not found.');
+
+    if (user.kycStatus !== 'Approved') {
+      throw new BadRequestError('You cannot submit attempts before KYC approval.');
+    }
 
     // Save cheat notifications
     if (payload.cheatAlerts && payload.cheatAlerts.length > 0) {

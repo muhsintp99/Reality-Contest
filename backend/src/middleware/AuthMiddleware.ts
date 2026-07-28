@@ -44,16 +44,38 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
     let userDetails = await redisService.get<any>(cacheKey);
 
     if (!userDetails) {
-      // Fallback to Mongoose read
-      const user = await User.findById(decoded.id).select('role status email name').exec();
-      if (!user) {
+      const { Admin } = require('../models/Admin');
+      const adminRoles = [
+        'Super Admin',
+        'Admin',
+        'Contest Manager',
+        'Finance Manager',
+        'Support Manager',
+        'Marketing Manager',
+        'Content Moderator',
+        'KYC Officer',
+        'Analytics Manager'
+      ];
+      
+      let userDoc: any;
+      if (decoded.role && adminRoles.includes(decoded.role)) {
+        userDoc = await Admin.findById(decoded.id).select('role status email name').exec();
+      } else {
+        userDoc = await User.findById(decoded.id).select('role status email name').exec();
+        if (!userDoc) {
+          userDoc = await Admin.findById(decoded.id).select('role status email name').exec();
+        }
+      }
+
+      if (!userDoc) {
         throw new UnauthorizedError('User no longer exists.');
       }
+      
       userDetails = {
-        _id: user._id.toString(),
-        role: user.role,
-        status: user.status,
-        email: user.email
+        _id: userDoc._id.toString(),
+        role: userDoc.role,
+        status: userDoc.status,
+        email: userDoc.email
       };
       
       // Store user cache representation in Redis

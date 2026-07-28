@@ -1,39 +1,57 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { loginRequest, clearError } from '../store/authSlice';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { loginRequest } from '../store/authSlice';
 import { Eye, EyeOff, Lock, Mail, Phone, Sparkles } from 'lucide-react';
 import { HakaLogo } from '../components/HakaLogo';
 
 export const Login = ({ onForgotClick, onLoginSuccess }) => {
   const dispatch = useDispatch();
   const { error, loading } = useSelector((state) => state.auth);
-  const [loginId, setLoginId] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    dispatch(loginRequest({
-      loginId,
-      password,
-      isOtpLogin: false,
-      otp: '',
-      isAdminLogin: true,
-      callback: (success) => {
-        if (success) onLoginSuccess();
-      }
-    }));
-  };
+  const formik = useFormik({
+    initialValues: {
+      loginId: '',
+      password: '',
+      rememberMe: false
+    },
+    validationSchema: Yup.object({
+      loginId: Yup.string()
+        .required('Email address or mobile number is required')
+        .test('valid-login-id', 'Must be a valid email or phone number (+91...)', (value) => {
+          if (!value) return false;
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          const phoneRegex = /^\+?[0-9]{7,15}$/;
+          return emailRegex.test(value) || phoneRegex.test(value);
+        }),
+      password: Yup.string()
+        .min(6, 'Password must be at least 6 characters')
+        .required('Password is required')
+    }),
+    onSubmit: (values) => {
+      dispatch(loginRequest({
+        loginId: values.loginId,
+        password: values.password,
+        isOtpLogin: false,
+        otp: '',
+        isAdminLogin: true,
+        callback: (success) => {
+          if (success) onLoginSuccess();
+        }
+      }));
+    }
+  });
 
   return (
-    <div className="min-h-screen bg-[#080b12] text-white flex flex-col justify-center items-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#EDF6E5] dark:bg-[#080b12] text-slate-800 dark:text-white flex flex-col justify-center items-center p-4 relative overflow-hidden transition-colors duration-300">
       {/* Background Decorative Radial Glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[350px] h-[350px] rounded-full bg-brandPrimary/10 blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[350px] h-[350px] rounded-full bg-brandSecondary/10 blur-[100px] pointer-events-none"></div>
 
       <div className="w-full max-w-[460px] z-10 space-y-6">
-        <div className="glassmorphism p-8 rounded-2xl border border-white/10 shadow-2xl relative flex flex-col items-center">
+        <div className="glassmorphism p-8 rounded-3xl border border-[#C4E2A8]/70 dark:border-white/10 shadow-2xl relative flex flex-col items-center bg-white/80 dark:bg-slate-900/40">
           
           {/* Logo Showcase */}
           <div className="mb-6">
@@ -42,17 +60,17 @@ export const Login = ({ onForgotClick, onLoginSuccess }) => {
 
           {/* Title & Subtitle */}
           <div className="text-center mb-8">
-            <h2 className="text-xl font-extrabold font-poppins tracking-tight text-white">
+            <h2 className="text-xl font-extrabold font-poppins tracking-tight text-slate-900 dark:text-white">
               Admin Dashboard Login
             </h2>
-            <p className="mt-1.5 text-xs text-white/50">
+            <p className="mt-1.5 text-xs text-slate-600 dark:text-white/60 font-semibold">
               Sign in to continue.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="w-full space-y-6">
+          <form onSubmit={formik.handleSubmit} className="w-full space-y-6">
             {error && (
-              <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold text-left flex flex-col gap-2 w-full">
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold text-left flex flex-col gap-2 w-full animate-fade-in">
                 <span>{error}</span>
                 {error.includes('not authorized to access the Admin Dashboard') && (
                   <a
@@ -67,29 +85,37 @@ export const Login = ({ onForgotClick, onLoginSuccess }) => {
 
             {/* Email / Mobile Field */}
             <div className="space-y-2 text-left">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-white/55">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50">
                 Email Address or Mobile Number
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
-                  {loginId.includes('@') ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-white/40">
+                  {formik.values.loginId.includes('@') ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
                 </div>
                 <input
                   type="text"
-                  required
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
+                  name="loginId"
+                  value={formik.values.loginId}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   autoComplete="username"
                   placeholder="name@domain.com or +91..."
-                  className="block w-full pl-10 pr-4 py-3 bg-[#0c1322] border border-white/10 rounded-xl text-white placeholder-white/20 text-xs focus:outline-none focus:border-brandPrimary/65 transition-colors"
+                  className={`block w-full pl-10 pr-4 py-3 bg-white/90 dark:bg-[#0c1322] border rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 text-xs focus:outline-none transition-colors ${
+                    formik.touched.loginId && formik.errors.loginId
+                      ? 'border-rose-500/60 focus:border-rose-500'
+                      : 'border-slate-300/80 dark:border-white/10 focus:border-brandPrimary focus:ring-1 focus:ring-brandPrimary/20'
+                  }`}
                 />
               </div>
+              {formik.touched.loginId && formik.errors.loginId && (
+                <span className="text-[10px] text-rose-500 font-semibold mt-1 block animate-fade-in">{formik.errors.loginId}</span>
+              )}
             </div>
 
             {/* Password Field */}
             <div className="space-y-2 text-left">
               <div className="flex justify-between items-center">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-white/55">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-white/50">
                   Password
                 </label>
                 <button
@@ -101,36 +127,45 @@ export const Login = ({ onForgotClick, onLoginSuccess }) => {
                 </button>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-white/40">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  name="password"
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="block w-full pl-10 pr-12 py-3 bg-[#0c1322] border border-white/10 rounded-xl text-white placeholder-white/20 text-xs focus:outline-none focus:border-brandPrimary/65 transition-colors"
+                  className={`block w-full pl-10 pr-12 py-3 bg-white/90 dark:bg-[#0c1322] border rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 text-xs focus:outline-none transition-colors ${
+                    formik.touched.password && formik.errors.password
+                      ? 'border-rose-500/60 focus:border-rose-500'
+                      : 'border-slate-300/80 dark:border-white/10 focus:border-brandPrimary focus:ring-1 focus:ring-brandPrimary/20'
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/45 hover:text-white/75 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 dark:text-white/45 hover:text-slate-700 dark:hover:text-white transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {formik.touched.password && formik.errors.password && (
+                <span className="text-[10px] text-rose-500 font-semibold mt-1 block animate-fade-in">{formik.errors.password}</span>
+              )}
             </div>
 
             {/* Remember Me */}
             <div className="flex items-center text-xs text-left">
-              <label className="flex items-center gap-2 text-white/60 select-none cursor-pointer">
+              <label className="flex items-center gap-2 text-slate-700 dark:text-white/70 font-semibold select-none cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-white/15 bg-[#0c1322] text-brandPrimary focus:ring-brandPrimary/35"
+                  name="rememberMe"
+                  checked={formik.values.rememberMe}
+                  onChange={formik.handleChange}
+                  className="w-4 h-4 rounded border-slate-300 dark:border-white/15 bg-white dark:bg-[#0c1322] text-brandPrimary focus:ring-brandPrimary/35 accent-brandPrimary cursor-pointer"
                 />
                 <span>Remember Me</span>
               </label>
@@ -140,7 +175,7 @@ export const Login = ({ onForgotClick, onLoginSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl font-bold transition-all text-xs uppercase tracking-wider flex justify-center items-center gap-2 shadow-lg shadow-brandPrimary/10"
+              className="w-full py-3.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl font-extrabold transition-all text-xs uppercase tracking-wider flex justify-center items-center gap-2 shadow-lg shadow-brandPrimary/20 disabled:opacity-50 active:scale-[0.99] cursor-pointer"
             >
               {loading ? (
                 <span>Signing in...</span>

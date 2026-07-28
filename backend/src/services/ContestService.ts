@@ -48,6 +48,10 @@ export class ContestService {
       throw new NotFoundError('User not found.');
     }
 
+    if (user.kycStatus !== 'Approved') {
+      throw new BadRequestError('You cannot join contests before KYC approval.');
+    }
+
     if (contest.status !== 'Registration Open') {
       throw new BadRequestError('Registration for this contest is not open.');
     }
@@ -111,6 +115,32 @@ export class ContestService {
       success: true,
       joinedGroup: assignedGroup.name
     };
+  }
+
+  async updateContest(id: string, data: Partial<IContest>): Promise<IContest> {
+    const contest = await this.contestRepo.findById(id);
+    if (!contest) {
+      throw new NotFoundError('Contest not found.');
+    }
+    
+    // Convert date strings if they are passed as raw ISO strings
+    if (data.registrationStart) data.registrationStart = new Date(data.registrationStart);
+    if (data.registrationEnd) data.registrationEnd = new Date(data.registrationEnd);
+    if (data.startDate) data.startDate = new Date(data.startDate);
+    if (data.endDate) data.endDate = new Date(data.endDate);
+
+    Object.assign(contest, data);
+    return contest.save();
+  }
+
+  async deleteContest(id: string): Promise<IContest> {
+    const contest = await this.contestRepo.findById(id);
+    if (!contest) {
+      throw new NotFoundError('Contest not found.');
+    }
+    await this.contestRepo.delete(id);
+    await this.groupRepo.deleteMany({ contestId: id });
+    return contest;
   }
 }
 export const contestService = new ContestService();

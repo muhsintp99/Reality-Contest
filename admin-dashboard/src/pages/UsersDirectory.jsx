@@ -1,79 +1,187 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import axios from 'axios';
 import { CustomSelect } from '../components/CustomSelect';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
+import { useNotification } from '../context/NotificationContext';
 import { 
   Users, UserPlus, ShieldAlert, Check, ToggleLeft, ToggleRight, 
-  Trash2, Search, Eye, X, Mail, Phone, Lock, Sparkles, ChevronLeft, ChevronRight, Filter, Settings
+  Trash2, Search, Eye, EyeOff, X, Mail, Phone, Lock, Sparkles, ChevronLeft, ChevronRight, Filter, Settings
 } from 'lucide-react';
 
-const PAGE_SIZE = 5;
-
-export const UsersDirectory = () => {
+export const UsersDirectory = ({ type = 'Contestant' }) => {
   const { showAlert, showSnackbar, showConfirm } = useAlert();
+  const navigate = useNavigate();
   const { user: currentUser } = useSelector((state) => state.auth);
-  
-  // Only Super Admin can manage Admins. Normal Admins cannot see/manage Admin accounts.
-  const availableTabs = currentUser?.role === 'Super Admin'
-    ? ['Admin', 'Contestant', 'Judge', 'Sponsor']
-    : ['Contestant', 'Judge', 'Sponsor'];
+  const { markModuleAsRead } = useNotification();
 
-  const [activeTab, setActiveTab] = useState('');
+  const [activeTab, setActiveTab] = useState(type);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All'); // All, Active, Suspended
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   // Modal states
   const [selectedUser, setSelectedUser] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
 
-  // Create User Form fields
-  const [createName, setCreateName] = useState('');
-  const [createUsername, setCreateUsername] = useState('');
-  const [createEmail, setCreateEmail] = useState('');
-  const [createPhone, setCreatePhone] = useState('');
-  const [createPassword, setCreatePassword] = useState('');
-  const [createRole, setCreateRole] = useState('Contestant');
   const [createError, setCreateError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [updateSubmitting, setUpdateSubmitting] = useState(false);
 
-  // Edit User Form fields
-  const [editName, setEditName] = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editRole, setEditRole] = useState('');
+  const adminRoles = [
+    'Super Admin',
+    'Admin',
+    'Contest Manager',
+    'Finance Manager',
+    'Support Manager',
+    'Marketing Manager',
+    'Content Moderator',
+    'KYC Officer',
+    'Analytics Manager'
+  ];
+  const canManageSelected = currentUser?.role === 'Super Admin' || !adminRoles.includes(selectedUser?.role);
 
-  const canManageSelected = currentUser?.role === 'Super Admin' || !['Admin', 'Super Admin'].includes(selectedUser?.role);
+  // Create Formik Instance
+  const createFormik = useFormik({
+    initialValues: {
+      name: '',
+      username: '',
+      email: '',
+      phone: '',
+      password: '',
+      role: type
+    },
+    enableReinitialize: true,
+    validationSchema: Yup.object({
+      name: Yup.string()
+        .max(50, 'Full name must be 50 characters or less')
+        .required('Full name is required'),
+      username: Yup.string()
+        .min(3, 'Username must be at least 3 characters')
+        .max(20, 'Username must be 20 characters or less')
+        .matches(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores allowed')
+        .required('Username is required'),
+      email: Yup.string()
+        .email('Invalid email address format')
+        .required('Email address is required'),
+      phone: Yup.string()
+        .matches(/^\+?[0-9]{10,15}$/, 'Phone must be between 10 and 15 digits (+91...)')
+        .required('Mobile phone is required'),
+      password: Yup.string()
+        .min(6, 'Password must be at least 6 characters')
+        .required('Initial password is required')
+    }),
+    onSubmit: async (values) => {
+      setCreateError('');
+      try {
+        const payload = {
+          name: values.name,
+          username: values.username,
+          email: values.email,
+          phone: values.phone,
+          password: values.password,
+          role: values.role
+        };
+        const res = await axios.post('/api/admin/users', payload, { withCredentials: true });
+        if (res.data.success) {
+          showSnackbar(res.data.message, 'success');
+          setShowCreateModal(false);
+          createFormik.resetForm();
+          setShowPassword(false);
+          fetchUsers(activeTab);
+        }
+      } catch (err) {
+        setCreateError(err.response?.data?.message || 'Failed to create user.');
+      }
+    }
+  });
+
+  // Edit Formik Instance
+  const editFormik = useFormik({
+    initialValues: {
+      name: '',
+      phone: '',
+      role: ''
+    },
+    enableReinitialize: true,
+    validationSchema: Yup.object({
+      name: Yup.string()
+        .max(50, 'Display name must be 50 characters or less')
+        .required('Display name is required'),
+      phone: Yup.string()
+        .matches(/^\+?[0-9]{10,15}$/, 'Phone must be between 10 and 15 digits (+91...)')
+        .required('Mobile phone is required')
+    }),
+    onSubmit: async (values) => {
+      if (selectedUser?._id === currentUser?._id) {
+        showAlert('Action blocked: You cannot edit your own profile here.', 'error');
+        return;
+      }
+      setUpdateSubmitting(true);
+      try {
+        const payload = {
+          name: values.name,
+          phone: values.phone,
+          role: values.role
+        };
+        const res = await axios.put(`/api/admin/users/${selectedUser._id}`, payload, { withCredentials: true });
+        if (res.data.success) {
+          showSnackbar('User details updated successfully.', 'success');
+          setSelectedUser(null);
+          fetchUsers(activeTab);
+        }
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Failed to update user.', 'error');
+      } finally {
+        setUpdateSubmitting(false);
+      }
+    }
+  });
 
   const fetchUsers = async (roleName) => {
     setLoading(true);
-    setUsers([]); // Clear users immediately when starting a new fetch
+    setUsers([]); // Clear users immediately
     try {
       const res = await axios.get(`/api/admin/users/${roleName}`, { withCredentials: true });
       if (res.data.success) {
-        // Double-check: filter out current user on client-side just in case
         const filteredList = (res.data.users || [])
           .filter(u => u._id !== currentUser?._id)
           .filter(u => u.role !== 'Super Admin');
         setUsers(filteredList);
         setCurrentPage(1);
+
+        // Auto-clear notifications only after successful load
+        if (roleName === 'Contestant') {
+          markModuleAsRead('Contestant');
+        } else if (roleName === 'Judge') {
+          markModuleAsRead('Judge');
+        } else if (roleName === 'Sponsor') {
+          markModuleAsRead('Sponsor');
+        }
       }
     } catch (err) {
       console.error('Failed to fetch users:', err);
-      setUsers([]); // Clear users on error to avoid showing stale data
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (currentUser?.role && !activeTab) {
-      setActiveTab(currentUser.role === 'Super Admin' ? 'Admin' : 'Contestant');
-    }
-  }, [currentUser, activeTab]);
+    setActiveTab(type);
+    createFormik.setFieldValue('role', type);
+    setSearch('');
+    setStatusFilter('All');
+  }, [type]);
 
   useEffect(() => {
     if (activeTab) {
@@ -81,71 +189,14 @@ export const UsersDirectory = () => {
     }
   }, [activeTab]);
 
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    setCreateError('');
-    try {
-      const payload = {
-        name: createName,
-        username: createUsername,
-        email: createEmail,
-        phone: createPhone,
-        password: createPassword,
-        role: createRole
-      };
-      const res = await axios.post('/api/admin/users', payload, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar(res.data.message, 'success');
-        setShowCreateModal(false);
-        setCreateName('');
-        setCreateUsername('');
-        setCreateEmail('');
-        setCreatePhone('');
-        setCreatePassword('');
-        setCreateRole(activeTab);
-        if (activeTab === createRole) {
-          fetchUsers(activeTab);
-        } else {
-          setActiveTab(createRole);
-        }
-      }
-    } catch (err) {
-      setCreateError(err.response?.data?.message || 'Failed to create user.');
-    }
-  };
-
-  const handleUpdateUser = async (userId) => {
-    // Rule 11 check
+  const handleToggleStatus = async (userId, currentStatus) => {
     if (userId === currentUser?._id) {
-      showAlert('Action blocked: You cannot edit your own profile here.', 'error');
-      return;
-    }
-    try {
-      const payload = {
-        name: editName,
-        phone: editPhone,
-        role: editRole
-      };
-      const res = await axios.put(`/api/admin/users/${userId}`, payload, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar('User details updated successfully.', 'success');
-        setSelectedUser(null);
-        fetchUsers(activeTab);
-      }
-    } catch (err) {
-      showAlert(err.response?.data?.message || 'Failed to update user.', 'error');
-    }
-  };
-
-  const handleToggleStatus = async (userToToggle) => {
-    // Rule 11 check
-    if (userToToggle._id === currentUser?._id) {
       showAlert('Action blocked: You cannot suspend your own account.', 'error');
       return;
     }
-    showConfirm('Suspend User', `Are you sure you want to change the status for ${userToToggle.name}?`, async () => {
+    showConfirm('Toggle Status', `Are you sure you want to change the status for this user?`, async () => {
       try {
-        const res = await axios.put(`/api/admin/users/${userToToggle._id}/status`, {}, { withCredentials: true });
+        const res = await axios.put(`/api/admin/users/${userId}/status`, {}, { withCredentials: true });
         if (res.data.success) {
           const updatedUser = res.data.user;
           showSnackbar(`User is now ${updatedUser.status}.`, 'success');
@@ -159,7 +210,6 @@ export const UsersDirectory = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    // Rule 11 check
     if (userId === currentUser?._id) {
       showAlert('Action blocked: You cannot delete your own account.', 'error');
       return;
@@ -178,10 +228,26 @@ export const UsersDirectory = () => {
     });
   };
 
-  // Rule 2 & 12: Filtering list dynamically (excluding logged-in user)
+  // Filtering list dynamically
   const filteredAndStatusList = users
     .filter(u => u._id !== currentUser?._id)
-    .filter(u => u.role === activeTab) // Strictly enforce role match for the current tab
+    .filter(u => {
+      const adminRolesList = [
+        'Admin',
+        'Super Admin',
+        'Contest Manager',
+        'Finance Manager',
+        'Support Manager',
+        'Marketing Manager',
+        'Content Moderator',
+        'KYC Officer',
+        'Analytics Manager'
+      ];
+      if (activeTab === 'Admin') {
+        return adminRolesList.includes(u.role);
+      }
+      return u.role === activeTab;
+    })
     .filter(u => {
       const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
                             u.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -191,12 +257,12 @@ export const UsersDirectory = () => {
     })
     .sort((a, b) => new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime());
 
-  // Rule 12: Pagination details
-  const totalPages = Math.ceil(filteredAndStatusList.length / PAGE_SIZE) || 1;
-  const currentOffsetIndex = (currentPage - 1) * PAGE_SIZE;
-  const paginatedUsersList = filteredAndStatusList.slice(currentOffsetIndex, currentOffsetIndex + PAGE_SIZE);
+  // Pagination details
+  const totalPages = Math.ceil(filteredAndStatusList.length / pageSize) || 1;
+  const currentOffsetIndex = (currentPage - 1) * pageSize;
+  const paginatedUsersList = filteredAndStatusList.slice(currentOffsetIndex, currentOffsetIndex + pageSize);
 
-  if (!activeTab || !currentUser) {
+  if (!currentUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px] animate-pulse">
         <div className="flex flex-col items-center gap-3 text-white/50">
@@ -207,46 +273,35 @@ export const UsersDirectory = () => {
     );
   }
 
+  const getPageHeaderLabel = () => {
+    if (activeTab === 'Admin') return 'Staff & Admin';
+    return activeTab;
+  };
+
   return (
     <div className="space-y-6 text-left animate-fade-in relative">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold font-poppins text-white">
-            {activeTab} Management Page
+          <h2 className="text-xl font-bold font-poppins text-white flex items-center gap-2">
+            {getPageHeaderLabel()} Console Directory
           </h2>
-          <p className="text-xs text-white/50">Browse, edit, search, and perform administrative actions on {activeTab} accounts.</p>
+          <p className="text-xs text-white/50">Browse, edit, search, and perform administrative actions on {getPageHeaderLabel().toLowerCase()} accounts.</p>
         </div>
         <button
           onClick={() => {
-            setCreateRole(activeTab);
-            setShowCreateModal(true);
+            if (activeTab === 'Contestant') {
+              navigate('/admin-dashboard/contestants/create');
+            } else {
+              createFormik.resetForm();
+              createFormik.setFieldValue('role', activeTab);
+              setShowCreateModal(true);
+            }
           }}
           className="px-4 py-2.5 bg-brandPrimary text-white rounded-xl text-xs font-semibold hover:bg-brandPrimary/90 transition-colors flex items-center gap-2"
         >
           <UserPlus className="w-4 h-4" />
-          <span>Create User Account</span>
+          <span>Create {getPageHeaderLabel()} Account</span>
         </button>
-      </div>
-
-      {/* Separation Tab Selector */}
-      <div className="flex flex-wrap gap-2 border-b border-white/5 pb-2">
-        {availableTabs.map(role => (
-          <button
-            key={role}
-            onClick={() => {
-              setActiveTab(role);
-              setStatusFilter('All');
-              setSearch('');
-            }}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === role
-                ? 'bg-brandPrimary/15 border border-brandPrimary/20 text-brandPrimary shadow-md'
-                : 'hover:bg-white/5 text-white/60 hover:text-white border border-transparent'
-            }`}
-          >
-            {role} Management
-          </button>
-        ))}
       </div>
 
       {/* Search, Filter, and Status Filter Controls */}
@@ -255,17 +310,16 @@ export const UsersDirectory = () => {
           <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-white/30" />
           <input
             type="text"
-            placeholder={`Search ${activeTab}s...`}
+            placeholder={`Search ${getPageHeaderLabel().toLowerCase()}s...`}
             value={search}
             onChange={e => {
               setSearch(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-brandPrimary/50"
+            className="w-full bg-[#0c1322]/60 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-brandPrimary/50"
           />
         </div>
 
-        {/* Rule 12: Status Filter Option */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter className="w-4 h-4 text-white/40 shrink-0" />
           <CustomSelect
@@ -289,7 +343,7 @@ export const UsersDirectory = () => {
         {loading ? (
           <div className="p-12 text-center text-xs text-white/40">Querying user records...</div>
         ) : paginatedUsersList.length === 0 ? (
-          <div className="p-12 text-center text-xs text-white/40">No {activeTab} profiles found matching filters.</div>
+          <div className="p-12 text-center text-xs text-white/40">No {getPageHeaderLabel().toLowerCase()} profiles found matching filters.</div>
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -302,7 +356,8 @@ export const UsersDirectory = () => {
                     <th className="px-6 py-4">Phone</th>
                     <th className="px-6 py-4">Role Badge</th>
                     <th className="px-6 py-4">Account Status</th>
-                    <th className="px-6 py-4">Actions</th>
+                    {activeTab === 'Contestant' && <th className="px-6 py-4">KYC Status</th>}
+                    <th className="px-6 py-4 text-right pr-12">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-white/80">
@@ -335,27 +390,55 @@ export const UsersDirectory = () => {
                           {u.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 flex gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedUser(u);
-                            setEditName(u.name);
-                            setEditEmail(u.email);
-                            setEditPhone(u.phone);
-                            setEditRole(u.role);
-                          }}
-                          title="Manage User"
-                          className="p-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-full transition-all"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(u._id)}
-                          title="Delete User"
-                          className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {activeTab === 'Contestant' && (
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                            u.kycStatus === 'Approved'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : u.kycStatus === 'Under Review'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : u.kycStatus === 'Rejected'
+                              ? 'bg-rose-500/10 text-rose-450 border border-rose-500/20'
+                              : 'bg-white/5 text-white/50 border border-white/5'
+                          }`}>
+                            {u.kycStatus || 'Pending'}
+                          </span>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 text-right pr-6">
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => {
+                              setViewingUser(u);
+                              setIsViewDrawerOpen(true);
+                            }}
+                            title="View Full Details"
+                            className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-full transition-all"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedUser(u);
+                              editFormik.setValues({
+                                name: u.name,
+                                phone: u.phone || '',
+                                role: u.role
+                              });
+                            }}
+                            title="Configure Settings"
+                            className="p-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-full transition-all"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(u._id)}
+                            title="Delete User"
+                            className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -363,25 +446,44 @@ export const UsersDirectory = () => {
               </table>
             </div>
 
-            {/* Rule 12: Pagination controls */}
-            <div className="p-4 flex items-center justify-between text-xs text-white/50">
-              <span>Showing {currentOffsetIndex + 1}-{Math.min(currentOffsetIndex + PAGE_SIZE, filteredAndStatusList.length)} of {filteredAndStatusList.length} users</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(prev => prev - 1)}
-                  className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-white"
+            {/* Pagination controls */}
+            <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/50 border-t border-white/5">
+              <div className="flex items-center gap-2">
+                <span>Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-[#080b12] border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-brandPrimary transition-all cursor-pointer"
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="px-3 font-semibold text-white">Page {currentPage} of {totalPages}</span>
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-white"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <span>Showing {currentOffsetIndex + 1}-{Math.min(currentOffsetIndex + pageSize, filteredAndStatusList.length)} of {filteredAndStatusList.length} users</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-white"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="px-2 font-semibold text-white">Page {currentPage} of {totalPages}</span>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-white"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </>
@@ -392,124 +494,174 @@ export const UsersDirectory = () => {
       <RightDrawer
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Create User Account"
+        title={`Create ${getPageHeaderLabel()} Account`}
       >
+        {createError && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
+            {createError}
+          </div>
+        )}
 
-            {createError && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
-                {createError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateUser} className="space-y-6">
-              
+        <form onSubmit={createFormik.handleSubmit} className="space-y-6 text-left">
+          <div>
+            <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Account Details</div>
+            <div className="space-y-4">
               <div>
-                <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Account Details</div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={createName}
-                      onChange={(e) => setCreateName(e.target.value)}
-                      placeholder="Aarav Sharma"
-                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Username</label>
-                    <input
-                      type="text"
-                      required
-                      value={createUsername}
-                      onChange={(e) => setCreateUsername(e.target.value)}
-                      placeholder="aarav"
-                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      value={createEmail}
-                      onChange={(e) => setCreateEmail(e.target.value)}
-                      placeholder="aarav@domain.com"
-                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Mobile Phone</label>
-                    <input
-                      type="text"
-                      required
-                      value={createPhone}
-                      onChange={(e) => setCreatePhone(e.target.value)}
-                      placeholder="+9199..."
-                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none"
-                    />
-                  </div>
-                </div>
+                <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Full Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={createFormik.values.name}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  placeholder="Aarav Sharma"
+                  className={`w-full bg-[#080b12] border rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none ${
+                    createFormik.touched.name && createFormik.errors.name ? 'border-red-500/60' : 'border-white/10'
+                  }`}
+                />
+                {createFormik.touched.name && createFormik.errors.name && (
+                  <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{createFormik.errors.name}</span>
+                )}
               </div>
 
               <div>
-                <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Security & Roles</div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Initial Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={createPassword}
-                      onChange={(e) => setCreatePassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Account Role</label>
-                    <CustomSelect
-                      value={createRole}
-                      onChange={setCreateRole}
-                      options={currentUser?.role === 'Super Admin' ? [
-                        { value: 'Admin', label: 'Admin' },
-                        { value: 'Sponsor', label: 'Sponsor' },
-                        { value: 'Judge', label: 'Judge' },
-                        { value: 'Contestant', label: 'Contestant' }
-                      ] : [
-                        { value: 'Sponsor', label: 'Sponsor' },
-                        { value: 'Judge', label: 'Judge' },
-                        { value: 'Contestant', label: 'Contestant' }
-                      ]}
-                      position="top"
-                    />
-                  </div>
-                </div>
+                <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  value={createFormik.values.username}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  placeholder="aarav"
+                  className={`w-full bg-[#080b12] border rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none ${
+                    createFormik.touched.username && createFormik.errors.username ? 'border-red-500/60' : 'border-white/10'
+                  }`}
+                />
+                {createFormik.touched.username && createFormik.errors.username && (
+                  <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{createFormik.errors.username}</span>
+                )}
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all mt-4 flex justify-center items-center gap-2"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Publish New Account</span>
-              </button>
-            </form>
+              <div>
+                <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Email Address</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={createFormik.values.email}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  placeholder="aarav@domain.com"
+                  className={`w-full bg-[#080b12] border rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none ${
+                    createFormik.touched.email && createFormik.errors.email ? 'border-red-500/60' : 'border-white/10'
+                  }`}
+                />
+                {createFormik.touched.email && createFormik.errors.email && (
+                  <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{createFormik.errors.email}</span>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Mobile Phone</label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={createFormik.values.phone}
+                  onChange={createFormik.handleChange}
+                  onBlur={createFormik.handleBlur}
+                  placeholder="+9199..."
+                  className={`w-full bg-[#080b12] border rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none ${
+                    createFormik.touched.phone && createFormik.errors.phone ? 'border-red-500/60' : 'border-white/10'
+                  }`}
+                />
+                {createFormik.touched.phone && createFormik.errors.phone && (
+                  <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{createFormik.errors.phone}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4">Security & Roles</div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Initial Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={createFormik.values.password}
+                    onChange={createFormik.handleChange}
+                    onBlur={createFormik.handleBlur}
+                    placeholder="••••••••"
+                    className={`w-full bg-[#080b12] border rounded-xl pl-3 pr-10 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brandPrimary transition-all ${
+                      createFormik.touched.password && createFormik.errors.password ? 'border-red-500/60' : 'border-white/10'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-white/40 hover:text-white transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {createFormik.touched.password && createFormik.errors.password && (
+                  <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{createFormik.errors.password}</span>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Account Role</label>
+                {activeTab === 'Admin' ? (
+                  <CustomSelect
+                    value={createFormik.values.role}
+                    onChange={(val) => createFormik.setFieldValue('role', val)}
+                    options={[
+                      { value: 'Admin', label: 'Admin' },
+                      { value: 'Contest Manager', label: 'Contest Manager' },
+                      { value: 'Finance Manager', label: 'Finance Manager' },
+                      { value: 'Support Manager', label: 'Support Manager' },
+                      { value: 'Marketing Manager', label: 'Marketing Manager' },
+                      { value: 'Content Moderator', label: 'Content Moderator' },
+                      { value: 'KYC Officer', label: 'KYC Officer' },
+                      { value: 'Analytics Manager', label: 'Analytics Manager' }
+                    ]}
+                    position="top"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    disabled
+                    value={createFormik.values.role}
+                    className="w-full bg-[#080b12]/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/50 cursor-not-allowed focus:outline-none"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all mt-4 flex justify-center items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Publish New Account</span>
+          </button>
+        </form>
       </RightDrawer>
 
-      {/* Drawer: Manage/Details */}
+      {/* Drawer: Manage Settings */}
       <RightDrawer
         isOpen={!!selectedUser}
         onClose={() => setSelectedUser(null)}
         title="Manage User Account"
       >
         {selectedUser && (
-          <div className="space-y-6">
+          <div className="space-y-6 text-left">
             <div className="flex items-center gap-3 mb-6">
               <img 
                 src={selectedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedUser.username}`} 
@@ -522,32 +674,6 @@ export const UsersDirectory = () => {
               </div>
             </div>
 
-            {/* Read-only User Details */}
-            <div className="bg-[#080b12] p-4 rounded-xl border border-white/5 space-y-3">
-              <span className="text-[10px] text-brandPrimary uppercase font-extrabold tracking-wider block">User Information</span>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                   <p className="text-white/40 uppercase font-bold text-[9px] mb-0.5">Email Address</p>
-                   <p className="text-white truncate" title={selectedUser.email}>{selectedUser.email}</p>
-                </div>
-                <div>
-                   <p className="text-white/40 uppercase font-bold text-[9px] mb-0.5">Mobile Phone</p>
-                   <p className="text-white truncate">{selectedUser.phone}</p>
-                </div>
-                <div>
-                   <p className="text-white/40 uppercase font-bold text-[9px] mb-0.5">Current Role</p>
-                   <p className="text-white">{selectedUser.role}</p>
-                </div>
-                <div>
-                   <p className="text-white/40 uppercase font-bold text-[9px] mb-0.5">Account Status</p>
-                   <p className={`font-bold ${selectedUser.status === 'Active' ? 'text-emerald-400' : 'text-red-400'}`}>
-                     {selectedUser.status}
-                   </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Rule 3 & 11: Block self actions on UI completely */}
             {selectedUser._id === currentUser?._id ? (
               <div className="p-4 border border-red-500/20 bg-red-500/5 rounded-xl space-y-2 text-center">
                 <ShieldAlert className="w-6 h-6 text-red-500 mx-auto" />
@@ -557,10 +683,9 @@ export const UsersDirectory = () => {
                 </p>
               </div>
             ) : canManageSelected ? (
-              <div className="space-y-4">
+              <form onSubmit={editFormik.handleSubmit} className="space-y-4">
                 <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4 mt-2">Account Settings</div>
                 
-                {/* Form fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Username (Uneditable)</label>
@@ -575,7 +700,7 @@ export const UsersDirectory = () => {
                     <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Email Address (Uneditable)</label>
                     <input
                       type="email"
-                      value={editEmail}
+                      value={selectedUser?.email || ''}
                       disabled
                       className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white/50 cursor-not-allowed focus:outline-none"
                     />
@@ -587,52 +712,75 @@ export const UsersDirectory = () => {
                     <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Display Name</label>
                     <input
                       type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      name="name"
+                      value={editFormik.values.name}
+                      onChange={editFormik.handleChange}
+                      onBlur={editFormik.handleBlur}
+                      className={`w-full bg-[#080b12] border rounded-xl px-3 py-2 text-xs text-white focus:outline-none ${
+                        editFormik.touched.name && editFormik.errors.name ? 'border-red-500/60' : 'border-white/10'
+                      }`}
                     />
+                    {editFormik.touched.name && editFormik.errors.name && (
+                      <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{editFormik.errors.name}</span>
+                    )}
                   </div>
                   <div>
                     <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Mobile Phone</label>
                     <input
                       type="text"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      name="phone"
+                      value={editFormik.values.phone}
+                      onChange={editFormik.handleChange}
+                      onBlur={editFormik.handleBlur}
+                      className={`w-full bg-[#080b12] border rounded-xl px-3 py-2 text-xs text-white focus:outline-none ${
+                        editFormik.touched.phone && editFormik.errors.phone ? 'border-red-500/60' : 'border-white/10'
+                      }`}
                     />
+                    {editFormik.touched.phone && editFormik.errors.phone && (
+                      <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{editFormik.errors.phone}</span>
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] text-white/40 uppercase font-bold mb-1">Override Role</label>
-                  <CustomSelect
-                    value={editRole}
-                      onChange={setEditRole}
-                      options={currentUser?.role === 'Super Admin' ? [
+                  {activeTab === 'Admin' ? (
+                    <CustomSelect
+                      value={editFormik.values.role}
+                      onChange={(val) => editFormik.setFieldValue('role', val)}
+                      options={[
                         { value: 'Admin', label: 'Admin' },
-                        { value: 'Sponsor', label: 'Sponsor' },
-                        { value: 'Judge', label: 'Judge' },
-                        { value: 'Contestant', label: 'Contestant' }
-                      ] : [
-                        { value: 'Sponsor', label: 'Sponsor' },
-                        { value: 'Judge', label: 'Judge' },
-                        { value: 'Contestant', label: 'Contestant' }
+                        { value: 'Contest Manager', label: 'Contest Manager' },
+                        { value: 'Finance Manager', label: 'Finance Manager' },
+                        { value: 'Support Manager', label: 'Support Manager' },
+                        { value: 'Marketing Manager', label: 'Marketing Manager' },
+                        { value: 'Content Moderator', label: 'Content Moderator' },
+                        { value: 'KYC Officer', label: 'KYC Officer' },
+                        { value: 'Analytics Manager', label: 'Analytics Manager' }
                       ]}
                       position="top"
                     />
-                  </div>
+                  ) : (
+                    <input
+                      type="text"
+                      disabled
+                      value={editFormik.values.role}
+                      className="w-full bg-[#080b12]/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/50 cursor-not-allowed focus:outline-none"
+                    />
+                  )}
+                </div>
 
-                {/* Save and Controls */}
                 <div className="text-[10px] font-bold text-brandPrimary uppercase tracking-widest border-b border-white/10 pb-2 mb-4 mt-8">Administrative Actions</div>
                 <div className="grid grid-cols-2 gap-4">
                   <button
-                    onClick={() => handleUpdateUser(selectedUser._id)}
+                    type="submit"
                     disabled={updateSubmitting}
                     className="py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {updateSubmitting ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleToggleStatus(selectedUser._id, selectedUser.status)}
                     className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
                       selectedUser.status === 'Active'
@@ -643,7 +791,7 @@ export const UsersDirectory = () => {
                     {selectedUser.status === 'Active' ? 'Suspend Account' : 'Reactivate Account'}
                   </button>
                 </div>
-              </div>
+              </form>
             ) : (
               <div className="p-4 border border-red-500/20 bg-red-500/5 rounded-xl space-y-2 text-center">
                 <ShieldAlert className="w-6 h-6 text-red-500 mx-auto" />
@@ -657,6 +805,87 @@ export const UsersDirectory = () => {
         )}
       </RightDrawer>
 
+      {/* Drawer: Read-only Details View */}
+      <RightDrawer
+        isOpen={isViewDrawerOpen}
+        onClose={() => setIsViewDrawerOpen(false)}
+        title={`${getPageHeaderLabel()} Profile Details`}
+      >
+        {viewingUser && (
+          <div className="space-y-6 text-left">
+            <div className="flex items-center gap-4 border-b border-white/10 pb-5">
+              <img 
+                src={viewingUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewingUser.username}`} 
+                className="w-16 h-16 rounded-full border border-white/10" 
+                alt="" 
+              />
+              <div>
+                <h3 className="text-base font-bold text-white leading-tight">{viewingUser.name}</h3>
+                <p className="text-xs text-white/40 mt-1">@{viewingUser.username}</p>
+                <span className="inline-block mt-2 bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">
+                  {viewingUser.role}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Contact Info</label>
+                <div className="mt-2 space-y-2.5 bg-white/5 border border-white/5 p-4 rounded-xl text-xs text-white/80">
+                  <p className="flex justify-between"><span className="text-white/40">Email:</span> <span className="font-semibold select-all">{viewingUser.email}</span></p>
+                  <p className="flex justify-between"><span className="text-white/40">Phone:</span> <span className="font-semibold">{viewingUser.phone || 'N/A'}</span></p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Account Metrics & Status</label>
+                <div className="mt-2 space-y-2.5 bg-white/5 border border-white/5 p-4 rounded-xl text-xs text-white/80">
+                  <p className="flex justify-between">
+                    <span className="text-white/40">Status:</span> 
+                    <span className={`font-bold ${viewingUser.status === 'Active' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {viewingUser.status}
+                    </span>
+                  </p>
+                  {viewingUser.role === 'Contestant' && (
+                    <p className="flex justify-between">
+                      <span className="text-white/40">KYC Status:</span> 
+                      <span className={`font-bold ${
+                        viewingUser.kycStatus === 'Approved' ? 'text-emerald-400' :
+                        viewingUser.kycStatus === 'Under Review' ? 'text-amber-400' :
+                        viewingUser.kycStatus === 'Rejected' ? 'text-rose-400' : 'text-white/50'
+                      }`}>
+                        {viewingUser.kycStatus || 'Pending'}
+                      </span>
+                    </p>
+                  )}
+                  <p className="flex justify-between">
+                    <span className="text-white/40">Registration Date:</span> 
+                    <span className="font-semibold">{new Date(viewingUser.createdAt || new Date()).toLocaleString()}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-white/40">Wallet Balance:</span> 
+                    <span className="font-extrabold text-brandSecondary">₹{(viewingUser.walletBalance || 0).toLocaleString()}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-white/40">Profile ID:</span> 
+                    <span className="font-mono text-[9px] text-white/45 select-all">{viewingUser._id}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => setIsViewDrawerOpen(false)}
+                className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-bold transition-colors"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        )}
+      </RightDrawer>
     </div>
   );
 };

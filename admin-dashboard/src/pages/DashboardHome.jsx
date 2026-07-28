@@ -1,27 +1,97 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { updateWalletBalance, fetchPendingKycsRequest, reviewKycRequest } from '../store/authSlice';
+import { fetchPendingKycsRequest, reviewKycRequest } from '../store/authSlice';
 import axios from 'axios';
 import {
-  Users, Activity, Wallet, Trophy, Award,
-  Sparkles, ShieldAlert, ArrowUpRight, ArrowDownRight, ArrowRight, Play, Check, Clock,
-  Send, ShieldCheck, HelpCircle, Terminal, UserPlus, RefreshCw, Calendar, FileText
+  Users, Activity, Wallet, Trophy, Award, Sparkles, ShieldAlert,
+  ArrowUpRight, ArrowDownRight, ArrowRight, Play, Check, Clock,
+  Send, ShieldCheck, HelpCircle, UserPlus, RefreshCw, Calendar, FileText,
+  Filter, DollarSign, Landmark, CheckCircle, Flame, PieChart, TrendingUp,
+  Bot, Terminal, Globe
 } from 'lucide-react';
-import { CustomSelect } from '../components/CustomSelect';
 import { useAlert } from '../context/AlertContext';
 
+// Dynamic timeframe metric LEDGER
+const TIMEFRAME_DATA = {
+  today: {
+    todaysUsers: '142',
+    todaysUsersChange: '+18%',
+    todaysRevenue: '₹18,450',
+    todaysRevenueChange: '+12.4%',
+    todaysWithdrawals: '₹6,200',
+    todaysEntries: '412',
+    todaysEntriesChange: '+8.5%',
+    graphLabels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+    revenueSeries: [1200, 2400, 4800, 8900, 14200, 16800, 18450],
+    completionRate: '94.2%',
+    avgSessionTime: '18m 45s',
+    accuracyRate: '88.5%',
+    popularCategory: 'Logic & Reaction'
+  },
+  week: {
+    todaysUsers: '1,280',
+    todaysUsersChange: '+24%',
+    todaysRevenue: '₹1,42,000',
+    todaysRevenueChange: '+19.8%',
+    todaysWithdrawals: '₹45,000',
+    todaysEntries: '2,890',
+    todaysEntriesChange: '+15.2%',
+    graphLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    revenueSeries: [14000, 18000, 22000, 19500, 26000, 31000, 28000],
+    completionRate: '92.8%',
+    avgSessionTime: '21m 10s',
+    accuracyRate: '86.2%',
+    popularCategory: 'Grand Auditions'
+  },
+  month: {
+    todaysUsers: '5,420',
+    todaysUsersChange: '+31%',
+    todaysRevenue: '₹5,80,000',
+    todaysRevenueChange: '+28.4%',
+    todaysWithdrawals: '₹1,80,000',
+    todaysEntries: '11,400',
+    todaysEntriesChange: '+22.0%',
+    graphLabels: ['W1', 'W2', 'W3', 'W4'],
+    revenueSeries: [120000, 145000, 160000, 155000],
+    completionRate: '91.5%',
+    avgSessionTime: '24m 00s',
+    accuracyRate: '85.0%',
+    popularCategory: 'Speed & Memory'
+  },
+  year: {
+    todaysUsers: '48,200',
+    todaysUsersChange: '+85%',
+    todaysRevenue: '₹42,50,000',
+    todaysRevenueChange: '+64.5%',
+    todaysWithdrawals: '₹12,40,000',
+    todaysEntries: '94,000',
+    todaysEntriesChange: '+45.1%',
+    graphLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+    revenueSeries: [380000, 450000, 520000, 610000, 720000, 780000, 790000],
+    completionRate: '93.0%',
+    avgSessionTime: '26m 30s',
+    accuracyRate: '87.4%',
+    popularCategory: 'All Reality Categories'
+  }
+};
+
+const RECENT_WINNERS_LIST = [
+  { rank: 1, name: 'Aarav Sharma', prize: '₹1,00,000', contest: 'Grand Audition Season 1', time: '10 mins ago' },
+  { rank: 2, name: 'Priya Nair', prize: '₹50,000', contest: 'Grand Audition Season 1', time: '25 mins ago' },
+  { rank: 3, name: 'Rohan Mehta', prize: '₹25,000', contest: 'Speed Tapper Rush', time: '1 hour ago' },
+  { rank: 4, name: 'Ananya Verma', prize: '₹10,000', contest: 'Logic Matrix Arena', time: '2 hours ago' }
+];
+
 export const DashboardHome = ({ onViewChange, selectedRole }) => {
-  const { showAlert, showSnackbar, showConfirm } = useAlert();
+  const { showAlert, showSnackbar } = useAlert();
   const dispatch = useDispatch();
   const { user, pendingKycs } = useSelector((state) => state.auth);
 
   // States
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [promotionEmail, setPromotionEmail] = useState('');
-  const [promotionRole, setPromotionRole] = useState('Judge');
-  const [manualResultId, setManualResultId] = useState('');
-  const [manualStatus, setManualStatus] = useState('Qualified');
-  const [activeTimelineTab, setActiveTimelineTab] = useState('feeds'); // 'feeds', 'override', 'promote', 'audit'
+  const [timeframeFilter, setTimeframeFilter] = useState('today');
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
+  const [showCustomPicker, setShowCustomPicker] = useState(false);
+  const [activeTimelineTab, setActiveTimelineTab] = useState('feeds'); // 'feeds', 'override', 'promote', 'ai'
 
   // AI Assistant states
   const [aiMessages, setAiMessages] = useState([
@@ -35,77 +105,26 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
     type: 'Biometrics Match',
     risk: 'Low'
   });
+
+  const [promotionEmail, setPromotionEmail] = useState('');
+  const [promotionRole, setPromotionRole] = useState('Judge');
+  const [manualResultId, setManualResultId] = useState('');
+  const [manualStatus, setManualStatus] = useState('Qualified');
+
   const chatContainerRef = useRef(null);
 
-  // Fetch Audit Logs
-  const fetchAuditLogs = async () => {
-    try {
-      const res = await axios.get('/api/admin/audit-logs', { withCredentials: true });
-      setAuditLogs(res.data.logs || []);
-    } catch (err) {
-      console.error('Failed to load audit logs:', err);
-    }
-  };
-
   useEffect(() => {
-    if (selectedRole === 'Admin') {
-      dispatch(fetchPendingKycsRequest());
-    } else if (selectedRole === 'Super Admin') {
-      dispatch(fetchPendingKycsRequest());
-      fetchAuditLogs();
-    }
-  }, [selectedRole, dispatch]);
+    dispatch(fetchPendingKycsRequest());
+  }, [dispatch]);
 
-  // Scroll to bottom of AI chat internally
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [aiMessages]);
 
-  const handlePromoteRole = async (e) => {
-    e.preventDefault();
-    if (!promotionEmail) return;
-    try {
-      const res = await axios.put('/api/admin/users/role', {
-        email: promotionEmail,
-        role: promotionRole
-      }, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar(res.data.message, 'success');
-        setPromotionEmail('');
-        fetchAuditLogs();
-        setAiMessages(prev => [...prev, {
-          sender: 'ai',
-          text: `User ${promotionEmail} has been promoted to ${promotionRole} successfully. Security audit logs updated.`
-        }]);
-      }
-    } catch (err) {
-      showAlert(err.response?.data?.message || 'Failed to update user role.', 'error');
-    }
-  };
-
-  const handleManualOverride = async (e) => {
-    e.preventDefault();
-    if (!manualResultId) return;
-    try {
-      const res = await axios.put('/api/admin/results/override', {
-        resultId: manualResultId,
-        status: manualStatus
-      }, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar(res.data.message, 'success');
-        setManualResultId('');
-        fetchAuditLogs();
-        setAiMessages(prev => [...prev, {
-          sender: 'ai',
-          text: `Override completed! Result ID ${manualResultId} status updated to ${manualStatus}.`
-        }]);
-      }
-    } catch (err) {
-      showAlert(err.response?.data?.message || 'Manual override failed.', 'error');
-    }
-  };
+  const metrics = TIMEFRAME_DATA[timeframeFilter] || TIMEFRAME_DATA['today'];
+  const maxRevenue = Math.max(...metrics.revenueSeries) * 1.15;
 
   const handleReviewKycSubmit = (kycId, status) => {
     const reason = status === 'Rejected' ? 'Uploaded document text is illegible.' : undefined;
@@ -135,7 +154,6 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
     setAiMessages(prev => [...prev, newMsg]);
     setAiQuery('');
 
-    // Simulated premium intelligence replies
     setTimeout(() => {
       let aiText = '';
       const textLower = userText.toLowerCase();
@@ -158,16 +176,12 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           type: 'Biometrics Match',
           risk: 'Low'
         });
-      } else if (textLower.includes('risk') || textLower.includes('logs') || textLower.includes('anti-cheat')) {
-        aiText = 'Scanning anti-cheat daemons: 0 duplicate fingerprints detected today. AI facial match averages 96.5% validation score across all live auditions. Integrity metric is at 100%.';
-      } else if (textLower.includes('override') || textLower.includes('result')) {
-        aiText = 'To override quiz or audition results, use the "Override" tab on the Timeline panel. Enter the MongoDB Result ID and select the target status (Qualified/Failed).';
       } else {
-        aiText = `Understood. I am parsing logs for "${userText}". All backend microservices are active on ports 10000-10002. Compliance indexes look secure. Ask me to lookup "Priya Nair" or "Aarav Sharma" to review biometrics details.`;
+        aiText = `Understood. I am parsing logs for "${userText}". All backend microservices are active. Ask me to lookup "Priya Nair" or "Aarav Sharma" for biometrics.`;
       }
 
       setAiMessages(prev => [...prev, { sender: 'ai', text: aiText }]);
-    }, 600);
+    }, 500);
   };
 
   const getDayProgressStr = () => {
@@ -181,10 +195,8 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
   return (
     <div className="space-y-8 text-left font-jakarta pb-10">
 
-      {/* HEADER SECTION: Title & Abstract 3D Glass Card */}
+      {/* HEADER SECTION: Premium 3D Glass Ribbon Card & Title */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-
-        {/* Left Side: Elegant Text */}
         <div className="lg:col-span-7 flex flex-col justify-between py-2">
           <div>
             <span className="text-[10px] bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary px-3 py-1 rounded-full font-bold uppercase tracking-wider select-none">
@@ -198,7 +210,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
             </p>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center gap-4">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-2xl">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[11px] font-semibold text-slate-600 dark:text-white/60">
@@ -206,553 +218,325 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
               </span>
             </div>
 
-            <button
-              onClick={() => onViewChange('analytics')}
-              className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white/90 rounded-2xl text-[11px] font-bold shadow-lg flex items-center gap-1.5 transition-all"
-            >
-              <span>Telemetry charts</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            {/* Timeframe Filter Switcher */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-2xl border border-slate-200 dark:border-white/10">
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'week', label: 'Last Week' },
+                { id: 'month', label: 'This Month' },
+                { id: 'year', label: 'This Year' }
+              ].map(tf => (
+                <button
+                  key={tf.id}
+                  onClick={() => { setTimeframeFilter(tf.id); showSnackbar(`Filtered to ${tf.label}`, 'info'); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    timeframeFilter === tf.id
+                      ? 'bg-brandPrimary text-white shadow-md shadow-brandPrimary/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Right Side: Abstract Visual Ribbon Card (Visual inspiration element) */}
+        {/* Right Side: 3D Wireframe Spinning Globe System Telemetry Card */}
         <div className="lg:col-span-5">
-          <div className="luxury-card-premium p-6 h-56 relative overflow-hidden flex flex-col justify-between group">
-
-            {/* Background SVG abstract glassy shape */}
-            <div className="absolute right-0 top-0 w-64 h-64 -mr-10 -mt-10 pointer-events-none transition-transform duration-700 group-hover:scale-105">
-              <svg viewBox="0 0 200 200" className="w-full h-full animate-slow-rotate" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div className="luxury-card-premium p-6 h-56 relative overflow-hidden flex flex-col justify-between group rounded-3xl border border-[#C4E2A8]/70 dark:border-white/10 bg-gradient-to-br from-[#E2F1D5]/90 via-[#EDF6E5] to-[#F6FCF0] dark:from-slate-900 dark:via-slate-800 dark:to-slate-950 text-slate-800 dark:text-white transition-colors duration-300">
+            {/* Centered Spinning 3D Wireframe Globe Background SVG */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none transition-transform duration-700 group-hover:scale-110">
+              <svg viewBox="0 0 200 200" className="w-48 h-48 sm:w-52 sm:h-52 animate-slow-rotate opacity-75 dark:opacity-80" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <linearGradient id="premiumGlassGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.8" />
-                    <stop offset="50%" stopColor="#06B6D4" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.1" />
+                  <linearGradient id="globeGradPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#499A13" stopOpacity="0.85" />
+                    <stop offset="50%" stopColor="#8ECA3C" stopOpacity="0.6" />
+                    <stop offset="100%" stopColor="#BBDC12" stopOpacity="0.25" />
                   </linearGradient>
-                  <filter id="glassBlur" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="6" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                  </filter>
+                  <radialGradient id="globeGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#8ECA3C" stopOpacity="0.3" />
+                    <stop offset="70%" stopColor="#499A13" stopOpacity="0.1" />
+                    <stop offset="100%" stopColor="#276F27" stopOpacity="0" />
+                  </radialGradient>
                 </defs>
-                {/* 3D Glassy Metallic Ribbon Loops */}
-                <path
-                  d="M40,80 Q100,20 160,80 T80,160 Z"
-                  fill="url(#premiumGlassGrad)"
-                  filter="url(#glassBlur)"
-                  className="opacity-75"
-                />
-                <circle cx="110" cy="90" r="35" stroke="rgba(255,255,255,0.15)" strokeWidth="2" fill="none" />
-                <path
-                  d="M90,50 Q130,120 150,150"
-                  stroke="rgba(16,185,129,0.3)"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                />
+
+                {/* Soft ambient background glow */}
+                <circle cx="100" cy="100" r="75" fill="url(#globeGlow)" />
+
+                {/* Outer Globe Circle Ring */}
+                <circle cx="100" cy="100" r="68" stroke="url(#globeGradPrimary)" strokeWidth="2.5" className="opacity-90" />
+
+                {/* Latitude lines */}
+                <ellipse cx="100" cy="100" rx="68" ry="24" stroke="url(#globeGradPrimary)" strokeWidth="1.5" strokeDasharray="4 3" className="opacity-75" />
+                <ellipse cx="100" cy="100" rx="68" ry="48" stroke="url(#globeGradPrimary)" strokeWidth="1.5" className="opacity-60" />
+                <line x1="32" y1="100" x2="168" y2="100" stroke="url(#globeGradPrimary)" strokeWidth="1.5" className="opacity-80" />
+
+                {/* Longitude lines */}
+                <ellipse cx="100" cy="100" rx="24" ry="68" stroke="url(#globeGradPrimary)" strokeWidth="1.5" strokeDasharray="4 3" className="opacity-75" />
+                <ellipse cx="100" cy="100" rx="48" ry="68" stroke="url(#globeGradPrimary)" strokeWidth="1.5" className="opacity-60" />
+                <line x1="100" y1="32" x2="100" y2="168" stroke="url(#globeGradPrimary)" strokeWidth="1.5" className="opacity-80" />
+
+                {/* Orbiting Telemetry nodes */}
+                <circle cx="140" cy="65" r="4" fill="#BBDC12" className="animate-ping opacity-90" />
+                <circle cx="140" cy="65" r="3.5" fill="#499A13" />
+
+                <circle cx="65" cy="135" r="4" fill="#8ECA3C" className="animate-ping opacity-90" />
+                <circle cx="65" cy="135" r="3.5" fill="#276F27" />
+
+                <circle cx="125" cy="130" r="3" fill="#BBDC12" />
+                <circle cx="75" cy="70" r="3" fill="#8ECA3C" />
               </svg>
             </div>
 
-            {/* Glowing orb accent */}
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-brandPrimary/10 blur-2xl group-hover:bg-brandPrimary/15 transition-all" />
-
-            {/* Header Content on Card */}
             <div className="relative z-10 flex items-start justify-between">
               <div>
-                <span className="text-[10px] text-slate-400 dark:text-white/40 uppercase tracking-widest font-bold">SYSTEM TELEMETRY</span>
-                <h3 className="text-xl font-light font-outfit text-slate-800 dark:text-white mt-1">hakalive.in</h3>
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-white/40">
+                  <Globe className="w-3.5 h-3.5 text-brandPrimary animate-spin-slow" />
+                  <span className="text-[10px] uppercase tracking-widest font-extrabold">SYSTEM TELEMETRY</span>
+                </div>
+                <h3 className="text-xl font-bold font-outfit text-slate-900 dark:text-white mt-1">hakalive.in</h3>
               </div>
-              <div className="bg-slate-200/50 dark:bg-white/10 backdrop-blur-md border border-slate-300 dark:border-white/10 px-3 py-1 rounded-xl text-[10px] font-bold text-slate-600 dark:text-white/80">
+              <div className="bg-brandPrimary/15 dark:bg-white/10 backdrop-blur-md border border-brandPrimary/30 dark:border-white/10 px-3 py-1 rounded-xl text-[10px] font-bold text-brandPrimary dark:text-white/80 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-brandPrimary animate-ping" />
                 ACTIVE GATEWAY
               </div>
             </div>
 
-            {/* Bottom Metadata row */}
             <div className="relative z-10 flex items-end justify-between">
               <div>
-                <p className="text-[9px] text-slate-400 dark:text-white/30 uppercase tracking-wider font-bold">TELEMETRY SYNCED</p>
-                <p className="text-xs font-semibold text-slate-700 dark:text-white/80 font-mono mt-0.5">{getDayProgressStr()}</p>
+                <p className="text-[9px] text-slate-600 dark:text-white/30 uppercase tracking-wider font-bold">TELEMETRY SYNCED</p>
+                <p className="text-xs font-semibold text-slate-800 dark:text-white/80 font-mono mt-0.5">{getDayProgressStr()}</p>
               </div>
               <div className="flex gap-2">
-                <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-[10px] text-slate-500 dark:text-white/60">I</span>
-                <span className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center text-[10px] text-slate-500 dark:text-white/60">II</span>
-                <span className="w-16 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[10px] font-extrabold select-none">
-                  All Systems Ok
+                <span className="w-24 h-6 rounded-full bg-brandPrimary/15 border border-brandPrimary/30 text-brandPrimary dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 flex items-center justify-center text-[10px] font-extrabold gap-1">
+                  <Globe className="w-3 h-3" /> All Systems Ok
                 </span>
               </div>
             </div>
-
           </div>
         </div>
-
       </div>
 
-      {/* METRICS ROW: 4 Premium Minimal Rounded Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
-        {/* Card 1: Total Auditions */}
-        <div className="luxury-card p-6 flex flex-col justify-between h-40 hover:scale-[1.01] transition-transform duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">Total Auditions</span>
-            <span className="px-2 py-0.5 rounded-full font-bold text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 border border-emerald-500/10">
-              <ArrowUpRight className="w-2.5 h-2.5" /> +14.2%
-            </span>
+      {/* 10 CORE KPI METRICS CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Today's Users</span><Users className="w-4 h-4 text-brandPrimary" />
           </div>
-          <div>
-            <p className="text-3xl font-extrabold font-outfit text-slate-800 dark:text-white tracking-tight">
-              184,203
-            </p>
-            <p className="text-[10px] text-slate-400 dark:text-white/30 font-medium mt-1">Registered participants globally</p>
-          </div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{metrics.todaysUsers}</div>
+          <div className="text-[10px] text-emerald-500 font-bold mt-1 flex items-center gap-0.5"><ArrowUpRight className="w-3 h-3" /> {metrics.todaysUsersChange}</div>
         </div>
 
-        {/* Card 2: Requires Action (KYC pending) */}
-        <div className="luxury-card p-6 flex flex-col justify-between h-40 hover:scale-[1.01] transition-transform duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">Requires Action</span>
-            <span className="px-2 py-0.5 rounded-full font-bold text-[9px] bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center gap-0.5 border border-amber-500/10">
-              KYC Queue
-            </span>
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Total Users</span><Users className="w-4 h-4 text-indigo-500" />
           </div>
-          <div>
-            <p className="text-3xl font-extrabold font-outfit text-slate-800 dark:text-white tracking-tight">
-              {pendingKycs.length} cases
-            </p>
-            <p className="text-[10px] text-slate-400 dark:text-white/30 font-medium mt-1">Pending verification files</p>
-          </div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">54,290</div>
+          <div className="text-[10px] text-slate-400 mt-1">Platform Total</div>
         </div>
 
-        {/* Card 3: Active Contests */}
-        <div className="luxury-card p-6 flex flex-col justify-between h-40 hover:scale-[1.01] transition-transform duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">Active Contests</span>
-            <span className="px-2 py-0.5 rounded-full font-bold text-[9px] bg-brandPrimary/10 text-brandPrimary flex items-center gap-0.5 border border-brandPrimary/10">
-              Live Stages
-            </span>
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Online Users</span><Activity className="w-4 h-4 text-emerald-500" />
           </div>
-          <div>
-            <p className="text-3xl font-extrabold font-outfit text-slate-800 dark:text-white tracking-tight">
-              42 live
-            </p>
-            <p className="text-[10px] text-slate-400 dark:text-white/30 font-medium mt-1">Contests active this cycle</p>
-          </div>
+          <div className="text-2xl font-extrabold text-emerald-500 mt-2 flex items-center gap-2">384 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" /></div>
+          <div className="text-[10px] text-slate-400 mt-1">Live active sessions</div>
         </div>
 
-        {/* Card 4: Anti-Cheat Guard */}
-        <div className="luxury-card p-6 flex flex-col justify-between h-40 hover:scale-[1.01] transition-transform duration-300">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">Anti-Cheat Guard</span>
-            <span className="px-2 py-0.5 rounded-full font-bold text-[9px] bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center gap-0.5 border border-cyan-500/10">
-              Live Scan
-            </span>
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Today's Revenue</span><DollarSign className="w-4 h-4 text-amber-500" />
           </div>
-          <div>
-            <p className="text-3xl font-extrabold font-outfit text-slate-800 dark:text-white tracking-tight">
-              0 flags
-            </p>
-            <p className="text-[10px] text-slate-400 dark:text-white/30 font-medium mt-1">Zero fraud anomalies flagged</p>
-          </div>
+          <div className="text-2xl font-extrabold text-amber-500 mt-2">{metrics.todaysRevenue}</div>
+          <div className="text-[10px] text-emerald-500 font-bold mt-1 flex items-center gap-0.5"><ArrowUpRight className="w-3 h-3" /> {metrics.todaysRevenueChange}</div>
         </div>
 
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Today's Withdrawals</span><Landmark className="w-4 h-4 text-blue-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{metrics.todaysWithdrawals}</div>
+          <div className="text-[10px] text-slate-400 mt-1">Processed Payouts</div>
+        </div>
+
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Today's Entries</span><Trophy className="w-4 h-4 text-purple-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{metrics.todaysEntries}</div>
+          <div className="text-[10px] text-emerald-500 font-bold mt-1">{metrics.todaysEntriesChange} joins</div>
+        </div>
+
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Total Contests</span><FileText className="w-4 h-4 text-cyan-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">128</div>
+          <div className="text-[10px] text-slate-400 mt-1">Hosted contests</div>
+        </div>
+
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Active Contests</span><Flame className="w-4 h-4 text-rose-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-rose-500 mt-2">14 Live</div>
+          <div className="text-[10px] text-slate-400 mt-1">Running stages</div>
+        </div>
+
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Pending KYC</span><ShieldAlert className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-amber-500 mt-2">{pendingKycs.length || 24}</div>
+          <div className="text-[10px] text-slate-400 mt-1">Files in queue</div>
+        </div>
+
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
+            <span>Pending Withdrawals</span><Clock className="w-4 h-4 text-indigo-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-indigo-500 mt-2">8</div>
+          <div className="text-[10px] text-slate-400 mt-1">Awaiting approval</div>
+        </div>
       </div>
 
-      {/* THREE-COLUMN LOWER DASHBOARD GRID */}
+      {/* THREE-COLUMN EXECUTIVE LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-        {/* COLUMN 1: Needs Attention (KYC verifications) - col-span-4 */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="luxury-card p-6 min-h-[500px] flex flex-col justify-between">
+        {/* COLUMN 1: Needs Attention Container - col-span-4 */}
+        <div className="lg:col-span-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Needs Attention</h3>
+            <span className="text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded">{pendingKycs.length || 2} Pending</span>
+          </div>
+          <p className="text-xs text-slate-400">Biometric verifications requiring administrative action.</p>
 
-            {/* Header info */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider font-outfit">Needs Attention</h3>
-                <span className="text-[10px] text-slate-400 dark:text-white/30 font-semibold">{pendingKycs.length} critical cases</span>
+          <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+            {pendingKycs.length === 0 ? (
+              <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-center space-y-2">
+                <Check className="w-6 h-6 text-emerald-500 mx-auto" />
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">All verifications cleared!</p>
               </div>
-              <p className="text-xs text-slate-400 dark:text-white/40 mb-6 leading-relaxed">
-                Biometric failures, verification queues, and high-risk reviews requiring manual administrative resolution.
-              </p>
-
-              {/* KYC Pending items list */}
-              {pendingKycs.length === 0 ? (
-                <div className="space-y-4">
-                  {/* Mock items style of reference image when none exist to maintain beautiful UI density */}
-                  <div className="p-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl text-center py-10">
-                    <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">All verifications cleared</p>
-                    <p className="text-[10px] text-slate-400 dark:text-white/30 mt-1">No active queues in this console.</p>
+            ) : (
+              pendingKycs.map((k, idx) => (
+                <div key={k.userId || idx} className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-white">{k.userDetail?.name || 'Participant'}</h4>
+                    <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">AI: {k.livenessScore || 90}% Match</span>
                   </div>
-
-                  <div className="p-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl text-left">
-                    <span className="text-[9px] bg-slate-200 dark:bg-white/10 px-2 py-0.5 rounded font-bold text-slate-500 dark:text-white/50">Awaiting Response</span>
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-white mt-2 font-outfit">Brightpath Claims Sync</h4>
-                    <p className="text-[10px] text-slate-400 dark:text-white/40 mt-1">Integrity token check pending client verification.</p>
-                  </div>
-
-                  <div className="p-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl text-left">
-                    <span className="text-[9px] bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded font-bold">Blocked</span>
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-white mt-2 font-outfit">Harbor Lease Upload</h4>
-                    <p className="text-[10px] text-slate-400 dark:text-white/40 mt-1">Duplicate file signature scanned in DB.</p>
+                  <p className="text-[10px] text-slate-400">{k.userDetail?.email}</p>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => handleReviewKycSubmit(k.userId, 'Approved')} className="flex-1 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-xl flex items-center justify-center gap-1">
+                      <Check className="w-3 h-3" /> Approve
+                    </button>
+                    <button onClick={() => handleReviewKycSubmit(k.userId, 'Rejected')} className="px-3 py-1.5 bg-rose-500/10 text-rose-500 text-[10px] font-bold rounded-xl">
+                      Reject
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
-                  {pendingKycs.map((k, index) => (
-                    <div
-                      key={k.userId || index}
-                      className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl flex flex-col justify-between gap-3 group hover:border-brandPrimary/30 transition-all duration-300"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-bold text-slate-800 dark:text-white font-outfit">{k.userDetail?.name || 'Participant'}</h4>
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${k.livenessScore >= 90 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            }`}>
-                            AI: {k.livenessScore || 90}% match
-                          </span>
-                        </div>
-                        <p className="text-[9px] text-slate-400 dark:text-white/30 truncate mt-1">{k.userDetail?.email}</p>
-                        <div className="flex gap-3 text-[9px] font-mono text-slate-500 dark:text-white/40 mt-2">
-                          <span>Doc: {k.documentType} ({k.documentNumber})</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 mt-1">
-                        <button
-                          onClick={() => handleReviewKycSubmit(k.userId, 'Approved')}
-                          className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm transition-colors"
-                        >
-                          <Check className="w-3 h-3" /> Approve
-                        </button>
-                        <button
-                          onClick={() => handleReviewKycSubmit(k.userId, 'Rejected')}
-                          className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border border-red-500/10 rounded-xl text-[10px] font-bold transition-all"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Quick Stats overview Footer */}
-            <div className="pt-4 border-t border-slate-200 dark:border-white/5 text-[10px] text-slate-400 dark:text-white/30 flex items-center justify-between">
-              <span>Auto-refresh daemon online</span>
-              <span className="font-mono text-emerald-500 font-bold">100% telemetry</span>
-            </div>
-
+              ))
+            )}
           </div>
         </div>
 
-        {/* COLUMN 2: Timeline Schedule & Operations Drawer (tabbed control) - col-span-5 */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="luxury-card p-6 min-h-[500px] flex flex-col justify-between">
-
-            <div>
-              {/* Header */}
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider font-outfit">Today's Timeline</h3>
-                <span className="text-[10px] bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 px-2 py-0.5 rounded text-slate-500 dark:text-white/40 font-mono">01-07 Jan</span>
-              </div>
-              <p className="text-xs text-slate-400 dark:text-white/40 mb-6">Hour-by-hour operational timeline and scheduled verification checkouts.</p>
-
-              {/* Horizontal Timeline Ruler */}
-              <div className="relative mb-6">
-                <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-slate-200 dark:bg-white/10 -translate-y-1/2" />
-                <div className="relative flex justify-between text-[10px] font-mono text-slate-400 dark:text-white/30 px-1">
-                  <span>9:00</span>
-                  <span>10:00</span>
-                  <span>11:00</span>
-                  <span>12:00</span>
-                  <span>13:00</span>
-                  <span>14:00</span>
-                  <span>15:00</span>
-                </div>
-              </div>
-
-              {/* Scheduled Event Blocks */}
-              <div className="space-y-3 mb-6">
-                <div className="p-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-l-2 border-emerald-500 rounded-r-xl">
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span className="font-bold text-slate-700 dark:text-slate-200">Biometrics verification checkout</span>
-                    <span className="text-slate-400 dark:text-white/30 font-mono">9:30 - 11:00</span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-gradient-to-r from-brandPrimary/10 to-transparent border-l-2 border-brandPrimary rounded-r-xl">
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span className="font-bold text-slate-700 dark:text-slate-200">Manual result overrides window</span>
-                    <span className="text-slate-400 dark:text-white/30 font-mono">11:30 - 13:00</span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-gradient-to-r from-slate-500/10 to-transparent border-l-2 border-slate-500 rounded-r-xl">
-                  <div className="flex justify-between items-center text-[10px]">
-                    <span className="font-bold text-slate-700 dark:text-slate-200">Audit trail security consolidation</span>
-                    <span className="text-slate-400 dark:text-white/30 font-mono">13:30 - 15:00</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tab Selector for Forms/Logs Console */}
-              <div className="border-t border-slate-200 dark:border-white/5 pt-4">
-                <div className="flex flex-wrap gap-2 p-1 bg-slate-100/80 dark:bg-white/5 rounded-2xl mb-4">
-                  <button
-                    onClick={() => setActiveTimelineTab('feeds')}
-                    className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${activeTimelineTab === 'feeds' ? 'bg-white dark:bg-darkCard text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white'
-                      }`}
-                  >
-                    Anti-Cheat Feed
-                  </button>
-                  {selectedRole === 'Super Admin' && (
-                    <>
-                      <button
-                        onClick={() => setActiveTimelineTab('promote')}
-                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${activeTimelineTab === 'promote' ? 'bg-white dark:bg-darkCard text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white'
-                          }`}
-                      >
-                        Promote Role
-                      </button>
-                      <button
-                        onClick={() => setActiveTimelineTab('override')}
-                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${activeTimelineTab === 'override' ? 'bg-white dark:bg-darkCard text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white'
-                          }`}
-                      >
-                        Override Result
-                      </button>
-                      <button
-                        onClick={() => setActiveTimelineTab('audit')}
-                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold transition-all ${activeTimelineTab === 'audit' ? 'bg-white dark:bg-darkCard text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white'
-                          }`}
-                      >
-                        Audit Logs
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Tab content 1: Anti-Cheat Feed */}
-                {activeTimelineTab === 'feeds' && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-[11px] mb-2 font-bold text-slate-700 dark:text-white/60">
-                      <span>Anti-Cheat Real-Time Feed</span>
-                      <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-mono animate-pulse">monitoring live</span>
-                    </div>
-                    <div className="bg-slate-900 text-emerald-400 font-mono text-[10px] rounded-2xl p-4 space-y-2 border border-slate-800 max-h-48 overflow-y-auto text-left">
-                      <div>[14:32:02] Anti-Cheat Audit Daemon initialized.</div>
-                      <div>[14:35:10] Duplicate browser fingerprint scanned for User Aarav - PASSED.</div>
-                      <div>[14:38:40] AI facial match score for sub-1 returned: 98.4% - APPROVED.</div>
-                      <div>[14:42:15] Plagiarism check on pitch_deck.pdf - 0% Copied.</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab content 2: Promote Role */}
-                {activeTimelineTab === 'promote' && selectedRole === 'Super Admin' && (
-                  <form onSubmit={handlePromoteRole} className="space-y-3">
-                    <div>
-                      <label className="block text-[9px] text-slate-400 dark:text-white/40 uppercase mb-1 font-bold">User Email Address</label>
-                      <input
-                        type="email"
-                        value={promotionEmail}
-                        onChange={(e) => setPromotionEmail(e.target.value)}
-                        placeholder="user@domain.com"
-                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none focus:border-brandPrimary"
-                        required
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <div className="flex-1">
-                        <label className="block text-[9px] text-slate-400 dark:text-white/40 uppercase mb-1 font-bold">Target Role</label>
-                        <CustomSelect
-                          value={promotionRole}
-                          onChange={setPromotionRole}
-                          options={[
-                            { value: 'Contestant', label: 'Contestant' },
-                            { value: 'Judge', label: 'Judge' },
-                            { value: 'Sponsor', label: 'Sponsor' },
-                            { value: 'Admin', label: 'Admin' }
-                          ]}
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="self-end px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-brandPrimary/10"
-                      >
-                        Promote Role
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Tab content 3: Result Override */}
-                {activeTimelineTab === 'override' && selectedRole === 'Super Admin' && (
-                  <form onSubmit={handleManualOverride} className="space-y-3">
-                    <div>
-                      <label className="block text-[9px] text-slate-400 dark:text-white/40 uppercase mb-1 font-bold">Result ID (MongoDB Object ID)</label>
-                      <input
-                        type="text"
-                        value={manualResultId}
-                        onChange={(e) => setManualResultId(e.target.value)}
-                        placeholder="64fc3a79bc..."
-                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none focus:border-brandPrimary"
-                        required
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <div className="flex-1">
-                        <label className="block text-[9px] text-slate-400 dark:text-white/40 uppercase mb-1 font-bold">Override Status</label>
-                        <CustomSelect
-                          value={manualStatus}
-                          onChange={setManualStatus}
-                          options={[
-                            { value: 'Qualified', label: 'Qualified' },
-                            { value: 'Failed', label: 'Failed' }
-                          ]}
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="self-end px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-md"
-                      >
-                        Override Status
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Tab content 4: Audit Logs */}
-                {activeTimelineTab === 'audit' && selectedRole === 'Super Admin' && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-white/30 font-bold uppercase mb-2">
-                      <span>Ledger Database</span>
-                      <button type="button" onClick={fetchAuditLogs} className="flex items-center gap-1 hover:text-white">
-                        <RefreshCw className="w-2.5 h-2.5" /> Reload
-                      </button>
-                    </div>
-                    {auditLogs.length === 0 ? (
-                      <div className="p-4 bg-slate-100/50 dark:bg-white/5 rounded-xl text-center text-xs text-slate-400 border border-slate-200 dark:border-white/5">No security audit logs indexed.</div>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {auditLogs.map((log, idx) => (
-                          <div key={log._id || idx} className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/5 text-[10px]">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-brandPrimary">{log.action}</span>
-                              <span className="text-[8px] text-slate-400 dark:text-white/30">{new Date(log.createdAt).toLocaleTimeString()}</span>
-                            </div>
-                            <p className="text-slate-600 dark:text-white/70 mt-1 text-[9px]">{log.details}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
+        {/* COLUMN 2: Haka AI Assistant Chat Drawer - col-span-4 */}
+        <div className="lg:col-span-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm flex flex-col h-[460px] justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Bot className="w-4 h-4 text-brandPrimary" /> Haka Intelligence AI Assistant
+              </h3>
+              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">Online</span>
             </div>
+            <p className="text-[11px] text-slate-400">Ask about biometrics, user verification or risk logs.</p>
+          </div>
 
-            {/* Bottom info row */}
-            <div className="pt-4 border-t border-slate-200 dark:border-white/5 text-[10px] text-slate-400 dark:text-white/30 flex items-center justify-between">
-              <span>Timezone Local UTC+5:30</span>
-              <span className="font-bold">Sync: stable</span>
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-3 py-3 pr-1 text-xs">
+            {aiMessages.map((m, i) => (
+              <div key={i} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`p-3 rounded-2xl max-w-[85%] ${
+                  m.sender === 'user'
+                    ? 'bg-brandPrimary text-white'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/5'
+                }`}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleSendAiMessage} className="relative mt-2">
+            <input
+              type="text"
+              placeholder="Ask Haka AI assistant..."
+              value={aiQuery}
+              onChange={e => setAiQuery(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl pl-4 pr-10 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+            />
+            <button type="submit" className="absolute right-2 top-2 p-1.5 bg-brandPrimary text-white rounded-xl">
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        </div>
+
+        {/* COLUMN 3: Revenue Telemetry Graph & Contest Analytics - col-span-4 */}
+        <div className="lg:col-span-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-brandPrimary" /> Revenue Telemetry Graph
+            </h3>
+            <span className="text-[10px] font-bold text-brandPrimary bg-brandPrimary/10 px-2 py-0.5 rounded capitalize">{timeframeFilter}</span>
+          </div>
+
+          <div className="h-44 flex items-end justify-between gap-2 pt-4 px-2 border-b border-slate-100 dark:border-white/5">
+            {metrics.revenueSeries.map((val, idx) => {
+              const heightPercent = Math.round((val / maxRevenue) * 100);
+              return (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
+                  <div style={{ height: `${heightPercent}%` }} className="w-full bg-gradient-to-t from-brandPrimary/50 to-brandPrimary rounded-t-lg group-hover:from-brandPrimary group-hover:to-emerald-400 transition-all duration-300" />
+                  <span className="text-[9px] font-bold text-slate-400">{metrics.graphLabels[idx] || `P${idx+1}`}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="space-y-2 text-xs pt-2">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Completion Rate:</span>
+              <strong className="text-emerald-500 font-bold">{metrics.completionRate}</strong>
             </div>
-
+            <div className="flex justify-between">
+              <span className="text-slate-400">Avg Session Duration:</span>
+              <strong className="text-indigo-500 font-bold">{metrics.avgSessionTime}</strong>
+            </div>
           </div>
         </div>
 
-        {/* COLUMN 3: Haka AI Assistant (Chatbot / Case Analyzer) - col-span-3 */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="luxury-card p-5 min-h-[500px] flex flex-col justify-between">
+      </div>
 
-            {/* Header info */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-brandPrimary/20 flex items-center justify-center text-brandPrimary">
-                    <Sparkles className="w-4.5 h-4.5" />
-                  </div>
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-darkCard" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-white font-outfit">Haka AI Assistant</h4>
-                  <p className="text-[9px] text-emerald-500 font-semibold">Agent Online</p>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 dark:text-white/40 leading-relaxed mb-4">
-                Assessing uploads, biometrics checkouts, fraud detection, and liveness scoring logs.
-              </p>
-
-              {/* Selected Case Folder Card (Reference design matching folder logo + parameters) */}
-              <div className="p-3 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl mb-4">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-7 h-7 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-slate-400 dark:text-white/40 font-bold uppercase tracking-wider leading-none">ACTIVE TARGET</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-white mt-1 leading-none font-outfit">{selectedCase.name}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 text-[9px] text-slate-500 dark:text-white/55 border-t border-slate-200 dark:border-white/5 pt-2 font-mono">
-                  <div className="flex justify-between"><span>Case ID:</span><span className="font-bold text-slate-800 dark:text-white">{selectedCase.id}</span></div>
-                  <div className="flex justify-between"><span>Check Type:</span><span className="text-slate-800 dark:text-white">{selectedCase.type}</span></div>
-                  <div className="flex justify-between"><span>Liveness:</span><span className="font-bold text-brandPrimary">{selectedCase.score}</span></div>
-                  <div className="flex justify-between"><span>Risk Index:</span><span className={`font-bold ${selectedCase.risk === 'Low' ? 'text-emerald-500' : 'text-amber-500'}`}>{selectedCase.risk}</span></div>
-                </div>
-              </div>
-
-              {/* Progress rating bar (Reference design Overall risk) */}
-              <div className="mb-4">
-                <div className="flex justify-between text-[9px] text-slate-400 dark:text-white/40 font-bold uppercase mb-1">
-                  <span>Compliance score</span>
-                  <span className="text-emerald-500 font-mono">98% Excellent</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full" style={{ width: '98%' }} />
-                </div>
-              </div>
-
-              {/* simulated chat box logs */}
-              <div
-                ref={chatContainerRef}
-                className="h-28 overflow-y-auto border border-slate-200/50 dark:border-white/5 bg-slate-50 dark:bg-black/10 rounded-xl p-2.5 space-y-2.5 scrollbar-thin"
-              >
-                {aiMessages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`text-[9px] leading-relaxed p-2 rounded-xl text-left ${msg.sender === 'ai'
-                        ? 'bg-slate-200/50 dark:bg-white/5 text-slate-700 dark:text-white/80 border border-slate-200 dark:border-white/5'
-                        : 'bg-brandPrimary text-white self-end ml-4 shadow-sm'
-                      }`}
-                  >
-                    {msg.text}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Interactive Query Input Bar (Reference design query input) */}
-            <form onSubmit={handleSendAiMessage} className="mt-4 pt-3 border-t border-slate-200 dark:border-white/5">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Ask AI Assistant..."
-                  value={aiQuery}
-                  onChange={(e) => setAiQuery(e.target.value)}
-                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl pl-3 pr-10 py-2 text-[10px] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none focus:border-brandPrimary transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-1 top-1 bottom-1 w-7 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-white/90 text-white dark:text-slate-900 rounded-lg flex items-center justify-center transition-colors"
-                >
-                  <Send className="w-3 h-3" />
-                </button>
-              </div>
-            </form>
-
-          </div>
+      {/* RECENT WINNERS SPOTLIGHT */}
+      <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-500" /> Recent Contest Winners Spotlight
+          </h3>
+          <button onClick={() => onViewChange('leaderboard')} className="text-xs font-bold text-amber-500 hover:underline">View Leaderboard</button>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {RECENT_WINNERS_LIST.map(w => (
+            <div key={w.rank} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">Rank #{w.rank}</span>
+                <span className="text-[10px] text-slate-400">{w.time}</span>
+              </div>
+              <div className="font-bold text-slate-900 dark:text-white text-sm">{w.name}</div>
+              <div className="text-xs font-bold text-emerald-500">Prize: {w.prize}</div>
+              <div className="text-[10px] text-slate-400 truncate">{w.contest}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
     </div>

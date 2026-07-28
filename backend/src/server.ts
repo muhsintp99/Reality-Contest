@@ -49,55 +49,48 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
   });
 } else {
   const startServer = async () => {
-    // Wait for Redis connection to resolve or timeout before initializing components
-    await redisService.waitForConnection();
-
-    // Initialize Queues
-    queueService.initialize();
-
-    // Initialize Background Queue Workers
-    initEmailWorker();
-    initSMSWorker();
-    initKycWorker();
-    initWalletWorker();
-
     const app = express();
     const server = http.createServer(app);
 
     // Initialize Real-time Socket sync
     socketService.initialize(server);
 
-  // Serve API documentation via Swagger UI
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    // Serve API documentation via Swagger UI
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-  // Parser and Compression Middlewares
-  app.use(helmet());
-  app.use(cookieParser());
-  app.use(compression()); // Compress text response payloads
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+    // Parser and Compression Middlewares
+    app.use(
+      helmet({
+        crossOriginEmbedderPolicy: false,
+        crossOriginResourcePolicy: { policy: 'cross-origin' }
+      })
+    );
+    app.use(cookieParser());
+    app.use(compression()); // Compress text response payloads
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+    app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-  app.use(
-    cors({
-      origin: [
-        'http://localhost:10001', 'http://127.0.0.1:10001',
-        'http://localhost:10002', 'http://127.0.0.1:10002'
-      ],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization']
-    })
-  );
+    app.use(
+      cors({
+        origin: [
+          'http://localhost:10001', 'http://127.0.0.1:10001',
+          'http://localhost:10002', 'http://127.0.0.1:10002'
+        ],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+      })
+    );
 
     // Rate Limiting Store Selection (Redis Cluster vs Memory)
     const redisClient = redisService.getClient();
     const createRedisStore = (prefix: string) => {
       return redisService.getIsConnected() && redisClient
         ? new RedisStore({
-          sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as Promise<any>,
-          prefix
-        })
+            sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as Promise<any>,
+            prefix
+          })
         : undefined; // Defaults to memory store inside express-rate-limit
     };
 
@@ -120,51 +113,63 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       message: { success: false, message: 'Too many requests. Please try again later.' }
     });
 
-  // Apply general API rate limiting and mount standard API routes
-  app.use('/api', generalApiLimiter, createApiRouter(authLimiter));
+    // Apply general API rate limiting and mount standard API routes
+    app.use('/api', generalApiLimiter, createApiRouter(authLimiter));
 
-  // 5. Health Check Endpoint
-  app.get('/health', (req, res) => {
-    res.status(200).json({
-      status: 'healthy',
-      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      redis: redisService.getIsConnected() ? 'connected' : 'disconnected',
-      activeQueues: queueService ? 'active' : 'inactive',
-      clustering: cluster.isWorker ? `worker_${cluster.worker?.id}` : 'standalone'
+    // Health Check Endpoint
+    app.get('/health', (req, res) => {
+      res.status(200).json({
+        status: 'healthy',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        redis: redisService.getIsConnected() ? 'connected' : 'disconnected',
+        activeQueues: queueService ? 'active' : 'inactive',
+        clustering: cluster.isWorker ? `worker_${cluster.worker?.id}` : 'standalone'
+      });
     });
-  });
 
-  // Centralized Error Middleware (Winston logs, Stack hiding)
-  app.use(errorHandler);
+    // Centralized Error Middleware (Winston logs, Stack hiding)
+    app.use(errorHandler);
 
-  // Database Connection Pooling & Initialization
-  mongoose.set('bufferCommands', false);
-  const dbOptions = {
-    maxPoolSize: 100, // Handle high concurrent connections
-    minPoolSize: 10,
-    socketTimeoutMS: 45000,
-    serverSelectionTimeoutMS: 5000
-  };
+    // Start listening immediately on 0.0.0.0 so Vite dev server proxy connections are accepted without delay
+    const PORT = config.PORT;
+    server.listen(PORT, '0.0.0.0', () => {
+      logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
+    });
 
-  mongoose
-    .connect(config.MONGODB_URI, dbOptions)
-    .then(() => {
+    // Asynchronously wait for Redis connection to resolve or timeout before initializing queues & background workers
+    redisService.waitForConnection().then(() => {
+      queueService.initialize();
+      initEmailWorker();
+      initSMSWorker();
+      initKycWorker();
+      initWalletWorker();
+    }).catch((err) => {
+      logger.error(`Redis/Queue initialization error: ${err.message}`);
+    });
+
+    // Database Connection Pooling & Initialization
+    mongoose.set('bufferCommands', true);
+    const dbOptions = {
+      maxPoolSize: 100, // Handle high concurrent connections
+      minPoolSize: 10,
+      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 30000
+    };
+
+    try {
+      logger.info('Connecting to MongoDB Cluster...');
+      await mongoose.connect(config.MONGODB_URI, dbOptions);
       logger.info('Successfully connected to MongoDB Cluster.');
-      seedDatabase();
-    })
-    .catch((err) => {
+      await seedDatabase();
+    } catch (err) {
+      logger.error('Database connection failed:', err);
       logger.warn('\n======================================================');
       logger.warn('WARNING: MongoDB is not running on your local machine.');
       logger.warn(`Attempted URI: ${config.MONGODB_URI}`);
       logger.warn('The server will launch, but database queries will fail.');
       logger.warn('Please start mongod locally or update MONGODB_URI in .env');
       logger.warn('======================================================\n');
-    });
-
-    const PORT = config.PORT;
-    server.listen(PORT, () => {
-      logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
-    });
+    }
   };
 
   startServer().catch((err) => {

@@ -13,6 +13,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --only=production
 COPY --from=builder /usr/src/app/dist ./dist
+RUN mkdir -p public/uploads
 
-EXPOSE 5000
+EXPOSE 10000
 CMD ["node", "dist/server.js"]

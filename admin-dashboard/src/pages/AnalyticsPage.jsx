@@ -1,78 +1,95 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   TrendingUp, Calendar, Filter, Users, Vote, DollarSign, 
-  ArrowUpRight, Sparkles, Check, Download
+  ArrowUpRight, Sparkles, Check, Download, History, CheckSquare,
+  HelpCircle, Trophy, Award, Share2, Landmark, Activity, PieChart, Clock
 } from 'lucide-react';
 
 const TIMEFRAMES = ['7 Days', '30 Days', '6 Months'];
 
-// Data Ledger
+// 12 Analytical Metrics ledger
+const ANALYTICS_METRICS = [
+  { id: 'dau-mau', label: 'DAU/MAU', icon: Users, stat: '48.2K / 184.2K', change: '+14.2%', desc: 'Daily Active vs Monthly Active User Ratio' },
+  { id: 'participation-rate', label: 'Contest Participation Rate', icon: Vote, stat: '78.5%', change: '+8.4%', desc: 'Registered Users Participating in Live Contests' },
+  { id: 'avg-session-time', label: 'Average Session Time', icon: Clock, stat: '22m 45s', change: '+5.1%', desc: 'Average Time Spent per Active Contest Session' },
+  { id: 'completion-rate', label: 'Contest Completion Rate', icon: CheckSquare, stat: '92.4%', change: '+3.8%', desc: 'Percentage of Started Contests Completed' },
+  { id: 'question-accuracy', label: 'Question Accuracy', icon: HelpCircle, stat: '86.2%', change: '+2.1%', desc: 'Platform-wide Average Quiz Accuracy' },
+  { id: 'category-popularity', label: 'Category Popularity', icon: Trophy, stat: 'Grand Reality (42%)', change: '+18.0%', desc: 'Most Played Contest Categories' },
+  { id: 'revenue-by-contest', label: 'Revenue by Contest', icon: DollarSign, stat: '₹14,50,000', change: '+24.5%', desc: 'Gross Entry Fee Revenue by Tournament' },
+  { id: 'top-earners', label: 'Top Earners', icon: Award, stat: 'Aarav Sharma (₹1.8L)', change: '+15.2%', desc: 'Highest Contest Prize Winners' },
+  { id: 'top-referrers', label: 'Top Referrers', icon: Share2, stat: 'Ananya Verma (29 Invites)', change: '+32.0%', desc: 'Top Affiliate Referral Leaderboard' },
+  { id: 'retention-rate', label: 'Retention Rate', icon: TrendingUp, stat: '68.4% (D30)', change: '+6.2%', desc: '30-Day Cohort User Retention' },
+  { id: 'conversion-rate', label: 'Conversion Rate', icon: Sparkles, stat: '14.8%', change: '+4.5%', desc: 'Free User to Paid Entry Fee Conversion' },
+  { id: 'withdrawal-trends', label: 'Withdrawal Trends', icon: Landmark, stat: '₹4,80,000 Payouts', change: '-2.4%', desc: 'Daily Payout Volumes & Trends' }
+];
+
 const CHART_DATA = {
   '7 Days': {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    revenue: [12000, 15000, 14000, 18000, 22000, 25000, 24000],
-    votes: [5400, 6800, 7200, 8100, 9500, 12000, 10500],
-    users: [420, 580, 610, 750, 890, 1100, 950]
+    series: [12000, 15000, 14000, 18000, 22000, 25000, 24000]
   },
   '30 Days': {
     labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-    revenue: [65000, 78000, 85000, 98000],
-    votes: [28000, 34000, 39000, 45000],
-    users: [2400, 3100, 3800, 4500]
+    series: [65000, 78000, 85000, 98000]
   },
   '6 Months': {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    revenue: [320000, 410000, 390000, 480000, 550000, 620000],
-    votes: [120000, 154000, 142000, 189000, 210000, 248000],
-    users: [11200, 14500, 13800, 17900, 19800, 24800]
+    series: [320000, 410000, 390000, 480000, 550000, 620000]
   }
 };
 
 export const AnalyticsPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [timeframe, setTimeframe] = useState('7 Days');
-  const [activeChart, setActiveChart] = useState('revenue'); // revenue, votes, users
-  const [hoverIndex, setHoverIndex] = useState(null);
 
+  // Extract metric id from path e.g. /admin-dashboard/analytics/dau-mau
+  const currentSubPath = location.pathname.replace('/admin-dashboard/analytics/', '').replace('/admin-dashboard/analytics', '');
+  const activeMetricId = currentSubPath || 'dau-mau';
+
+  const activeMetric = ANALYTICS_METRICS.find(m => m.id === activeMetricId) || ANALYTICS_METRICS[0];
   const currentData = CHART_DATA[timeframe];
-  const activeSeries = currentData[activeChart];
-  const maxVal = Math.max(...activeSeries) * 1.15;
+  const maxVal = Math.max(...currentData.series) * 1.15;
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
       + currentData.labels.join(",") + "\n"
-      + activeSeries.join(",");
+      + currentData.series.join(",");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `RCP_Analytics_${activeChart}_${timeframe.replace(' ', '_')}.csv`);
+    link.setAttribute("download", `RCP_${activeMetric.id}_${timeframe.replace(' ', '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-6 text-left animate-fade-in">
+    <div className="space-y-6 text-left animate-fade-in p-2">
       
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold font-poppins text-white dark:text-white light:text-black tracking-tight flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-brandPrimary" />
-            <span>Platform Analytics</span>
+          <h1 className="text-2xl font-bold font-poppins text-slate-900 dark:text-white flex items-center gap-2">
+            <TrendingUp className="w-7 h-7 text-brandPrimary" />
+            <span>Platform Analytics & Telemetry</span>
           </h1>
-          <p className="text-xs text-white/50 dark:text-white/50 light:text-black/50">
-            Real-time query metrics mapping growth trajectories and payment volumes.
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Granular data metrics mapping user engagement, retention, quiz accuracy & revenue trajectories.
           </p>
         </div>
 
         {/* Timeframe selector & export */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-white/5 dark:bg-white/5 light:bg-black/5 border border-white/10 dark:border-white/10 light:border-black/10 p-1 rounded-xl">
+          <div className="flex items-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-1 rounded-xl">
             {TIMEFRAMES.map(tf => (
               <button
                 key={tf}
-                onClick={() => { setTimeframe(tf); setHoverIndex(null); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${timeframe === tf ? 'bg-brandPrimary text-white shadow-sm' : 'text-white/50 dark:text-white/50 light:text-black/50 hover:text-white'}`}
+                onClick={() => setTimeframe(tf)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  timeframe === tf ? 'bg-brandPrimary text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
               >
                 {tf}
               </button>
@@ -81,221 +98,77 @@ export const AnalyticsPage = () => {
 
           <button
             onClick={handleExportCSV}
-            className="p-2.5 bg-white/5 dark:bg-white/5 light:bg-black/5 hover:bg-white/10 rounded-xl border border-white/10 dark:border-white/10 light:border-black/10 text-white/60 dark:text-white/60 light:text-black/60 hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
-            title="Export CSV Data"
+            className="px-3.5 py-2 bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary hover:bg-brandPrimary/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
+            <span>Export CSV</span>
           </button>
         </div>
       </div>
 
-      {/* Grid Quick Metric Switchers */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button
-          onClick={() => { setActiveChart('revenue'); setHoverIndex(null); }}
-          className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-            activeChart === 'revenue' 
-              ? 'bg-brandPrimary/10 border-brandPrimary/45 text-brandPrimary shadow-lg' 
-              : 'glassmorphism border-white/10 hover:border-brandPrimary/20 text-white'
-          }`}
-        >
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-white/50 dark:text-white/50 light:text-black/50 font-bold uppercase tracking-wider">Revenue Escrow</span>
-            <DollarSign className="w-4 h-4 text-brandSecondary" />
-          </div>
-          <p className="text-2xl font-extrabold text-white dark:text-white light:text-black mt-2 font-poppins">
-            {timeframe === '7 Days' ? '₹1,39,000' : timeframe === '30 Days' ? '₹3,26,000' : '₹28,50,000'}
-          </p>
-          <span className="text-[10px] text-emerald-400 font-semibold block mt-1">+18.5% Growth</span>
-          {activeChart === 'revenue' && <div className="absolute right-0 bottom-0 w-2 h-2 bg-brandPrimary rounded-tl" />}
-        </button>
-
-        <button
-          onClick={() => { setActiveChart('votes'); setHoverIndex(null); }}
-          className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-            activeChart === 'votes' 
-              ? 'bg-brandPrimary/10 border-brandPrimary/45 text-brandPrimary shadow-lg' 
-              : 'glassmorphism border-white/10 hover:border-brandPrimary/20 text-white'
-          }`}
-        >
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-white/50 dark:text-white/50 light:text-black/50 font-bold uppercase tracking-wider">Votes Audited</span>
-            <Vote className="w-4 h-4 text-brandSecondary" />
-          </div>
-          <p className="text-2xl font-extrabold text-white dark:text-white light:text-black mt-2 font-poppins">
-            {timeframe === '7 Days' ? '68,500' : timeframe === '30 Days' ? '1,46,000' : '10,73,000'}
-          </p>
-          <span className="text-[10px] text-emerald-400 font-semibold block mt-1">+6.4% Traffic</span>
-          {activeChart === 'votes' && <div className="absolute right-0 bottom-0 w-2 h-2 bg-brandPrimary rounded-tl" />}
-        </button>
-
-        <button
-          onClick={() => { setActiveChart('users'); setHoverIndex(null); }}
-          className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-            activeChart === 'users' 
-              ? 'bg-brandPrimary/10 border-brandPrimary/45 text-brandPrimary shadow-lg' 
-              : 'glassmorphism border-white/10 hover:border-brandPrimary/20 text-white'
-          }`}
-        >
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-white/50 dark:text-white/50 light:text-black/50 font-bold uppercase tracking-wider">User Enrolls</span>
-            <Users className="w-4 h-4 text-brandSecondary" />
-          </div>
-          <p className="text-2xl font-extrabold text-white dark:text-white light:text-black mt-2 font-poppins">
-            {timeframe === '7 Days' ? '5,100' : timeframe === '30 Days' ? '13,800' : '1,12,700'}
-          </p>
-          <span className="text-[10px] text-emerald-400 font-semibold block mt-1">+12.2% Enrolls</span>
-          {activeChart === 'users' && <div className="absolute right-0 bottom-0 w-2 h-2 bg-brandPrimary rounded-tl" />}
-        </button>
+      {/* 12 Analytics Sub-Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-white/10 no-scrollbar">
+        {ANALYTICS_METRICS.map(m => {
+          const Icon = m.icon;
+          const isActive = activeMetric.id === m.id;
+          return (
+            <button
+              key={m.id}
+              onClick={() => navigate(`/admin-dashboard/analytics/${m.id}`)}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-brandPrimary text-white shadow-md shadow-brandPrimary/20'
+                  : 'bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/5'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{m.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Main Chart Card */}
-      <div className="glassmorphism p-6 rounded-2xl border border-white/10 dark:border-white/5 light:border-black/10">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-sm font-bold text-white dark:text-white light:text-black uppercase tracking-wider">
-              {activeChart.toUpperCase()} OVER TIME ({timeframe})
-            </h3>
-            <p className="text-[10px] text-white/40 mt-0.5">Hover on data points to view specific counts.</p>
-          </div>
-          {hoverIndex !== null && (
-            <div className="bg-brandSecondary/25 border border-brandSecondary/30 px-3 py-1 rounded-xl text-xs font-bold text-brandSecondary animate-fade-in">
-              {currentData.labels[hoverIndex]}: {activeChart === 'revenue' ? '₹' : ''}{activeSeries[hoverIndex].toLocaleString()}
-            </div>
-          )}
+      {/* Active Metric Spotlight Banner */}
+      <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <span className="text-[10px] bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+            {activeMetric.label} Telemetry
+          </span>
+          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{activeMetric.stat}</h2>
+          <p className="text-xs text-slate-400">{activeMetric.desc}</p>
         </div>
-
-        {/* Dynamic SVG Area Chart */}
-        <div className="relative h-64 w-full bg-[#080b12]/30 border border-white/5 rounded-xl p-4">
-          <svg className="w-full h-full overflow-visible" viewBox="0 0 600 200" preserveAspectRatio="none">
-            {/* Gradients */}
-            <defs>
-              <linearGradient id="areaGlow" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.45" />
-                <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-
-            {/* Grid Lines */}
-            <line x1="0" y1="40" x2="600" y2="40" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-            <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-            <line x1="0" y1="140" x2="600" y2="140" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-            <line x1="0" y1="190" x2="600" y2="190" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" />
-
-            {/* Path definitions */}
-            {(() => {
-              const pointsCount = activeSeries.length;
-              const points = activeSeries.map((val, idx) => {
-                const x = (idx * (600 / (pointsCount - 1))).toFixed(1);
-                const y = (190 - (val / maxVal) * 160).toFixed(1);
-                return { x, y };
-              });
-
-              const pathD = `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ');
-              const areaD = `${pathD} L ${points[points.length - 1].x} 190 L ${points[0].x} 190 Z`;
-
-              return (
-                <>
-                  {/* Fill Area */}
-                  <path d={areaD} fill="url(#areaGlow)" />
-                  
-                  {/* Line Stroke */}
-                  <path d={pathD} fill="none" stroke="#7C3AED" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-                  {/* Interactive node circles */}
-                  {points.map((p, idx) => (
-                    <circle
-                      key={idx}
-                      cx={p.x}
-                      cy={p.y}
-                      r={hoverIndex === idx ? "7" : "4.5"}
-                      fill={hoverIndex === idx ? "#06b6d4" : "#7C3AED"}
-                      stroke="#0b1120"
-                      strokeWidth="2.5"
-                      className="cursor-pointer transition-all duration-150"
-                      onMouseEnter={() => setHoverIndex(idx)}
-                      onMouseLeave={() => setHoverIndex(null)}
-                    />
-                  ))}
-                </>
-              );
-            })()}
-          </svg>
-        </div>
-
-        {/* Labels Footer */}
-        <div className="flex justify-between px-3 mt-4 text-[10px] text-white/40 dark:text-white/40 light:text-black/40 font-semibold uppercase font-mono">
-          {currentData.labels.map((lbl, idx) => (
-            <span key={idx} className="w-10 text-center">{lbl}</span>
-          ))}
+        <div className="px-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-bold text-sm flex items-center gap-1.5 w-fit">
+          <ArrowUpRight className="w-4 h-4" /> {activeMetric.change} vs prior timeframe
         </div>
       </div>
 
-      {/* Grid: Conversion Rate stats & Sponsor budget tracking */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Conversion rate */}
-        <div className="glassmorphism p-5 rounded-2xl border border-white/10">
-          <h3 className="text-xs font-bold uppercase text-white dark:text-white light:text-black tracking-wider mb-4">Audition conversion rates</h3>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-xs text-white/60 mb-2">
-                <span>Quiz Stages Pass Rate</span>
-                <span className="font-extrabold text-brandSecondary">64.5%</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                <div className="h-full bg-brandSecondary rounded-full" style={{ width: '64.5%' }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs text-white/60 mb-2">
-                <span>KYC Approval Conversion</span>
-                <span className="font-extrabold text-brandPrimary">91.8%</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                <div className="h-full bg-brandPrimary rounded-full" style={{ width: '91.8%' }} />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-xs text-white/60 mb-2">
-                <span>Judges Card Audits Ratio</span>
-                <span className="font-extrabold text-brandAccent font-mono">42.0%</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                <div className="h-full bg-brandAccent rounded-full" style={{ width: '42%' }} />
-              </div>
-            </div>
-          </div>
+      {/* Main Telemetry Chart */}
+      <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Activity className="w-5 h-5 text-brandPrimary" /> {activeMetric.label} Trend Graph ({timeframe})
+          </h3>
+          <span className="text-xs text-slate-400 font-mono">Max Peak: {Math.max(...currentData.series).toLocaleString()}</span>
         </div>
 
-        {/* Sponsor performance */}
-        <div className="glassmorphism p-5 rounded-2xl border border-white/10">
-          <h3 className="text-xs font-bold uppercase text-white dark:text-white light:text-black tracking-wider mb-4">Active Brand Budgets</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs bg-white/5 p-3.5 rounded-xl border border-white/5">
-              <div>
-                <p className="font-bold text-white">Pepsi Co</p>
-                <p className="text-[10px] text-white/40 mt-0.5">Pepsi Fizz Creator Challenge</p>
+        {/* Dynamic SVG Bar Chart */}
+        <div className="h-64 flex items-end justify-between gap-4 pt-6 px-4 border-b border-slate-100 dark:border-white/5">
+          {currentData.series.map((val, idx) => {
+            const heightPercent = Math.round((val / maxVal) * 100);
+            return (
+              <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
+                <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {val.toLocaleString()}
+                </div>
+                <div
+                  style={{ height: `${heightPercent}%` }}
+                  className="w-full bg-gradient-to-t from-brandPrimary/40 to-brandPrimary rounded-t-2xl group-hover:from-brandPrimary group-hover:to-emerald-400 transition-all duration-300 shadow-md shadow-brandPrimary/15"
+                />
+                <span className="text-xs font-bold text-slate-400 mt-2">{currentData.labels[idx]}</span>
               </div>
-              <div className="text-right">
-                <span className="font-extrabold text-brandSecondary">₹10,00,000</span>
-                <span className="block text-[10px] text-emerald-400 mt-0.5">8.4% CTR</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-xs bg-white/5 p-3.5 rounded-xl border border-white/5">
-              <div>
-                <p className="font-bold text-white">Zebronics</p>
-                <p className="text-[10px] text-white/40 mt-0.5">Zeb-Sound Master Contest</p>
-              </div>
-              <div className="text-right">
-                <span className="font-extrabold text-brandSecondary">₹5,00,000</span>
-                <span className="block text-[10px] text-emerald-400 mt-0.5">6.2% CTR</span>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
-
       </div>
 
     </div>

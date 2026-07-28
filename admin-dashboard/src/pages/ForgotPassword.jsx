@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { forgotPasswordRequest, resetPasswordRequest } from '../store/authSlice';
 import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { HakaLogo } from '../components/HakaLogo';
@@ -7,59 +9,77 @@ import { HakaLogo } from '../components/HakaLogo';
 export const ForgotPassword = ({ onBackToLogin }) => {
   const dispatch = useDispatch();
   const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSendOtp = (e) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    dispatch(forgotPasswordRequest({
-      email,
-      callback: (res) => {
-        setLoading(false);
-        if (res && res.success) {
-          setUserId(res.userId);
-          setStep(2);
-        } else {
-          setError(res?.message || 'Failed to request reset OTP.');
+  // Step 1: Send OTP
+  const emailFormik = useFormik({
+    initialValues: { email: '' },
+    validationSchema: Yup.object({
+      email: Yup.string()
+        .email('Invalid email address format')
+        .required('Email address is required')
+    }),
+    onSubmit: (values) => {
+      setError(null);
+      setLoading(true);
+      dispatch(forgotPasswordRequest({
+        email: values.email,
+        callback: (res) => {
+          setLoading(false);
+          if (res && res.success) {
+            setUserId(res.userId);
+            setStep(2);
+          } else {
+            setError(res?.message || 'Failed to request reset OTP.');
+          }
         }
-      }
-    }));
-  };
-
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-    setError(null);
-    setStep(3);
-  };
-
-  const handleResetPasswordSubmit = (e) => {
-    e.preventDefault();
-    setError(null);
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
+      }));
     }
+  });
 
-    setLoading(true);
-    dispatch(resetPasswordRequest({
-      data: { userId, otp, newPassword },
-      callback: (success) => {
-        setLoading(false);
-        if (success) {
-          setStep(4);
-        } else {
-          setError('Failed to update credentials. Please retry.');
+  // Step 2: Verify OTP
+  const otpFormik = useFormik({
+    initialValues: { otp: '' },
+    validationSchema: Yup.object({
+      otp: Yup.string()
+        .matches(/^\d{6}$/, 'Verification code must be exactly 6 digits')
+        .required('Verification code is required')
+    }),
+    onSubmit: () => {
+      setError(null);
+      setStep(3);
+    }
+  });
+
+  // Step 3: Reset Password
+  const resetFormik = useFormik({
+    initialValues: { newPassword: '', confirmPassword: '' },
+    validationSchema: Yup.object({
+      newPassword: Yup.string()
+        .min(6, 'Password must be at least 6 characters')
+        .required('New password is required'),
+      confirmPassword: Yup.string()
+        .oneOf([Yup.ref('newPassword')], 'Passwords must match')
+        .required('Confirm new password is required')
+    }),
+    onSubmit: (values) => {
+      setError(null);
+      setLoading(true);
+      dispatch(resetPasswordRequest({
+        data: { userId, otp: otpFormik.values.otp, newPassword: values.newPassword },
+        callback: (success) => {
+          setLoading(false);
+          if (success) {
+            setStep(4);
+          } else {
+            setError('Failed to update credentials. Please retry.');
+          }
         }
-      }
-    }));
-  };
+      }));
+    }
+  });
 
   return (
     <div className="min-h-screen bg-[#080b12] text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -75,20 +95,20 @@ export const ForgotPassword = ({ onBackToLogin }) => {
 
         <div className="glassmorphism p-8 rounded-2xl border border-white/10 shadow-2xl relative">
           {error && (
-            <div className="mb-6 p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold">
+            <div className="mb-6 p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold animate-fade-in">
               {error}
             </div>
           )}
 
           {step === 1 && (
-            <form onSubmit={handleSendOtp} className="space-y-6">
+            <form onSubmit={emailFormik.handleSubmit} className="space-y-6">
               <div>
                 <h3 className="text-xl font-bold font-poppins mb-1">Forgot Password?</h3>
                 <p className="text-xs text-white/50">Enter your registered email address to receive a recovery OTP.</p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+              <div className="space-y-2 text-left">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60">
                   Email Address
                 </label>
                 <div className="relative">
@@ -97,13 +117,21 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                   </div>
                   <input
                     type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    name="email"
+                    value={emailFormik.values.email}
+                    onChange={emailFormik.handleChange}
+                    onBlur={emailFormik.handleBlur}
                     placeholder="name@domain.com"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className={`block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border rounded-xl text-white placeholder-white/30 text-sm focus:outline-none transition-all ${
+                      emailFormik.touched.email && emailFormik.errors.email
+                        ? 'border-red-500/60 focus:ring-red-500'
+                        : 'border-white/10 focus:ring-purple-500'
+                    }`}
                   />
                 </div>
+                {emailFormik.touched.email && emailFormik.errors.email && (
+                  <span className="text-[10px] text-red-400 block mt-1 animate-fade-in">{emailFormik.errors.email}</span>
+                )}
               </div>
 
               <button
@@ -118,14 +146,14 @@ export const ForgotPassword = ({ onBackToLogin }) => {
           )}
 
           {step === 2 && (
-            <form onSubmit={handleVerifyOtp} className="space-y-6">
+            <form onSubmit={otpFormik.handleSubmit} className="space-y-6">
               <div>
                 <h3 className="text-xl font-bold font-poppins mb-1">Verify Code</h3>
-                <p className="text-xs text-white/50">Enter the recovery code sent to {email}.</p>
+                <p className="text-xs text-white/50">Enter the recovery code sent to {emailFormik.values.email}.</p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+              <div className="space-y-2 text-left">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60">
                   Verification OTP
                 </label>
                 <div className="relative">
@@ -134,14 +162,22 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                   </div>
                   <input
                     type="text"
-                    required
+                    name="otp"
                     maxLength={6}
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    value={otpFormik.values.otp}
+                    onChange={otpFormik.handleChange}
+                    onBlur={otpFormik.handleBlur}
                     placeholder="6-digit code"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm tracking-widest text-center font-bold"
+                    className={`block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border rounded-xl text-white text-sm tracking-widest text-center font-bold focus:outline-none transition-all ${
+                      otpFormik.touched.otp && otpFormik.errors.otp
+                        ? 'border-red-500/60 focus:ring-red-500'
+                        : 'border-white/10 focus:ring-purple-500'
+                    }`}
                   />
                 </div>
+                {otpFormik.touched.otp && otpFormik.errors.otp && (
+                  <span className="text-[10px] text-red-400 block mt-1 animate-fade-in">{otpFormik.errors.otp}</span>
+                )}
               </div>
 
               <button
@@ -155,14 +191,14 @@ export const ForgotPassword = ({ onBackToLogin }) => {
           )}
 
           {step === 3 && (
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-6">
+            <form onSubmit={resetFormik.handleSubmit} className="space-y-6">
               <div>
                 <h3 className="text-xl font-bold font-poppins mb-1">Reset Password</h3>
                 <p className="text-xs text-white/50">Declare a secure new password for your platform profile.</p>
               </div>
 
-               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+              <div className="space-y-2 text-left">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60">
                   New Password
                 </label>
                 <div className="relative">
@@ -171,18 +207,26 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                   </div>
                   <input
                     type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    name="newPassword"
+                    value={resetFormik.values.newPassword}
+                    onChange={resetFormik.handleChange}
+                    onBlur={resetFormik.handleBlur}
                     autoComplete="new-password"
                     placeholder="••••••••"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm"
+                    className={`block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border rounded-xl text-white text-sm focus:outline-none transition-all ${
+                      resetFormik.touched.newPassword && resetFormik.errors.newPassword
+                        ? 'border-red-500/60'
+                        : 'border-white/10'
+                    }`}
                   />
                 </div>
+                {resetFormik.touched.newPassword && resetFormik.errors.newPassword && (
+                  <span className="text-[10px] text-red-400 block mt-1 animate-fade-in">{resetFormik.errors.newPassword}</span>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+              <div className="space-y-2 text-left">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-white/60">
                   Confirm New Password
                 </label>
                 <div className="relative">
@@ -191,14 +235,22 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                   </div>
                   <input
                     type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    name="confirmPassword"
+                    value={resetFormik.values.confirmPassword}
+                    onChange={resetFormik.handleChange}
+                    onBlur={resetFormik.handleBlur}
                     autoComplete="new-password"
                     placeholder="••••••••"
-                    className="block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border border-white/10 rounded-xl text-white text-sm"
+                    className={`block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border rounded-xl text-white text-sm focus:outline-none transition-all ${
+                      resetFormik.touched.confirmPassword && resetFormik.errors.confirmPassword
+                        ? 'border-red-500/60'
+                        : 'border-white/10'
+                    }`}
                   />
                 </div>
+                {resetFormik.touched.confirmPassword && resetFormik.errors.confirmPassword && (
+                  <span className="text-[10px] text-red-400 block mt-1 animate-fade-in">{resetFormik.errors.confirmPassword}</span>
+                )}
               </div>
 
               <button

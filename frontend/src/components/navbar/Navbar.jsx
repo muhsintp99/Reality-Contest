@@ -38,7 +38,7 @@ export const Navbar = ({ activeView, onOpenMobileMenu, isCollapsed, setIsCollaps
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full h-16 px-6 flex items-center justify-between bg-white/60 dark:bg-[#0B1120]/40 backdrop-blur-md border-b border-slate-200/50 dark:border-white/5 transition-colors duration-300">
+    <header className="sticky top-0 z-30 w-full h-16 px-6 flex items-center justify-between bg-[#EAF4E1]/85 dark:bg-[#0B1120]/40 backdrop-blur-md border-b border-[#C4E2A8]/70 dark:border-white/5 transition-colors duration-300">
       
       {/* Left Section: Mobile Menu & Breadcrumb & Search */}
       <div className="flex items-center gap-4 flex-1">

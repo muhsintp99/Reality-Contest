@@ -63,7 +63,7 @@ export const ForgotPassword = ({ onBackToLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] dark:bg-[#080b12] text-slate-800 dark:text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-[#EDF6E5] dark:bg-[#080b12] text-slate-800 dark:text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-300">
       <div className="absolute top-[-10%] right-[-10%] w-[350px] h-[350px] rounded-full bg-brandPrimary/5 blur-[80px] pointer-events-none"></div>
 
       <div className="max-w-md w-full mx-auto z-10 space-y-8">

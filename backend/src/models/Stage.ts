@@ -12,6 +12,7 @@ export interface IStage extends Document {
   groupId: mongoose.Types.ObjectId;
   name: string;
   description: string;
+  icon: string;
   rules: IStageRules;
   startDate: Date;
   endDate: Date;
@@ -43,6 +44,7 @@ const stageSchema = new Schema<IStage>(
     groupId: { type: Schema.Types.ObjectId, ref: 'Group', required: true, index: true },
     name: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
+    icon: { type: String, default: 'Milestone' },
     rules: { type: stageRulesSchema, default: () => ({}) },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },

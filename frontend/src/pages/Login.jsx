@@ -56,7 +56,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-12 bg-[#F7F8FA] dark:bg-[#080b12] text-slate-800 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-12 bg-[#EDF6E5] dark:bg-[#080b12] text-slate-800 dark:text-white transition-colors duration-300">
       
       {/* Left side Panel: Brand Showcase (gorgeous minimalist gradient) */}
       <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 bg-white dark:bg-[#0f1424] border-r border-slate-200 dark:border-white/5 overflow-hidden">
@@ -93,12 +93,12 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
           </div>
 
           <div className="space-y-3.5">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/35">Previous Winner</h4>
-            <div className="p-4 bg-slate-55 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl flex items-center gap-3 shadow-sm">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-white/40">Previous Winner</h4>
+            <div className="p-4 bg-white/70 dark:bg-white/5 border border-slate-200/80 dark:border-white/5 rounded-2xl flex items-center gap-3 shadow-sm">
               <img className="w-10 h-10 rounded-full animate-float-delayed" src="https://api.dicebear.com/7.x/avataaars/svg?seed=AnanyaI" alt="" />
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-white">Ananya Iyer</p>
-                <p className="text-[10px] text-slate-450 dark:text-white/50 font-medium">Credited ₹10 Lakhs • Creator Cup Winner</p>
+                <p className="text-[10px] text-slate-500 dark:text-white/50 font-medium">Credited ₹10 Lakhs • Creator Cup Winner</p>
               </div>
             </div>
           </div>
@@ -115,10 +115,10 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
 
         <div className="max-w-md w-full mx-auto space-y-8 z-10">
           <div className="text-left">
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Welcome Back
             </h2>
-            <p className="mt-2 text-xs text-slate-450 dark:text-white/50 font-semibold leading-relaxed">
+            <p className="mt-2 text-xs text-slate-600 dark:text-white/60 font-semibold leading-relaxed">
               Sign in to manage contestant profile, judge scoring sheets, or campaign leads.
             </p>
           </div>
@@ -140,7 +140,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
               )}
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/40">
                   Email Address or Mobile Number
                 </label>
                 <div className="relative">
@@ -154,7 +154,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                     onChange={(e) => setLoginId(e.target.value)}
                     autoComplete="username"
                     placeholder="name@domain.com or +919876543210"
-                    className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs transition-all"
+                    className="block w-full pl-10 pr-4 py-2.5 bg-white/90 dark:bg-[#080b12]/40 border border-slate-300/80 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary focus:ring-1 focus:ring-brandPrimary/20 text-xs transition-all font-medium"
                   />
                 </div>
               </div>
@@ -162,7 +162,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
               {!isOtpLogin ? (
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/40">
                       Security Password
                     </label>
                     <button
@@ -184,12 +184,12 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
                       placeholder="••••••••"
-                      className="block w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs transition-all"
+                      className="block w-full pl-10 pr-10 py-2.5 bg-white/90 dark:bg-[#080b12]/40 border border-slate-300/80 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary focus:ring-1 focus:ring-brandPrimary/20 text-xs transition-all font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 dark:text-white/40 hover:text-slate-650"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -198,7 +198,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
               ) : (
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/40">
                       Verification OTP Code
                     </label>
                     <button
@@ -220,7 +220,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
                       placeholder="6-digit verification code"
-                      className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs tracking-widest text-center font-extrabold"
+                      className="block w-full pl-10 pr-4 py-2.5 bg-white/90 dark:bg-[#080b12]/40 border border-slate-300/80 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary focus:ring-1 focus:ring-brandPrimary/20 text-xs tracking-widest text-center font-extrabold"
                     />
                   </div>
                 </div>
@@ -258,15 +258,15 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
               </button>
             </form>
 
-            <div className="mt-8 border-t border-slate-200/60 dark:border-white/5 pt-6 text-center">
-              <span className="text-[10px] text-slate-400 dark:text-white/35 font-bold uppercase tracking-wider block mb-4">
+            <div className="mt-8 border-t border-slate-200/80 dark:border-white/10 pt-6 text-center">
+              <span className="text-[10px] text-slate-500 dark:text-white/40 font-extrabold uppercase tracking-wider block mb-4">
                 Or Continue With
               </span>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('Google')}
-                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
+                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
                 >
                   <Chrome className="w-4 h-4 text-red-500" />
                   <span>Google</span>
@@ -274,15 +274,15 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('GitHub')}
-                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
+                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
                 >
-                  <Github className="w-4 h-4 text-slate-705 dark:text-white" />
+                  <Github className="w-4 h-4 text-slate-800 dark:text-white" />
                   <span>GitHub</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('Facebook')}
-                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-slate-50 dark:bg-white/5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
+                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
                 >
                   <Facebook className="w-4 h-4 text-blue-500" />
                   <span>Facebook</span>

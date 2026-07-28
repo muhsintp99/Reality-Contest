@@ -109,8 +109,8 @@ export class KycService {
   }
 
   // 4. ADMIN GET ALL PENDING
-  async getPendingKycs(): Promise<any[]> {
-    return this.kycRepo.getPendingKycs();
+  async getPendingKycs(status?: string): Promise<any[]> {
+    return this.kycRepo.getPendingKycs(status);
   }
 }
 export default KycService;

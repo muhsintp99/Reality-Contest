@@ -2,10 +2,10 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import { ShieldAlert } from 'lucide-react';
 
-export const PermissionGuard = ({ children, requiredRole }) => {
+export const PermissionGuard = ({ children, allowedRoles }) => {
   const { user } = useSelector((state) => state.auth);
 
-  if (requiredRole && user?.role !== requiredRole) {
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return (
       <div className="py-20 text-center space-y-4 animate-fade-in text-white/90">
         <div className="inline-flex p-4 bg-red-500/10 border border-red-500/20 rounded-full text-red-500">
@@ -16,7 +16,7 @@ export const PermissionGuard = ({ children, requiredRole }) => {
             Access Denied
           </h3>
           <p className="text-xs text-slate-500 dark:text-white/40 max-w-sm mx-auto mt-1 font-semibold">
-            Only accounts with the "{requiredRole}" role have permission to access this administrative console.
+            Your account role does not have permission to access this administrative console section.
           </p>
         </div>
       </div>

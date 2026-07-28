@@ -66,13 +66,13 @@ export const Breadcrumb = ({ activeView }) => {
   const items = getBreadcrumbs();
 
   return (
-    <nav className="flex items-center gap-1.5 text-xs text-white/50 font-medium select-none py-1">
+    <nav className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-white/50 font-medium select-none py-1">
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         return (
           <React.Fragment key={index}>
-            {index > 0 && <ChevronRight className="w-3 h-3 text-white/20" />}
-            <span className={`flex items-center gap-1 ${isLast ? 'text-brandPrimary dark:text-cyan-400 font-bold' : 'hover:text-white transition-colors'}`}>
+            {index > 0 && <ChevronRight className="w-3 h-3 text-slate-400 dark:text-white/30 shrink-0" />}
+            <span className={`flex items-center gap-1 ${isLast ? 'text-brandPrimary dark:text-brandSecondary font-bold' : 'hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer'}`}>
               {item.label}
             </span>
           </React.Fragment>

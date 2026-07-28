@@ -41,12 +41,33 @@ export class AdminController {
       const { role } = req.params;
       const loggedInUserId = (req as any).user.id;
       
-      // Rule 10: Exclude currently logged-in user and filter by role
-      const users = await User.find({ 
-        role, 
-        _id: { $ne: loggedInUserId } 
-      }).select('-password');
-      console.log(`[AdminController] listUsersByRole called with role: "${role}". Found ${users.length} users. Sample roles:`, users.slice(0,2).map(u => u.role));
+      const adminRoles = [
+        'Admin',
+        'Super Admin',
+        'Contest Manager',
+        'Finance Manager',
+        'Support Manager',
+        'Marketing Manager',
+        'Content Moderator',
+        'KYC Officer',
+        'Analytics Manager'
+      ];
+      
+      const isParamAdmin = role === 'Admin' || adminRoles.includes(role);
+      
+      let users;
+      if (isParamAdmin) {
+        const { Admin } = require('../models/Admin');
+        const query = role === 'Admin'
+          ? { role: { $in: adminRoles }, _id: { $ne: loggedInUserId } }
+          : { role, _id: { $ne: loggedInUserId } };
+        users = await Admin.find(query).select('-password');
+      } else {
+        const query = { role, _id: { $ne: loggedInUserId } };
+        users = await User.find(query).select('-password');
+      }
+
+      console.log(`[AdminController] listUsersByRole called with role: "${role}". Found ${users.length} users.`);
       
       res.status(200).json({ success: true, users });
     } catch (err) {
@@ -93,30 +114,66 @@ export class AdminController {
       const callerRole = (req as any).user.role;
       const callerId = (req as any).user.id;
 
-      // Super Admin is the ONLY role that can create Admin/Super Admin accounts
-      if (['Admin', 'Super Admin'].includes(role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can create Admin or Super Admin accounts.');
+      const adminRoles = [
+        'Admin',
+        'Super Admin',
+        'Contest Manager',
+        'Finance Manager',
+        'Support Manager',
+        'Marketing Manager',
+        'Content Moderator',
+        'KYC Officer',
+        'Analytics Manager'
+      ];
+
+      // Super Admin is the ONLY role that can create Admin/Super Admin / Manager accounts
+      if (adminRoles.includes(role) && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only Super Admin can create administrative or manager accounts.');
       }
 
-      // Check unique constraints
-      const emailExists = await User.findOne({ email: email.toLowerCase() });
+      const { Admin } = require('../models/Admin');
+
+      // Check unique constraints across both collections
+      const emailExists = (await User.findOne({ email: email.toLowerCase() })) || (await Admin.findOne({ email: email.toLowerCase() }));
       if (emailExists) throw new BadRequestError('Email address already registered.');
 
-      const usernameExists = await User.findOne({ username: username.toLowerCase() });
+      const usernameExists = (await User.findOne({ username: username.toLowerCase() })) || (await Admin.findOne({ username: username.toLowerCase() }));
       if (usernameExists) throw new BadRequestError('Username is already taken.');
 
-      const phoneExists = await User.findOne({ phone });
+      const phoneExists = (await User.findOne({ phone })) || (await Admin.findOne({ phone }));
       if (phoneExists) throw new BadRequestError('Mobile number already registered.');
 
-      const newUser = new User({
-        name,
-        username,
-        email,
-        phone,
-        password,
-        role,
-        status: 'Active'
-      });
+      let newUser: any;
+      if (adminRoles.includes(role)) {
+        newUser = new Admin({
+          name,
+          username,
+          email,
+          phone,
+          password,
+          role,
+          status: 'Active'
+        });
+      } else {
+        newUser = new User({
+          name,
+          username,
+          email,
+          phone,
+          password,
+          role,
+          status: 'Active',
+          city: req.body.city || '',
+          preferredLanguage: req.body.preferredLanguage || '',
+          pincode: req.body.pincode || '',
+          occupation: req.body.occupation || '',
+          education: req.body.education || '',
+          employmentStatus: req.body.employmentStatus || 'Unemployed',
+          notificationPermission: !!req.body.notificationPermission,
+          locationPermission: !!req.body.locationPermission,
+          kycStatus: req.body.kycStatus || 'Pending'
+        });
+      }
 
       await newUser.save();
 
@@ -148,27 +205,86 @@ export class AdminController {
         throw new ForbiddenError('Access Denied: You cannot modify your own profile through user directory panel.');
       }
 
-      const userToEdit = await User.findById(id);
+      const { Admin } = require('../models/Admin');
+      let userToEdit = await Admin.findById(id);
+      let isAdmin = true;
+      if (!userToEdit) {
+        userToEdit = await User.findById(id);
+        isAdmin = false;
+      }
       if (!userToEdit) {
         throw new NotFoundError('User not found.');
       }
 
-      // Admin CANNOT edit Admin/Super Admin
-      if (['Admin', 'Super Admin'].includes(userToEdit.role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can edit Admin or Super Admin accounts.');
+      const adminRoles = [
+        'Admin',
+        'Super Admin',
+        'Contest Manager',
+        'Finance Manager',
+        'Support Manager',
+        'Marketing Manager',
+        'Content Moderator',
+        'KYC Officer',
+        'Analytics Manager'
+      ];
+
+      // Admin CANNOT edit Admin/Super Admin/Manager staff
+      if (adminRoles.includes(userToEdit.role) && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only Super Admin can edit administrative or manager accounts.');
       }
 
-      // Admin CANNOT promote anyone to Admin/Super Admin
-      if (['Admin', 'Super Admin'].includes(role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can assign Admin or Super Admin roles.');
+      // Admin CANNOT promote anyone to Admin/Super Admin/Manager roles
+      if (adminRoles.includes(role) && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only Super Admin can assign administrative or manager roles.');
       }
 
+      const oldRole = userToEdit.role;
       userToEdit.name = name || userToEdit.name;
       userToEdit.email = email || userToEdit.email;
       userToEdit.phone = phone || userToEdit.phone;
       userToEdit.role = role || userToEdit.role;
 
-      await userToEdit.save();
+      // Handle Collection Migration if role switches between administrative and user
+      const wasAdmin = adminRoles.includes(oldRole);
+      const nowAdmin = adminRoles.includes(userToEdit.role);
+
+      if (wasAdmin && !nowAdmin) {
+        // Move from Admin to User collection
+        await Admin.findByIdAndDelete(id);
+        const newUserDoc = new User({
+          _id: userToEdit._id,
+          name: userToEdit.name,
+          username: userToEdit.username,
+          email: userToEdit.email,
+          phone: userToEdit.phone,
+          password: userToEdit.password,
+          role: userToEdit.role,
+          status: userToEdit.status,
+          walletBalance: userToEdit.walletBalance,
+          kycStatus: userToEdit.kycStatus
+        });
+        await newUserDoc.save();
+        userToEdit = newUserDoc;
+      } else if (!wasAdmin && nowAdmin) {
+        // Move from User to Admin collection
+        await User.findByIdAndDelete(id);
+        const newAdminDoc = new Admin({
+          _id: userToEdit._id,
+          name: userToEdit.name,
+          username: userToEdit.username,
+          email: userToEdit.email,
+          phone: userToEdit.phone,
+          password: userToEdit.password,
+          role: userToEdit.role,
+          status: userToEdit.status,
+          walletBalance: userToEdit.walletBalance,
+          kycStatus: userToEdit.kycStatus
+        });
+        await newAdminDoc.save();
+        userToEdit = newAdminDoc;
+      } else {
+        await userToEdit.save();
+      }
 
       // Create audit log
       await AuditLog.create({
@@ -197,17 +313,39 @@ export class AdminController {
         throw new ForbiddenError('Access Denied: You cannot delete your own account.');
       }
 
-      const userToDelete = await User.findById(id);
+      const { Admin } = require('../models/Admin');
+      let userToDelete = await Admin.findById(id);
+      let isDeleteAdmin = true;
+      if (!userToDelete) {
+        userToDelete = await User.findById(id);
+        isDeleteAdmin = false;
+      }
       if (!userToDelete) {
         throw new NotFoundError('User not found.');
       }
 
-      // Admin CANNOT delete Admin/Super Admin
-      if (['Admin', 'Super Admin'].includes(userToDelete.role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can delete Admin or Super Admin accounts.');
+      const adminRoles = [
+        'Admin',
+        'Super Admin',
+        'Contest Manager',
+        'Finance Manager',
+        'Support Manager',
+        'Marketing Manager',
+        'Content Moderator',
+        'KYC Officer',
+        'Analytics Manager'
+      ];
+
+      // Admin CANNOT delete Admin/Super Admin/Manager staff
+      if (adminRoles.includes(userToDelete.role) && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only Super Admin can delete administrative or manager accounts.');
       }
 
-      await User.findByIdAndDelete(id);
+      if (isDeleteAdmin) {
+        await Admin.findByIdAndDelete(id);
+      } else {
+        await User.findByIdAndDelete(id);
+      }
 
       // Create audit log
       await AuditLog.create({
@@ -236,14 +374,32 @@ export class AdminController {
         throw new ForbiddenError('Access Denied: You cannot deactivate or suspend your own account.');
       }
 
-      const userToToggle = await User.findById(id);
+      const { Admin } = require('../models/Admin');
+      let userToToggle = await Admin.findById(id);
+      let isToggleAdmin = true;
+      if (!userToToggle) {
+        userToToggle = await User.findById(id);
+        isToggleAdmin = false;
+      }
       if (!userToToggle) {
         throw new NotFoundError('User not found.');
       }
 
-      // Admin CANNOT suspend/disable Admin/Super Admin
-      if (['Admin', 'Super Admin'].includes(userToToggle.role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can disable Admin or Super Admin accounts.');
+      const adminRoles = [
+        'Admin',
+        'Super Admin',
+        'Contest Manager',
+        'Finance Manager',
+        'Support Manager',
+        'Marketing Manager',
+        'Content Moderator',
+        'KYC Officer',
+        'Analytics Manager'
+      ];
+
+      // Admin CANNOT suspend/disable Admin/Super Admin/Manager staff
+      if (adminRoles.includes(userToToggle.role) && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only Super Admin can disable administrative or manager accounts.');
       }
 
       const nextStatus = userToToggle.status === 'Active' ? 'Suspended' : 'Active';
@@ -261,6 +417,21 @@ export class AdminController {
       });
 
       res.status(200).json({ success: true, message: `User status updated to ${nextStatus} successfully.`, user: userToToggle });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getSidebarCounts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const loggedInUserId = (req as any).user?.id;
+      const { notificationService } = require('../services/NotificationService');
+      const counts = await notificationService.getModuleUnreadCounts(loggedInUserId);
+
+      res.status(200).json({
+        success: true,
+        counts
+      });
     } catch (err) {
       next(err);
     }

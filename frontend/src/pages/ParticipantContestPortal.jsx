@@ -37,6 +37,10 @@ export const ParticipantContestPortal = () => {
   }, []);
 
   const handleRegister = async (c) => {
+    if (user?.kycStatus !== 'Approved') {
+      alert('You cannot register for contests before your KYC is approved.');
+      return;
+    }
     if (user.walletBalance < c.entryFee) {
       alert('Insufficient wallet balance to register.');
       return;
@@ -91,6 +95,10 @@ export const ParticipantContestPortal = () => {
   };
 
   const handleEnterStage = (stage) => {
+    if (user?.kycStatus !== 'Approved') {
+      alert('You cannot enter audition stages before your KYC is approved.');
+      return;
+    }
     setRulesStage(stage);
     setAcceptedCheckbox(false);
   };
@@ -154,6 +162,19 @@ export const ParticipantContestPortal = () => {
               <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight leading-tight">Tournaments Portal</h2>
               <p className="text-xs text-slate-400 dark:text-white/40 mt-1">Register for active contests, review stage rules, and monitor progression.</p>
             </div>
+
+            {user?.kycStatus !== 'Approved' && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex items-start gap-3 animate-pulse">
+                <Lock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400">KYC Approval Pending</h4>
+                  <p className="text-[10px] text-slate-550 dark:text-white/45 mt-0.5">
+                    Your KYC status is currently <span className="font-extrabold underline">{user?.kycStatus || 'Pending'}</span>. 
+                    You cannot register for contests or enter audition stages until a KYC Officer approves your documents.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {contests.length > 0 ? (

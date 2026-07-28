@@ -148,12 +148,12 @@ export const StageBuilder = () => {
   return (
     <div className="space-y-6 text-left animate-fade-in">
       {/* Breadcrumbs */}
-      <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-wider mb-2">
+      <div className="flex items-center gap-2 text-[10px] text-slate-600 dark:text-white/40 font-bold uppercase tracking-wider mb-2">
         <span className="hover:text-brandPrimary cursor-pointer transition-colors" onClick={() => navigate('/admin-dashboard/contests')}>Contests</span>
-        <ChevronRight className="w-3 h-3" />
+        <ChevronRight className="w-3 h-3 text-slate-400 dark:text-white/30 shrink-0" />
         <span className="hover:text-brandPrimary cursor-pointer transition-colors" onClick={() => navigate(`/admin-dashboard/contests/${contestId}`)}>Stages</span>
-        <ChevronRight className="w-3 h-3" />
-        <span className="text-brandPrimary truncate max-w-[200px]">{stage?.name || stageId} Builder</span>
+        <ChevronRight className="w-3 h-3 text-slate-400 dark:text-white/30 shrink-0" />
+        <span className="text-brandPrimary font-bold truncate max-w-[200px]">{stage?.name || stageId} Builder</span>
       </div>
 
       <div className="p-6 bg-white/5 border border-white/5 rounded-2xl flex flex-col md:flex-row justify-between md:items-center gap-4">

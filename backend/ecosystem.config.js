@@ -7,12 +7,12 @@ module.exports = {
       exec_mode: 'cluster', // Enables clustering mode
       env: {
         NODE_ENV: 'production',
-        PORT: 5000,
+        PORT: 10000,
         PM2_USAGE: 'true'
       },
       env_development: {
         NODE_ENV: 'development',
-        PORT: 5000
+        PORT: 10000
       },
       max_memory_restart: '1G',
       autorestart: true,

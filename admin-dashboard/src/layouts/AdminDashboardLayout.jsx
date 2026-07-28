@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { useNotification } from '../context/NotificationContext';
 
 export const AdminDashboardLayout = ({ children, activeView, onLogout, selectedRole, setSelectedRole }) => {
   const [isOpenMobileMenu, setIsOpenMobileMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { unreadCounts } = useNotification();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -14,7 +16,7 @@ export const AdminDashboardLayout = ({ children, activeView, onLogout, selectedR
   }, [activeView]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F7F8FA] dark:bg-[#0B1120] text-slate-800 dark:text-white transition-colors duration-305">
+    <div className="flex h-screen overflow-hidden bg-[#EDF6E5] dark:bg-[#0B1120] text-slate-800 dark:text-white transition-colors duration-305">
       <Sidebar
         activeView={activeView}
         onLogout={onLogout}
@@ -23,6 +25,7 @@ export const AdminDashboardLayout = ({ children, activeView, onLogout, selectedR
         role={selectedRole}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
+        counts={unreadCounts}
       />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -30,6 +33,8 @@ export const AdminDashboardLayout = ({ children, activeView, onLogout, selectedR
           onOpenMobileMenu={() => setIsOpenMobileMenu(true)}
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
+          onLogout={onLogout}
+          selectedRole={selectedRole}
         />
         <main className="flex-1 p-6 overflow-y-auto relative no-scrollbar">
           <div className="aurora-bg absolute inset-0 pointer-events-none z-0" />

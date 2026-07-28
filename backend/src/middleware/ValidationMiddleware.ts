@@ -11,6 +11,7 @@ export const validateRequest = (schema: Schema) => {
       next();
     } catch (err: any) {
       if (err.errors) {
+        console.error("Zod Validation Errors detail:", JSON.stringify(err.errors, null, 2));
         next(new ValidationError('Input validation failed', err.errors));
       } else {
         next(err);

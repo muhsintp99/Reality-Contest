@@ -157,7 +157,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     <>
       {/* Desktop Sidebar Layout - full height, zero scrollbars on wrapper */}
       <aside 
-        className={`hidden md:block shrink-0 h-screen sticky top-0 border-r border-slate-200/50 dark:border-white/5 transition-all duration-300 z-40 bg-white/60 dark:bg-[#0B1120]/40 overflow-hidden ${
+        className={`hidden md:block shrink-0 h-screen sticky top-0 border-r border-[#C4E2A8]/70 dark:border-white/5 transition-all duration-300 z-40 bg-[#E3F0D7]/90 backdrop-blur-md dark:bg-[#0B1120]/40 overflow-hidden ${
           isCollapsed ? 'w-20' : 'w-60'
         }`}
       >
@@ -187,7 +187,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"
           />
           
-          <div className="relative flex flex-col w-64 h-full bg-white dark:bg-[#0B1120] border-r border-slate-200 dark:border-white/10 shadow-2xl z-50 animate-slide-in overflow-hidden">
+          <div className="relative flex flex-col w-64 h-full bg-[#EDF6E5] dark:bg-[#0B1120] border-r border-[#C4E2A8] dark:border-white/10 shadow-2xl z-50 animate-slide-in overflow-hidden">
             <button
               onClick={() => setIsOpenMobile(false)}
               className="absolute top-4 right-4 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-550 dark:text-white/70"

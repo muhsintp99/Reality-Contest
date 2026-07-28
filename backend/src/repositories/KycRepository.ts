@@ -10,13 +10,14 @@ export class KycRepository extends BaseRepository<IKYC> {
     return this.findOne({ userId });
   }
 
-  async getPendingKycs(): Promise<IKYC[]> {
-    return this.model.find({ status: 'Under Review' })
+  async getPendingKycs(status?: string): Promise<IKYC[]> {
+    const query = status && status !== 'All' ? { status } : {};
+    return this.model.find(query)
       .populate({
         path: 'userId',
         select: 'name email username phone'
       })
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: -1 })
       .exec();
   }
 }

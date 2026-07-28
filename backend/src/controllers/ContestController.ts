@@ -39,6 +39,24 @@ export class ContestController {
       next(err);
     }
   }
+
+  async updateContest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contest = await contestService.updateContest(req.params.id, req.body);
+      res.status(200).json({ success: true, contest });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteContest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contest = await contestService.deleteContest(req.params.id);
+      res.status(200).json({ success: true, contest });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 export const contestController = new ContestController();
 export default contestController;

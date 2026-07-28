@@ -32,7 +32,7 @@ export const HakaLogo = ({ variant = 'full', className = '', size = 120 }) => {
         x="88"
         y="56"
         textAnchor="middle"
-        fill="#10B981"
+        fill="#499A13"
         fontSize="8"
         fontWeight="700"
         fontFamily="sans-serif"
@@ -67,7 +67,7 @@ export const HakaLogo = ({ variant = 'full', className = '', size = 120 }) => {
               <path d="M 68,22 L 75,2 L 82,22" stroke="currentColor" strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
             </svg>
           </div>
-          <span className="text-[9px] text-[#10B981] font-bold tracking-widest leading-none mt-1 uppercase">
+          <span className="text-[9px] text-[#499A13] font-bold tracking-widest leading-none mt-1 uppercase">
             Win Beyond Rewards
           </span>
         </div>

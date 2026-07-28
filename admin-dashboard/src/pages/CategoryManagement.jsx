@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import * as Icons from 'lucide-react';
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
+import { CustomSelect } from '../components/CustomSelect';
 
 // Curated list of high-quality icons for categories
 const ICON_OPTIONS = [
@@ -22,20 +25,51 @@ const ICON_OPTIONS = [
   { name: 'Zap', label: 'Energy' },
   { name: 'Camera', label: 'Photo' },
   { name: 'Tv', label: 'TV' },
-  { name: 'Mic', label: 'Speech' }
+  { name: 'Mic', label: 'Speech' },
+  { name: 'Film', label: 'Cinema' },
+  { name: 'PenTool', label: 'Design' },
+  { name: 'Code', label: 'Tech' },
+  { name: 'Leaf', label: 'Nature' },
+  { name: 'Coins', label: 'Finance' },
+  { name: 'HeartPulse', label: 'Health' },
+  { name: 'Compass', label: 'Adventure' }
 ];
 
 const MOCK_CATEGORIES = [
-  { _id: 'cat-1', title: 'Knowledge', icon: 'Brain', description: 'Quizzes, tech trivia, cognitive tests, and subject expertise challenge arenas.', status: 'Active' },
-  { _id: 'cat-2', title: 'Arts', icon: 'Palette', description: 'Creative expression, drawing, painting, craftsmanship, and performance arts.', status: 'Active' },
-  { _id: 'cat-3', title: 'Content Creation', icon: 'Video', description: 'Vlogging, cinematography, video editing, storytelling, and digital influence.', status: 'Active' },
-  { _id: 'cat-4', title: 'Entrepreneurship', icon: 'Briefcase', description: 'Startup pitches, SaaS models, business strategy, and venture modeling.', status: 'Active' },
-  { _id: 'cat-5', title: 'Sports', icon: 'Trophy', description: 'Athletics, e-sports gaming, physical fitness milestones, and sports analysis.', status: 'Active' },
-  { _id: 'cat-6', title: 'Science', icon: 'Atom', description: 'Scientific experiments, academic research, innovation prototypes, and tech builds.', status: 'Active' },
-  { _id: 'cat-7', title: 'Social Impact', icon: 'Heart', description: 'Eco campaigns, social volunteering, community development, and charity drives.', status: 'Active' }
+  { _id: 'cat-1', title: 'GK', icon: 'Brain', description: 'General knowledge questions covering historical facts, trivia, science, and world events.', status: 'Active' },
+  { _id: 'cat-2', title: 'Current Affairs', icon: 'Globe', description: 'Latest news, global occurrences, political trends, and dynamic international updates.', status: 'Active' },
+  { _id: 'cat-3', title: 'Sports', icon: 'Trophy', description: 'Athletic achievements, player statistics, historical championships, and rules across world sports.', status: 'Active' },
+  { _id: 'cat-4', title: 'Science', icon: 'Atom', description: 'Physics, chemistry, biology, space exploration, research breakthroughs, and scientific inquiry.', status: 'Active' },
+  { _id: 'cat-5', title: 'Technology', icon: 'Code', description: 'Information systems, digital security, computer languages, and consumer electronics.', status: 'Active' },
+  { _id: 'cat-6', title: 'Movies', icon: 'Film', description: 'Cinema history, Hollywood and regional blockbusters, directors, actors, and awards trivia.', status: 'Active' },
+  { _id: 'cat-7', title: 'Music', icon: 'Music', description: 'Historical genres, dynamic tracks, global pop charts, instruments, and classical symphonies.', status: 'Active' },
+  { _id: 'cat-8', title: 'History', icon: 'BookOpen', description: 'Ancient civilisations, world wars, historical leaders, and timeline milestones.', status: 'Active' },
+  { _id: 'cat-9', title: 'Geography', icon: 'Compass', description: 'Topographical maps, flags, countries, capitals, landmarks, and oceanic boundaries.', status: 'Active' },
+  { _id: 'cat-10', title: 'Politics', icon: 'Shield', description: 'Government frameworks, democratic systems, constitution articles, and diplomatic updates.', status: 'Active' },
+  { _id: 'cat-11', title: 'Business', icon: 'Briefcase', description: 'Global commerce, management models, corporate merges, and entrepreneurial leadership.', status: 'Active' },
+  { _id: 'cat-12', title: 'Finance', icon: 'Coins', description: 'Capital markets, cryptocurrency trends, inflation indexes, and accounting rules.', status: 'Active' },
+  { _id: 'cat-13', title: 'Travel', icon: 'Compass', description: 'Wanderlust directories, cultural milestones, geography expeditions, and vacation landmarks.', status: 'Active' },
+  { _id: 'cat-14', title: 'Food', icon: 'Heart', description: 'Global cuisines, culinary techniques, historical recipes, and nutrition metrics.', status: 'Active' },
+  { _id: 'cat-15', title: 'Automobiles', icon: 'Zap', description: 'Supercar specs, internal combustion engines, electric vehicles, and motorsport leagues.', status: 'Active' },
+  { _id: 'cat-16', title: 'Gaming', icon: 'Gamepad2', description: 'Console generations, strategy guides, virtual worlds, and global e-sports tournaments.', status: 'Active' },
+  { _id: 'cat-17', title: 'Artificial Intelligence', icon: 'Brain', description: 'Machine learning algorithms, neural network systems, natural language processing, and robotics.', status: 'Active' },
+  { _id: 'cat-18', title: 'Health', icon: 'HeartPulse', description: 'Human anatomy, diet plans, physical fitness, mental wellbeing, and disease prevention.', status: 'Active' },
+  { _id: 'cat-19', title: 'Space', icon: 'Atom', description: 'Astrophysics, stellar constellations, spacecraft launches, and alien search theories.', status: 'Active' },
+  { _id: 'cat-20', title: 'Nature', icon: 'Leaf', description: 'Ecosystem conservation, animal kingdoms, flora diversity, and climate tracking.', status: 'Active' },
+  { _id: 'cat-21', title: 'Kerala', icon: 'Globe', description: 'Local culture, historical rulers, traditional art forms, geography, and language milestones in God\'s Own Country.', status: 'Active' },
+  { _id: 'cat-22', title: 'India', icon: 'Globe', description: 'National heritage, federal state directories, constitution laws, freedom struggle milestones, and cultural diversity.', status: 'Active' },
+  { _id: 'cat-23', title: 'World', icon: 'Globe', description: 'International organizations, treaties, geopolitical unions, and globally shared historical epochs.', status: 'Active' },
+  { _id: 'cat-24', title: 'Entertainment', icon: 'Tv', description: 'Celebrity news, reality television formats, popular shows, and general media trends.', status: 'Active' },
+  { _id: 'cat-25', title: 'Fashion', icon: 'Palette', description: 'Designer lines, textile histories, couture events, and styling aesthetics.', status: 'Active' },
+  { _id: 'cat-26', title: 'Social Media', icon: 'Video', description: 'Platform algorithms, viral video content creation, internet memes, and influencer markets.', status: 'Active' },
+  { _id: 'cat-27', title: 'Startup', icon: 'Briefcase', description: 'Venture capital strategies, pitch decks, business modeling, and scaling metrics.', status: 'Active' },
+  { _id: 'cat-28', title: 'Cricket', icon: 'Trophy', description: 'Match statistics, historical records, tournament profiles, and pitch layouts.', status: 'Active' },
+  { _id: 'cat-29', title: 'Football', icon: 'Trophy', description: 'European leagues, World Cup archives, club histories, and referee rules.', status: 'Active' },
+  { _id: 'cat-30', title: 'Olympics', icon: 'Trophy', description: 'Summer and winter games registries, historic athletes, medals, and event categories.', status: 'Active' },
+  { _id: 'cat-31', title: 'Mathematics', icon: 'Brain', description: 'Algebra formulas, calculus theories, geometry proofs, and statistics calculations.', status: 'Active' },
+  { _id: 'cat-32', title: 'Logical Reasoning', icon: 'Brain', description: 'Aptitude tests, spatial pattern recognition, syllogisms, and puzzle solving arenas.', status: 'Active' }
 ];
 
-// Helper to render Lucide icon dynamically by string name
 const DynamicIcon = ({ name, className }) => {
   const IconComponent = Icons[name] || Icons.Layers;
   return <IconComponent className={className} />;
@@ -49,15 +83,80 @@ export const CategoryManagement = () => {
   const [editingId, setEditingId] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Form states
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState('Brain');
-  const [status, setStatus] = useState('Active');
+  // Filter & Search states
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [viewingCategory, setViewingCategory] = useState(null);
+  const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [iconType, setIconType] = useState('preset'); // 'preset' or 'upload'
+
+  const formik = useFormik({
+    initialValues: {
+      title: '',
+      description: '',
+      icon: 'Brain',
+      status: 'Active'
+    },
+    enableReinitialize: true,
+    validationSchema: Yup.object({
+      title: Yup.string()
+        .max(50, 'Title must be 50 characters or less')
+        .required('Category title is required'),
+      description: Yup.string()
+        .max(300, 'Description must be 300 characters or less')
+        .required('Category description is required')
+    }),
+    onSubmit: async (values) => {
+      const data = {
+        title: values.title,
+        description: values.description,
+        icon: values.icon,
+        status: values.status
+      };
+
+      if (isMockMode) {
+        if (editingId) {
+          setCategories(prev => prev.map(c => c._id === editingId ? { ...c, ...data } : c));
+          showAlert('Mock category updated.', 'success');
+          resetForm();
+        } else {
+          const titleExists = categories.some(c => c.title.toLowerCase() === values.title.toLowerCase());
+          if (titleExists) {
+            showAlert('A category with this title already exists.', 'error');
+            return;
+          }
+          setCategories(prev => [...prev, { _id: `cat-${Date.now()}`, ...data }]);
+          showAlert('Mock category created.', 'success');
+          resetForm();
+        }
+        return;
+      }
+
+      try {
+        if (editingId) {
+          const res = await axios.put(`/api/categories/${editingId}`, data, { withCredentials: true });
+          if (res.data.success) {
+            showSnackbar('Category updated successfully.', 'success');
+            resetForm();
+            fetchCategories();
+          }
+        } else {
+          const res = await axios.post('/api/categories', data, { withCredentials: true });
+          if (res.data.success) {
+            showSnackbar('Category created successfully.', 'success');
+            resetForm();
+            fetchCategories();
+          }
+        }
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Failed to save category', 'error');
+      }
+    }
+  });
 
   const fetchCategories = async () => {
     if (isMockMode) {
-      // Initialize with default mock categories if not loaded yet
       setCategories(prev => prev.length ? prev : MOCK_CATEGORIES);
       return;
     }
@@ -78,57 +177,16 @@ export const CategoryManagement = () => {
     fetchCategories();
   }, [isMockMode]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!title) return;
-
-    const data = { title, description, icon, status };
-
-    if (isMockMode) {
-      if (editingId) {
-        setCategories(prev => prev.map(c => c._id === editingId ? { ...c, ...data } : c));
-        showAlert('Mock category updated.', 'success');
-        resetForm();
-      } else {
-        const titleExists = categories.some(c => c.title.toLowerCase() === title.toLowerCase());
-        if (titleExists) {
-          showAlert('A category with this title already exists.', 'error');
-          return;
-        }
-        setCategories(prev => [...prev, { _id: `cat-${Date.now()}`, ...data }]);
-        showAlert('Mock category created.', 'success');
-        resetForm();
-      }
-      return;
-    }
-
-    try {
-      if (editingId) {
-        const res = await axios.put(`/api/categories/${editingId}`, data, { withCredentials: true });
-        if (res.data.success) {
-          showSnackbar('Category updated successfully.', 'success');
-          resetForm();
-          fetchCategories();
-        }
-      } else {
-        const res = await axios.post('/api/categories', data, { withCredentials: true });
-        if (res.data.success) {
-          showSnackbar('Category created successfully.', 'success');
-          resetForm();
-          fetchCategories();
-        }
-      }
-    } catch (err) {
-      showAlert(err.response?.data?.message || 'Failed to save category', 'error');
-    }
-  };
-
   const handleEditClick = (c) => {
     setEditingId(c._id);
-    setTitle(c.title);
-    setDescription(c.description || '');
-    setIcon(c.icon || 'Brain');
-    setStatus(c.status || 'Active');
+    formik.setValues({
+      title: c.title,
+      description: c.description || '',
+      icon: c.icon || 'Brain',
+      status: c.status || 'Active'
+    });
+    const isCustom = c.icon && (c.icon.startsWith('http') || c.icon.startsWith('/') || c.icon.startsWith('data:'));
+    setIconType(isCustom ? 'upload' : 'preset');
     setIsDrawerOpen(true);
   };
 
@@ -156,17 +214,54 @@ export const CategoryManagement = () => {
 
   const resetForm = () => {
     setEditingId(null);
-    setTitle('');
-    setDescription('');
-    setIcon('Brain');
-    setStatus('Active');
+    formik.resetForm();
+    setIconType('preset');
     setIsDrawerOpen(false);
   };
+
+  const handleUploadFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploading(true);
+    try {
+      const res = await axios.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+      if (res.data.success) {
+        formik.setFieldValue('icon', res.data.fileUrl);
+        showSnackbar('Icon image uploaded successfully.', 'success');
+      }
+    } catch (err) {
+      showAlert(err.response?.data?.message || 'Failed to upload icon image.', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleViewClick = (c) => {
+    setViewingCategory(c);
+    setIsViewDrawerOpen(true);
+  };
+
+  const filteredCategories = categories.filter(c => {
+    const matchesSearch = 
+      c.title.toLowerCase().includes(search.toLowerCase()) ||
+      (c.description || '').toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus = statusFilter === 'All' ? true : c.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6 text-left animate-fade-in">
       <div>
-        <h2 className="text-xl font-bold font-poppins text-white dark:text-white light:text-black flex items-center gap-2">
+        <h2 className="text-xl font-bold font-poppins text-white flex items-center gap-2">
           <Icons.Layers className="w-6 h-6 text-brandPrimary" />
           Category Architecture Console
         </h2>
@@ -176,12 +271,11 @@ export const CategoryManagement = () => {
       </div>
 
       <div className="flex flex-col gap-6">
-        {/* Categories List Grid */}
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-4">
               <h3 className="text-xs font-bold uppercase text-brandPrimary tracking-wider">
-                Active Platform Categories ({categories.length})
+                Active Platform Categories ({filteredCategories.length})
               </h3>
               {isMockMode && (
                 <span className="text-[10px] bg-brandSecondary/10 text-brandSecondary border border-brandSecondary/20 px-2 py-0.5 rounded-full font-bold">
@@ -191,32 +285,60 @@ export const CategoryManagement = () => {
             </div>
             <button
               onClick={() => { resetForm(); setIsDrawerOpen(true); }}
-              className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-brandPrimary/20 flex items-center gap-2"
+              className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-brandPrimary/20 flex items-center gap-2 shrink-0"
             >
               <Icons.Plus className="w-4 h-4" />
               Syndicate Category
             </button>
           </div>
 
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="relative flex-1">
+              <Icons.Search className="absolute left-3.5 top-3 w-4 h-4 text-white/30" />
+              <input
+                type="text"
+                placeholder="Search categories by title or description..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-[#0c1322]/60 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brandPrimary/60"
+              />
+            </div>
+            <div className="w-full md:w-48">
+              <CustomSelect
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: 'All', label: 'All Statuses' },
+                  { value: 'Active', label: 'Active' },
+                  { value: 'Archived', label: 'Archived' }
+                ]}
+              />
+            </div>
+          </div>
+
           {loading ? (
             <div className="flex justify-center items-center h-48 bg-white/5 border border-white/5 rounded-2xl">
               <span className="text-sm text-white/60 animate-pulse">Loading categories database...</span>
             </div>
-          ) : categories.length === 0 ? (
+          ) : filteredCategories.length === 0 ? (
             <div className="flex justify-center items-center h-48 bg-white/5 border border-white/5 rounded-2xl">
-              <span className="text-sm text-white/40">No categories found. Create one.</span>
+              <span className="text-sm text-white/40">No categories found matching criteria.</span>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categories.map((c) => (
+              {filteredCategories.map((c) => (
                 <div
                   key={c._id}
                   className={`p-5 bg-white/5 border rounded-2xl flex flex-col justify-between min-h-[160px] transition-all relative overflow-hidden group border-white/5 hover:border-brandPrimary/30 hover:bg-white/[0.07]`}
                 >
                   <div>
                     <div className="flex justify-between items-start mb-3">
-                      <div className="p-2.5 bg-brandPrimary/10 border border-brandPrimary/20 rounded-xl text-brandPrimary">
-                        <DynamicIcon name={c.icon} className="w-5 h-5" />
+                      <div className="p-2.5 bg-brandPrimary/10 border border-brandPrimary/20 rounded-xl text-brandPrimary flex items-center justify-center w-10.5 h-10.5 shrink-0 overflow-hidden">
+                        {c.icon && (c.icon.startsWith('http') || c.icon.startsWith('/') || c.icon.startsWith('data:')) ? (
+                          <img src={c.icon} alt={c.title} className="w-5.5 h-5.5 object-contain rounded-md" />
+                        ) : (
+                          <DynamicIcon name={c.icon} className="w-5 h-5" />
+                        )}
                       </div>
                       <span
                         className={`text-[9px] border px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider ${
@@ -241,6 +363,13 @@ export const CategoryManagement = () => {
                       /{c.slug || c.title.toLowerCase().replace(/\s+/g, '-')}
                     </span>
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewClick(c)}
+                        title="View Category Details"
+                        className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-455 rounded-full transition-all"
+                      >
+                        <Icons.Eye className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleEditClick(c)}
                         title="Edit Category"
@@ -270,8 +399,8 @@ export const CategoryManagement = () => {
           title={editingId ? 'Modify Category' : 'Syndicate Category'}
         >
           <form
-            onSubmit={handleSubmit}
-            className="flex flex-col h-full"
+            onSubmit={formik.handleSubmit}
+            className="flex flex-col h-full text-left"
           >
             <div className="flex-1 space-y-6">
               <div>
@@ -281,23 +410,40 @@ export const CategoryManagement = () => {
                     <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Category Title</label>
                     <input
                       type="text"
-                      required
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      name="title"
+                      value={formik.values.title}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
                       placeholder="E.g. Dance Audition"
-                      className="w-full bg-black/45 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-brandPrimary transition-all"
+                      className={`w-full bg-black/45 border rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none transition-all ${
+                        formik.touched.title && formik.errors.title
+                          ? 'border-red-500/60 focus:border-red-500'
+                          : 'border-white/10 focus:border-brandPrimary'
+                      }`}
                     />
+                    {formik.touched.title && formik.errors.title && (
+                      <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{formik.errors.title}</span>
+                    )}
                   </div>
 
                   <div>
                     <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Description</label>
                     <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      name="description"
+                      value={formik.values.description}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
                       placeholder="Brief summary of contestants or challenge scopes in this category."
                       rows={3}
-                      className="w-full bg-black/45 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-brandPrimary transition-all resize-none"
+                      className={`w-full bg-black/45 border rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none transition-all resize-none ${
+                        formik.touched.description && formik.errors.description
+                          ? 'border-red-500/60 focus:border-red-500'
+                          : 'border-white/10 focus:border-brandPrimary'
+                      }`}
                     />
+                    {formik.touched.description && formik.errors.description && (
+                      <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{formik.errors.description}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -310,9 +456,9 @@ export const CategoryManagement = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => setStatus('Active')}
+                        onClick={() => formik.setFieldValue('status', 'Active')}
                         className={`py-2 text-xs font-bold rounded-xl border transition-all ${
-                          status === 'Active'
+                          formik.values.status === 'Active'
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                             : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white'
                         }`}
@@ -321,9 +467,9 @@ export const CategoryManagement = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setStatus('Archived')}
+                        onClick={() => formik.setFieldValue('status', 'Archived')}
                         className={`py-2 text-xs font-bold rounded-xl border transition-all ${
-                          status === 'Archived'
+                          formik.values.status === 'Archived'
                             ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
                             : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white'
                         }`}
@@ -335,23 +481,90 @@ export const CategoryManagement = () => {
 
                   <div>
                     <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Representational Icon</label>
-                    <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1 scrollbar-hide">
-                      {ICON_OPTIONS.map((item) => (
-                        <button
-                          key={item.name}
-                          type="button"
-                          onClick={() => setIcon(item.name)}
-                          title={item.label}
-                          className={`p-2.5 rounded-xl border flex items-center justify-center transition-all ${
-                            icon === item.name
-                              ? 'bg-brandPrimary/20 border-brandPrimary text-brandPrimary shadow-lg shadow-brandPrimary/10'
-                              : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white hover:border-white/20'
-                          }`}
-                        >
-                          <DynamicIcon name={item.name} className="w-5 h-5" />
-                        </button>
-                      ))}
+                    
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setIconType('preset')}
+                        className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                          iconType === 'preset'
+                            ? 'bg-brandPrimary/15 border-brandPrimary/30 text-brandPrimary'
+                            : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        Lucide Preset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIconType('upload')}
+                        className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${
+                          iconType === 'upload'
+                            ? 'bg-brandPrimary/15 border-brandPrimary/30 text-brandPrimary'
+                            : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        Custom Upload
+                      </button>
                     </div>
+
+                    {iconType === 'preset' ? (
+                      <div className="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1 scrollbar-hide">
+                        {ICON_OPTIONS.map((item) => (
+                          <button
+                            key={item.name}
+                            type="button"
+                            onClick={() => formik.setFieldValue('icon', item.name)}
+                            title={item.label}
+                            className={`p-2.5 rounded-xl border flex items-center justify-center transition-all ${
+                              formik.values.icon === item.name
+                                ? 'bg-brandPrimary/20 border-brandPrimary text-brandPrimary shadow-lg shadow-brandPrimary/10'
+                                : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white hover:border-white/20'
+                            }`}
+                          >
+                            <DynamicIcon name={item.name} className="w-5 h-5" />
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {formik.values.icon && (formik.values.icon.startsWith('http') || formik.values.icon.startsWith('/') || formik.values.icon.startsWith('data:')) ? (
+                          <div className="relative border border-white/15 rounded-2xl p-4 bg-white/5 flex flex-col items-center justify-center gap-2 group/upload select-none">
+                            <img src={formik.values.icon} alt="Custom Category Icon" className="w-14 h-14 object-contain rounded-xl animate-fade-in" />
+                            <span className="text-[10px] text-white/30 truncate max-w-full font-mono">{formik.values.icon.split('/').pop()}</span>
+                            <button
+                              type="button"
+                              onClick={() => formik.setFieldValue('icon', 'Brain')}
+                              className="absolute top-2 right-2 p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-all"
+                              title="Remove Custom Image"
+                            >
+                              <Icons.Trash className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="border border-dashed border-white/20 hover:border-brandPrimary/50 rounded-2xl p-6 bg-white/[0.02] hover:bg-white/5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleUploadFile}
+                              className="hidden"
+                              disabled={uploading}
+                            />
+                            {uploading ? (
+                              <>
+                                <div className="w-5 h-5 border-2 border-brandPrimary/30 border-t-brandPrimary rounded-full animate-spin" />
+                                <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">Uploading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Icons.Upload className="w-5 h-5 text-white/40" />
+                                <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Choose Custom Icon File</span>
+                                <span className="text-[9px] text-white/25">Supports PNG, JPG, WEBP (Max 5MB)</span>
+                              </>
+                            )}
+                          </label>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -386,6 +599,73 @@ export const CategoryManagement = () => {
               )}
             </div>
           </form>
+        </RightDrawer>
+
+        {/* View Details Drawer */}
+        <RightDrawer
+          isOpen={isViewDrawerOpen}
+          onClose={() => setIsViewDrawerOpen(false)}
+          title="Category Details"
+        >
+          {viewingCategory && (
+            <div className="space-y-6 text-left">
+              <div className="flex items-center gap-4 border-b border-white/10 pb-5">
+                <div className="p-4 bg-brandPrimary/10 border border-brandPrimary/20 rounded-2xl text-brandPrimary flex items-center justify-center w-16 h-16 shrink-0 overflow-hidden">
+                  {viewingCategory.icon && (viewingCategory.icon.startsWith('http') || viewingCategory.icon.startsWith('/') || viewingCategory.icon.startsWith('data:')) ? (
+                    <img src={viewingCategory.icon} alt={viewingCategory.title} className="w-9 h-9 object-contain rounded-lg" />
+                  ) : (
+                    <DynamicIcon name={viewingCategory.icon} className="w-8 h-8" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white leading-tight">{viewingCategory.title}</h3>
+                  <span className={`inline-block text-[9px] border px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider mt-1.5 ${
+                    viewingCategory.status === 'Active'
+                      ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                      : 'bg-rose-500/10 border-rose-500/25 text-rose-400'
+                  }`}>
+                    {viewingCategory.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Syndication Path / Slug</label>
+                  <p className="font-mono text-xs text-brandSecondary mt-1">
+                    /{viewingCategory.slug || viewingCategory.title.toLowerCase().replace(/\s+/g, '-')}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Description</label>
+                  <p className="text-xs text-white/70 leading-relaxed mt-1.5 bg-white/5 border border-white/5 p-4 rounded-xl">
+                    {viewingCategory.description || 'No description provided.'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Internal Reference ID</label>
+                  <p className="font-mono text-[10px] text-white/30 mt-1">{viewingCategory._id}</p>
+                </div>
+
+                {viewingCategory.createdAt && (
+                  <div>
+                    <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Syndicated Date</label>
+                    <p className="text-xs text-white/60 mt-1">{new Date(viewingCategory.createdAt).toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsViewDrawerOpen(false)}
+                className="w-full mt-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-bold transition-colors"
+              >
+                Close View
+              </button>
+            </div>
+          )}
         </RightDrawer>
       </div>
     </div>

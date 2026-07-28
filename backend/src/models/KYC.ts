@@ -7,6 +7,8 @@ export interface IKYC extends Document {
   documentFrontUrl: string;
   documentBackUrl?: string;
   selfieUrl: string;
+  addressProofUrl?: string;
+  declarationAccepted: boolean;
   livenessScore: number;
   aiMatchResult: 'PASSED' | 'REVIEW_REQUIRED' | 'FAILED';
   status: 'Pending' | 'Under Review' | 'Approved' | 'Rejected';
@@ -29,6 +31,8 @@ const kycSchema = new Schema<IKYC>(
     documentFrontUrl: { type: String, required: true },
     documentBackUrl: { type: String },
     selfieUrl: { type: String, required: true },
+    addressProofUrl: { type: String },
+    declarationAccepted: { type: Boolean, required: true, default: false },
     livenessScore: { type: Number, default: 0 },
     aiMatchResult: {
       type: String,

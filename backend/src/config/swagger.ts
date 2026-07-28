@@ -51,7 +51,7 @@ export const swaggerDocument = {
           phone: { type: 'string', example: '+919876543210' },
           role: {
             type: 'string',
-            enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin'],
+            enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin', 'Contest Manager', 'Finance Manager', 'Support Manager', 'Marketing Manager', 'Content Moderator', 'KYC Officer', 'Analytics Manager', 'Guest'],
             example: 'Contestant',
           },
           avatar: { type: 'string', example: 'https://example.com/avatar.jpg' },
@@ -1913,7 +1913,7 @@ export const swaggerDocument = {
                 required: ['email', 'role'],
                 properties: {
                   email: { type: 'string', format: 'email', example: 'judge@rcp.com' },
-                  role: { type: 'string', enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin'], example: 'Judge' },
+                  role: { type: 'string', enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin', 'Contest Manager', 'Finance Manager', 'Support Manager', 'Marketing Manager', 'Content Moderator', 'KYC Officer', 'Analytics Manager', 'Guest'], example: 'Judge' },
                 },
               },
             },
@@ -1948,7 +1948,7 @@ export const swaggerDocument = {
             name: 'role',
             in: 'path',
             required: true,
-            schema: { type: 'string', enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin'] },
+            schema: { type: 'string', enum: ['Contestant', 'Judge', 'Sponsor', 'Admin', 'Super Admin', 'Contest Manager', 'Finance Manager', 'Support Manager', 'Marketing Manager', 'Content Moderator', 'KYC Officer', 'Analytics Manager', 'Guest'] },
             description: 'System role',
           },
         ],
