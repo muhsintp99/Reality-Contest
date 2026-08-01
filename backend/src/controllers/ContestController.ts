@@ -49,6 +49,15 @@ export class ContestController {
     }
   }
 
+  async duplicateContest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contest = await contestService.duplicateContest(req.params.id);
+      res.status(201).json({ success: true, contest });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async deleteContest(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const contest = await contestService.deleteContest(req.params.id);

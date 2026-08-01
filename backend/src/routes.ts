@@ -14,6 +14,10 @@ import { categoryController } from './controllers/CategoryController';
 import { registrationController } from './controllers/RegistrationController';
 import { notificationController } from './controllers/NotificationController';
 import { moduleManagementController } from './controllers/ModuleManagementController';
+import { cmsController } from './controllers/CmsController';
+import { advertisementController } from './controllers/AdvertisementController';
+import { couponController } from './controllers/CouponController';
+import { referralController } from './controllers/ReferralController';
 
 // Import Middlewares
 import { authenticate, authorize } from './middleware/AuthMiddleware';
@@ -92,6 +96,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/contests/:id', authenticate, contestController.getContestDetail);
   router.put('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.updateContest);
   router.delete('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.deleteContest);
+  router.post('/contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.duplicateContest);
   router.post('/contests/:id/join', authenticate, contestController.joinContest);
   router.get('/contests/:contestId/stages', authenticate, stageController.getStagesByContest);
   router.post('/contests/:contestId/stages', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), stageController.createStageForContest);
@@ -130,7 +135,10 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/admin/users', authenticate, authorize('Admin', 'Super Admin'), adminController.createUser);
   router.put('/admin/users/:id', authenticate, authorize('Admin', 'Super Admin'), adminController.updateUser);
   router.delete('/admin/users/:id', authenticate, authorize('Admin', 'Super Admin'), adminController.deleteUser);
-  router.put('/admin/users/:id/status', authenticate, authorize('Admin', 'Super Admin'), adminController.toggleUserStatus);
+  router.put('/admin/users/:id/status', authenticate, authorize('Admin', 'Super Admin', 'Support Manager'), adminController.toggleUserStatus);
+  router.put('/admin/users/:id/reset-password', authenticate, authorize('Admin', 'Super Admin', 'Support Manager'), adminController.resetUserPassword);
+  router.put('/admin/users/:id/kyc', authenticate, authorize('Admin', 'Super Admin', 'KYC Officer'), adminController.updateKycStatus);
+  router.put('/admin/users/:id/wallet', authenticate, authorize('Admin', 'Super Admin', 'Finance Manager'), adminController.adjustWalletBalance);
 
   // Notification routes
   router.get('/notifications', authenticate, notificationController.getNotifications);
@@ -189,16 +197,73 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/admin/banners/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), moduleManagementController.deleteBanner);
   router.patch('/admin/banners/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), moduleManagementController.toggleBannerStatus);
 
-  // Ads & Coupons REST APIs
-  router.get('/admin/ads', authenticate, moduleManagementController.listAds);
-  router.post('/admin/ads', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), moduleManagementController.createAd);
-  router.get('/admin/coupons', authenticate, moduleManagementController.listCoupons);
-  router.post('/admin/coupons', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Finance Manager'), moduleManagementController.createCoupon);
-  router.delete('/admin/coupons/:code', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Finance Manager'), moduleManagementController.deleteCoupon);
+  // Advertisement REST APIs
+  router.get('/ads', advertisementController.listAds);
+  router.get('/admin/ads', authenticate, advertisementController.listAds);
+  router.get('/admin/ads/:id', authenticate, advertisementController.getAdById);
+  router.post('/admin/ads', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.createAd);
+  router.put('/admin/ads/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.updateAd);
+  router.delete('/admin/ads/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.deleteAd);
+  router.patch('/admin/ads/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.toggleAdStatus);
 
-  // CMS & Fraud Logs REST APIs
-  router.get('/admin/cms', authenticate, moduleManagementController.listCms);
-  router.put('/admin/cms/:type', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), moduleManagementController.updateCms);
+  // Coupon Management REST APIs
+  router.post('/coupons/validate', couponController.validateCoupon);
+  router.get('/admin/coupons', authenticate, couponController.listCoupons);
+  router.get('/admin/coupons/:id', authenticate, couponController.getCouponById);
+  router.post('/admin/coupons', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Finance Manager'), couponController.createCoupon);
+  router.put('/admin/coupons/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Finance Manager'), couponController.updateCoupon);
+  router.delete('/admin/coupons/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Finance Manager'), couponController.deleteCoupon);
+  // Referral Management REST APIs
+  router.get('/admin/referrals/rules', authenticate, referralController.getRules);
+  router.put('/admin/referrals/rules', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), referralController.updateRules);
+  router.get('/admin/referrals/earnings', authenticate, referralController.listEarnings);
+  router.get('/admin/referrals/abuse', authenticate, referralController.listAbuseLogs);
+  router.patch('/admin/referrals/abuse/:id/action', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Support Manager'), referralController.updateAbuseStatus);
+
+  // Public CMS REST APIs (Accessible for Member Platform & Visitors)
+  router.get('/cms/doc/:type', cmsController.getDocument);
+  router.get('/cms/faqs', cmsController.listFaqs);
+  router.get('/cms/help', cmsController.listHelpArticles);
+  router.get('/cms/blogs', cmsController.listBlogs);
+  router.get('/cms/news', cmsController.listNews);
+  router.get('/cms/social', cmsController.listSocial);
+
+  // Admin CMS REST APIs
+  // Legal Documents (Privacy Policy, Terms, About Us)
+  router.get('/admin/cms/doc/:type', authenticate, cmsController.getDocument);
+  router.put('/admin/cms/doc/:type', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateDocument);
+
+  // FAQs
+  router.get('/admin/cms/faqs', authenticate, cmsController.listFaqs);
+  router.post('/admin/cms/faqs', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.createFaq);
+  router.put('/admin/cms/faqs/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateFaq);
+  router.delete('/admin/cms/faqs/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.deleteFaq);
+
+  // Help Articles
+  router.get('/admin/cms/help', authenticate, cmsController.listHelpArticles);
+  router.post('/admin/cms/help', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.createHelpArticle);
+  router.put('/admin/cms/help/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateHelpArticle);
+  router.delete('/admin/cms/help/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.deleteHelpArticle);
+
+  // Blogs
+  router.get('/admin/cms/blogs', authenticate, cmsController.listBlogs);
+  router.post('/admin/cms/blogs', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.createBlog);
+  router.put('/admin/cms/blogs/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateBlog);
+  router.delete('/admin/cms/blogs/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.deleteBlog);
+
+  // News Bulletins
+  router.get('/admin/cms/news', authenticate, cmsController.listNews);
+  router.post('/admin/cms/news', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.createNews);
+  router.put('/admin/cms/news/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateNews);
+  router.delete('/admin/cms/news/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.deleteNews);
+
+  // Social Links & Logos
+  router.get('/admin/cms/social', authenticate, cmsController.listSocial);
+  router.post('/admin/cms/social', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.createSocial);
+  router.put('/admin/cms/social/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateSocial);
+  router.delete('/admin/cms/social/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.deleteSocial);
+
+  // Fraud Logs
   router.get('/admin/fraud-logs', authenticate, authorize('Super Admin', 'Admin', 'KYC Officer'), moduleManagementController.listFraudLogs);
 
   return router;

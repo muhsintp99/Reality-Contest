@@ -5,7 +5,8 @@ import {
   CheckSquare, Gamepad2, Award, Wallet, Landmark, ShieldCheck,
   Image, Bell, Share2, BarChart3, FileText, Megaphone,
   Ticket, ShieldAlert, Lock, TrendingUp, Settings, Search, X, UserCheck, Building, Shield,
-  History, Smartphone, RefreshCw, ChevronDown, ChevronRight, Calendar, Sparkles, Vote, DollarSign
+  History, Smartphone, RefreshCw, ChevronDown, ChevronRight, Calendar, Sparkles, Vote, DollarSign,
+  BookOpen, Newspaper, Info, Video, Gift, Plus, Layers
 } from 'lucide-react';
 import { HakaLogo } from './HakaLogo';
 
@@ -13,6 +14,7 @@ const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'user-management', label: 'User Management', icon: Users, hasSub: true },
   { id: 'contests', label: 'Contest Management', icon: Trophy },
+  { id: 'categories', label: 'Category Management', icon: Layers },
   { id: 'grand-contest', label: 'Grand Contest', icon: Crown },
   { id: 'question-bank', label: 'Question Bank', icon: HelpCircle },
   { id: 'surveys', label: 'Survey Management', icon: ClipboardList },
@@ -22,17 +24,17 @@ const MENU_ITEMS = [
   { id: 'wallet', label: 'Wallet Management', icon: Wallet },
   { id: 'withdrawals', label: 'Withdrawal Management', icon: Landmark },
   { id: 'kyc', label: 'KYC Management', icon: ShieldCheck },
-  { id: 'banners', label: 'Banner Management', icon: Image },
+  { id: 'banners', label: 'Banner Management', icon: Image, hasSub: true },
   { id: 'notifications', label: 'Notification Panel', icon: Bell },
-  { id: 'referrals', label: 'Referral Management', icon: Share2 },
+  { id: 'referrals', label: 'Referral Management', icon: Share2, hasSub: true },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'cms', label: 'CMS', icon: FileText },
-  { id: 'advertisements', label: 'Advertisement Mgmt', icon: Megaphone },
-  { id: 'coupons', label: 'Coupon Management', icon: Ticket },
+  { id: 'cms', label: 'CMS', icon: FileText, hasSub: true },
+  { id: 'advertisements', label: 'Advertisement Mgmt', icon: Megaphone, hasSub: true },
+  { id: 'coupons', label: 'Coupon Management', icon: Ticket, hasSub: true },
   { id: 'fraud-detection', label: 'Fraud Detection', icon: ShieldAlert },
   { id: 'roles-permissions', label: 'Roles & Permissions', icon: Lock },
   { id: 'myteam', label: 'My Team Directory', icon: UserCheck },
-  { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+  { id: 'analytics', label: 'Analytics', icon: TrendingUp, hasSub: true },
   { id: 'settings', label: 'System Settings', icon: Settings }
 ];
 
@@ -52,6 +54,39 @@ const BANNER_MGMT_SUBITEMS = [
   { id: 'banners/festival', label: 'Festival Banner', icon: Calendar },
   { id: 'banners/sponsored', label: 'Sponsored Banner', icon: Sparkles },
   { id: 'banners/announcement', label: 'Announcement', icon: Megaphone }
+];
+
+const CMS_SUBITEMS = [
+  { id: 'cms/privacy', label: 'Privacy Policy', icon: Shield },
+  { id: 'cms/terms', label: 'Terms & Conditions', icon: FileText },
+  { id: 'cms/faq', label: 'FAQ', icon: HelpCircle },
+  { id: 'cms/help', label: 'Help Center', icon: HelpCircle },
+  { id: 'cms/about', label: 'About Us', icon: Info },
+  { id: 'cms/blogs', label: 'Blogs', icon: BookOpen },
+  { id: 'cms/news', label: 'News & Media', icon: Newspaper },
+  { id: 'cms/social', label: 'Social Media', icon: Share2 }
+];
+
+const ADVERTISEMENT_SUBITEMS = [
+  { id: 'advertisements/create', label: 'Create Ads', icon: Plus },
+  { id: 'advertisements/sponsored', label: 'Sponsored Contest', icon: Trophy },
+  { id: 'advertisements/banner', label: 'Banner Ads', icon: Image },
+  { id: 'advertisements/video', label: 'Video Ads', icon: Video },
+  { id: 'advertisements/reward', label: 'Reward Ads', icon: Gift },
+  { id: 'advertisements/partner', label: 'Partner Campaigns', icon: Users }
+];
+
+const COUPON_SUBITEMS = [
+  { id: 'coupons/promo', label: 'Promo Codes', icon: Ticket },
+  { id: 'coupons/discount', label: 'Discount Entry Fee', icon: DollarSign },
+  { id: 'coupons/free', label: 'Free Entry', icon: Sparkles },
+  { id: 'coupons/reward', label: 'Reward Coupon', icon: Gift }
+];
+
+const REFERRAL_SUBITEMS = [
+  { id: 'referrals/rules', label: 'Referral Rules', icon: Settings },
+  { id: 'referrals/earnings', label: 'Referral Earnings', icon: DollarSign },
+  { id: 'referrals/abuse', label: 'Referral Abuse Detection', icon: ShieldAlert }
 ];
 
 const ANALYTICS_SUBITEMS = [
@@ -75,6 +110,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   const [tooltipY, setTooltipY] = useState(0);
   const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(true);
   const [isBannerMgmtOpen, setIsBannerMgmtOpen] = useState(false);
+  const [isCmsOpen, setIsCmsOpen] = useState(false);
+  const [isAdsOpen, setIsAdsOpen] = useState(false);
+  const [isCouponsOpen, setIsCouponsOpen] = useState(false);
+  const [isReferralsOpen, setIsReferralsOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -100,15 +139,15 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   let allowedIds = MENU_ITEMS.map(i => i.id);
 
   if (role === 'Contest Manager') {
-    allowedIds = ['dashboard', 'contests', 'grand-contest', 'question-bank', 'tasks', 'challenges', 'leaderboard', 'notifications', 'analytics'];
+    allowedIds = ['dashboard', 'contests', 'categories', 'grand-contest', 'question-bank', 'tasks', 'challenges', 'leaderboard', 'notifications', 'analytics'];
   } else if (role === 'Finance Manager') {
-    allowedIds = ['dashboard', 'wallet', 'withdrawals', 'reports', 'coupons', 'notifications', 'settings'];
+    allowedIds = ['dashboard', 'wallet', 'withdrawals', 'reports', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'notifications', 'settings'];
   } else if (role === 'Support Manager' || role === 'Support Executive') {
     allowedIds = ['dashboard', 'user-management', 'user-management/all-users', 'user-management/kyc-status', 'user-management/wallet-balance', 'user-management/contest-history', 'user-management/login-history', 'user-management/device-details', 'user-management/referral-details', 'kyc', 'notifications', 'settings'];
   } else if (role === 'Marketing Manager') {
-    allowedIds = ['dashboard', 'surveys', 'banners', 'banners/home', 'banners/popup', 'banners/festival', 'banners/sponsored', 'banners/announcement', 'notifications', 'referrals', 'advertisements', 'coupons', 'analytics'];
+    allowedIds = ['dashboard', 'surveys', 'banners', 'banners/home', 'banners/popup', 'banners/festival', 'banners/sponsored', 'banners/announcement', 'notifications', 'referrals', 'referrals/rules', 'referrals/earnings', 'referrals/abuse', 'advertisements', 'advertisements/create', 'advertisements/sponsored', 'advertisements/banner', 'advertisements/video', 'advertisements/reward', 'advertisements/partner', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'analytics'];
   } else if (role === 'Content Moderator') {
-    allowedIds = ['dashboard', 'contests', 'question-bank', 'tasks', 'cms', 'notifications'];
+    allowedIds = ['dashboard', 'contests', 'categories', 'question-bank', 'tasks', 'cms', 'notifications'];
   } else if (role === 'KYC Officer') {
     allowedIds = ['dashboard', 'user-management', 'user-management/kyc-status', 'kyc', 'notifications', 'fraud-detection'];
   } else if (role === 'Analytics Manager') {
@@ -135,6 +174,30 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
       setIsBannerMgmtOpen(false);
     }
 
+    if (activeView && activeView.startsWith('cms')) {
+      setIsCmsOpen(true);
+    } else {
+      setIsCmsOpen(false);
+    }
+
+    if (activeView && activeView.startsWith('advertisements')) {
+      setIsAdsOpen(true);
+    } else {
+      setIsAdsOpen(false);
+    }
+
+    if (activeView && activeView.startsWith('coupons')) {
+      setIsCouponsOpen(true);
+    } else {
+      setIsCouponsOpen(false);
+    }
+
+    if (activeView && activeView.startsWith('referrals')) {
+      setIsReferralsOpen(true);
+    } else {
+      setIsReferralsOpen(false);
+    }
+
     if (activeView && activeView.startsWith('analytics')) {
       setIsAnalyticsOpen(true);
     } else {
@@ -146,21 +209,73 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     if (id === 'user-management') {
       setIsUserMgmtOpen(!isUserMgmtOpen);
       setIsBannerMgmtOpen(false);
+      setIsCmsOpen(false);
+      setIsAdsOpen(false);
+      setIsCouponsOpen(false);
+      setIsReferralsOpen(false);
       setIsAnalyticsOpen(false);
       navigate(`/admin-dashboard/user-management/all-users`);
     } else if (id === 'banners') {
       setIsBannerMgmtOpen(!isBannerMgmtOpen);
       setIsUserMgmtOpen(false);
+      setIsCmsOpen(false);
+      setIsAdsOpen(false);
+      setIsCouponsOpen(false);
+      setIsReferralsOpen(false);
       setIsAnalyticsOpen(false);
       navigate(`/admin-dashboard/banners/home`);
+    } else if (id === 'cms') {
+      setIsCmsOpen(!isCmsOpen);
+      setIsUserMgmtOpen(false);
+      setIsBannerMgmtOpen(false);
+      setIsAdsOpen(false);
+      setIsCouponsOpen(false);
+      setIsReferralsOpen(false);
+      setIsAnalyticsOpen(false);
+      navigate(`/admin-dashboard/cms/privacy`);
+    } else if (id === 'advertisements') {
+      setIsAdsOpen(!isAdsOpen);
+      setIsUserMgmtOpen(false);
+      setIsBannerMgmtOpen(false);
+      setIsCmsOpen(false);
+      setIsCouponsOpen(false);
+      setIsReferralsOpen(false);
+      setIsAnalyticsOpen(false);
+      navigate(`/admin-dashboard/advertisements/sponsored`);
+    } else if (id === 'coupons') {
+      setIsCouponsOpen(!isCouponsOpen);
+      setIsUserMgmtOpen(false);
+      setIsBannerMgmtOpen(false);
+      setIsCmsOpen(false);
+      setIsAdsOpen(false);
+      setIsReferralsOpen(false);
+      setIsAnalyticsOpen(false);
+      navigate(`/admin-dashboard/coupons/promo`);
+    } else if (id === 'referrals') {
+      setIsReferralsOpen(!isReferralsOpen);
+      setIsUserMgmtOpen(false);
+      setIsBannerMgmtOpen(false);
+      setIsCmsOpen(false);
+      setIsAdsOpen(false);
+      setIsCouponsOpen(false);
+      setIsAnalyticsOpen(false);
+      navigate(`/admin-dashboard/referrals/rules`);
     } else if (id === 'analytics') {
       setIsAnalyticsOpen(!isAnalyticsOpen);
       setIsUserMgmtOpen(false);
       setIsBannerMgmtOpen(false);
+      setIsCmsOpen(false);
+      setIsAdsOpen(false);
+      setIsCouponsOpen(false);
+      setIsReferralsOpen(false);
       navigate(`/admin-dashboard/analytics/dau-mau`);
     } else {
       setIsUserMgmtOpen(false);
       setIsBannerMgmtOpen(false);
+      setIsCmsOpen(false);
+      setIsAdsOpen(false);
+      setIsCouponsOpen(false);
+      setIsReferralsOpen(false);
       setIsAnalyticsOpen(false);
       navigate(`/admin-dashboard/${id}`);
     }
@@ -260,21 +375,21 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <div className="pl-3 space-y-1 border-l-2 border-slate-200 dark:border-white/10 ml-3 py-1">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
                       {USER_MGMT_SUBITEMS.map(sub => {
                         const SubIcon = sub.icon;
-                        const isSubActive = activeView === sub.id;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
                         return (
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] whitespace-nowrap transition-all ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
                               isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-sm'
-                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
                             }`}
                           >
-                            <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
                           </button>
                         );
@@ -322,21 +437,269 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <div className="pl-3 space-y-1 border-l-2 border-slate-200 dark:border-white/10 ml-3 py-1">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
                       {BANNER_MGMT_SUBITEMS.map(sub => {
                         const SubIcon = sub.icon;
-                        const isSubActive = activeView === sub.id;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
                         return (
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] whitespace-nowrap transition-all ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
                               isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-sm'
-                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
                             }`}
                           >
-                            <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
+                            <span className="whitespace-nowrap truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.id === 'cms') {
+            const isCmsActive = activeView.startsWith('cms');
+            return (
+              <div key={item.id} className="space-y-1">
+                <button
+                  onClick={() => handleMenuClick(item.id)}
+                  onMouseEnter={(e) => handleMouseEnter(item, e)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
+                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                  } ${isCmsActive
+                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {isCmsActive && (
+                    <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isCmsActive ? 'text-brandPrimary dark:text-brandSecondary' : 'text-slate-400'}`} />
+                    {(!isCollapsed || isOpenMobile) && <span className="whitespace-nowrap truncate pr-1">{item.label}</span>}
+                  </div>
+                  {(!isCollapsed || isOpenMobile) && (
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isCmsOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  )}
+                </button>
+
+                {/* Sub-Items Dropdown */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCmsOpen && (!isCollapsed || isOpenMobile)
+                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
+                      {CMS_SUBITEMS.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleSubItemClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                            }`}
+                          >
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
+                            <span className="whitespace-nowrap truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.id === 'advertisements') {
+            const isAdsActive = activeView.startsWith('advertisements');
+            return (
+              <div key={item.id} className="space-y-1">
+                <button
+                  onClick={() => handleMenuClick(item.id)}
+                  onMouseEnter={(e) => handleMouseEnter(item, e)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
+                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                  } ${isAdsActive
+                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {isAdsActive && (
+                    <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isAdsActive ? 'text-brandPrimary dark:text-brandSecondary' : 'text-slate-400'}`} />
+                    {(!isCollapsed || isOpenMobile) && <span className="whitespace-nowrap truncate pr-1">{item.label}</span>}
+                  </div>
+                  {(!isCollapsed || isOpenMobile) && (
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isAdsOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  )}
+                </button>
+
+                {/* Sub-Items Dropdown */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isAdsOpen && (!isCollapsed || isOpenMobile)
+                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
+                      {ADVERTISEMENT_SUBITEMS.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleSubItemClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                            }`}
+                          >
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
+                            <span className="whitespace-nowrap truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.id === 'coupons') {
+            const isCouponsActive = activeView.startsWith('coupons');
+            return (
+              <div key={item.id} className="space-y-1">
+                <button
+                  onClick={() => handleMenuClick(item.id)}
+                  onMouseEnter={(e) => handleMouseEnter(item, e)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
+                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                  } ${isCouponsActive
+                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {isCouponsActive && (
+                    <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isCouponsActive ? 'text-brandPrimary dark:text-brandSecondary' : 'text-slate-400'}`} />
+                    {(!isCollapsed || isOpenMobile) && <span className="whitespace-nowrap truncate pr-1">{item.label}</span>}
+                  </div>
+                  {(!isCollapsed || isOpenMobile) && (
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isCouponsOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  )}
+                </button>
+
+                {/* Sub-Items Dropdown */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCouponsOpen && (!isCollapsed || isOpenMobile)
+                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
+                      {COUPON_SUBITEMS.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleSubItemClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                            }`}
+                          >
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
+                            <span className="whitespace-nowrap truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.id === 'referrals') {
+            const isReferralsActive = activeView.startsWith('referrals');
+            return (
+              <div key={item.id} className="space-y-1">
+                <button
+                  onClick={() => handleMenuClick(item.id)}
+                  onMouseEnter={(e) => handleMouseEnter(item, e)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
+                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                  } ${isReferralsActive
+                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {isReferralsActive && (
+                    <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isReferralsActive ? 'text-brandPrimary dark:text-brandSecondary' : 'text-slate-400'}`} />
+                    {(!isCollapsed || isOpenMobile) && <span className="whitespace-nowrap truncate pr-1">{item.label}</span>}
+                  </div>
+                  {(!isCollapsed || isOpenMobile) && (
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isReferralsOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  )}
+                </button>
+
+                {/* Sub-Items Dropdown */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isReferralsOpen && (!isCollapsed || isOpenMobile)
+                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
+                      {REFERRAL_SUBITEMS.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleSubItemClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                            }`}
+                          >
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
                           </button>
                         );
@@ -384,21 +747,21 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <div className="pl-3 space-y-1 border-l-2 border-slate-200 dark:border-white/10 ml-3 py-1">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
                       {ANALYTICS_SUBITEMS.map(sub => {
                         const SubIcon = sub.icon;
-                        const isSubActive = activeView === sub.id;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
                         return (
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] whitespace-nowrap transition-all ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
                               isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-sm'
-                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
                             }`}
                           >
-                            <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
                           </button>
                         );

@@ -6,6 +6,12 @@ import { IContest } from '../models/Contest';
 import { BadRequestError, NotFoundError } from '../core/errors';
 import mongoose from 'mongoose';
 
+const generateUniqueContestId = (): string => {
+  const year = new Date().getFullYear();
+  const randomDigits = Math.floor(10000 + Math.random() * 90000);
+  return `CNT-${year}-${randomDigits}`;
+};
+
 export class ContestService {
   private contestRepo = new ContestRepository();
   private groupRepo = new GroupRepository();
@@ -13,11 +19,25 @@ export class ContestService {
   private transRepo = new TransactionRepository();
 
   async createContest(data: Partial<IContest>): Promise<IContest> {
-    if (!data.title || !data.startDate || !data.endDate) {
-      throw new BadRequestError('Title, start date, and end date are required.');
+    if (!data.title) {
+      throw new BadRequestError('Title is required for contest creation.');
     }
-    const contest = await this.contestRepo.create(data);
-    
+
+    // Auto-create unique Contest ID if not explicitly specified
+    if (!data.contestId) {
+      data.contestId = generateUniqueContestId();
+    }
+
+    const payload: Partial<IContest> = {
+      ...data,
+      registrationStart: data.registrationStart ? new Date(data.registrationStart) : new Date(),
+      registrationEnd: data.registrationEnd ? new Date(data.registrationEnd) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      startDate: data.startDate ? new Date(data.startDate) : new Date(),
+      endDate: data.endDate ? new Date(data.endDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    };
+
+    const contest = await this.contestRepo.create(payload);
+
     // Auto-create a default group for this contest to hold stages
     await this.groupRepo.create({
       contestId: contest._id,
@@ -30,7 +50,14 @@ export class ContestService {
   }
 
   async getContestById(id: string): Promise<IContest> {
-    const contest = await this.contestRepo.findById(id);
+    let contest = await this.contestRepo.findById(id);
+    if (!contest) {
+      // Also attempt lookup by custom contestId (e.g. CNT-2026-12345)
+      const found = await this.contestRepo.find({ contestId: id });
+      if (found && found.length > 0) {
+        contest = found[0];
+      }
+    }
     if (!contest) {
       throw new NotFoundError('Contest not found.');
     }
@@ -38,7 +65,23 @@ export class ContestService {
   }
 
   async listContests(filter: any = {}): Promise<IContest[]> {
-    return this.contestRepo.find(filter, null, { sort: { createdAt: -1 } });
+    const query: any = {};
+    if (filter.status && filter.status !== 'All') {
+      query.status = filter.status;
+    }
+    if (filter.category && filter.category !== 'All') {
+      query.categories = filter.category;
+    }
+    if (filter.search) {
+      const searchRegex = new RegExp(filter.search, 'i');
+      query.$or = [
+        { contestId: searchRegex },
+        { title: searchRegex },
+        { description: searchRegex },
+        { rules: searchRegex }
+      ];
+    }
+    return this.contestRepo.find(query, null, { sort: { createdAt: -1 } });
   }
 
   async joinContest(contestId: string, userId: string): Promise<{ success: boolean; joinedGroup: string }> {
@@ -57,7 +100,7 @@ export class ContestService {
     }
 
     // Check if user already joined any group in this contest
-    const groupsInContest = await this.groupRepo.find({ contestId });
+    const groupsInContest = await this.groupRepo.find({ contestId: contest._id });
     const alreadyJoined = groupsInContest.some((g) =>
       g.participants.some((pId) => pId.toString() === userId)
     );
@@ -90,7 +133,7 @@ export class ContestService {
         amount: -contest.entryFee,
         type: 'Entry Fee',
         status: 'Completed',
-        description: `Entry fee for contest: ${contest.title}`,
+        description: `Entry fee for contest ${contest.contestId || ''}: ${contest.title}`,
         reference: `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
       });
     }
@@ -118,12 +161,12 @@ export class ContestService {
   }
 
   async updateContest(id: string, data: Partial<IContest>): Promise<IContest> {
-    const contest = await this.contestRepo.findById(id);
+    const contest = await this.getContestById(id);
     if (!contest) {
       throw new NotFoundError('Contest not found.');
     }
     
-    // Convert date strings if they are passed as raw ISO strings
+    // Convert date strings if passed
     if (data.registrationStart) data.registrationStart = new Date(data.registrationStart);
     if (data.registrationEnd) data.registrationEnd = new Date(data.registrationEnd);
     if (data.startDate) data.startDate = new Date(data.startDate);
@@ -133,13 +176,36 @@ export class ContestService {
     return contest.save();
   }
 
+  async duplicateContest(id: string): Promise<IContest> {
+    const existing = await this.getContestById(id);
+    const existingObj = existing.toObject ? existing.toObject() : existing;
+    
+    // Omit _id, createdAt, updatedAt and auto-generate new unique contestId
+    const { _id, createdAt, updatedAt, contestId, ...cloneData } = existingObj;
+    cloneData.contestId = generateUniqueContestId();
+    cloneData.title = `${cloneData.title} (Copy)`;
+    cloneData.status = 'Registration Open';
+
+    const newContest = await this.contestRepo.create(cloneData);
+
+    // Auto-create default group
+    await this.groupRepo.create({
+      contestId: newContest._id,
+      name: 'Default Group',
+      maxParticipants: newContest.maxParticipants || 0,
+      participants: []
+    });
+
+    return newContest;
+  }
+
   async deleteContest(id: string): Promise<IContest> {
-    const contest = await this.contestRepo.findById(id);
+    const contest = await this.getContestById(id);
     if (!contest) {
       throw new NotFoundError('Contest not found.');
     }
-    await this.contestRepo.delete(id);
-    await this.groupRepo.deleteMany({ contestId: id });
+    await this.contestRepo.delete(contest._id.toString());
+    await this.groupRepo.deleteMany({ contestId: contest._id });
     return contest;
   }
 }

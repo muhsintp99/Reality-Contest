@@ -3,6 +3,7 @@ import {
   Image, Plus, Megaphone, Calendar, Sparkles, Eye, Trash2, Edit, Search, Filter, ToggleLeft, ToggleRight, X
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
+import { CustomSelect } from '../components/CustomSelect';
 
 export const BannerManagement = () => {
   const { showSnackbar } = useAlert();
@@ -107,26 +108,27 @@ export const BannerManagement = () => {
             className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-rose-500"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto text-xs">
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <span className="text-slate-400">Type:</span>
-            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 text-slate-800 dark:text-white">
-              <option value="All">All Types</option>
-              <option value="Home Banner">Home Banner</option>
-              <option value="Festival Banner">Festival Banner</option>
-              <option value="Sponsored Banner">Sponsored Banner</option>
-              <option value="Announcement">Announcement</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Status:</span>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-2.5 py-1.5 text-slate-800 dark:text-white">
-              <option value="All">All</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto text-xs relative z-20">
+          <CustomSelect
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={[
+              { label: 'All Banner Types', value: 'All' },
+              { label: 'Home Banner', value: 'Home Banner' },
+              { label: 'Festival Banner', value: 'Festival Banner' },
+              { label: 'Sponsored Banner', value: 'Sponsored Banner' },
+              { label: 'Announcement', value: 'Announcement' }
+            ]}
+          />
+          <CustomSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { label: 'All Statuses', value: 'All' },
+              { label: 'Active Status', value: 'Active' },
+              { label: 'Inactive Status', value: 'Inactive' }
+            ]}
+          />
         </div>
       </div>
 

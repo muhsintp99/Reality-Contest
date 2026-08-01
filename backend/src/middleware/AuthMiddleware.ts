@@ -49,8 +49,10 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
         'Super Admin',
         'Admin',
         'Contest Manager',
+        'Question Manager',
         'Finance Manager',
         'Support Manager',
+        'Support Executive',
         'Marketing Manager',
         'Content Moderator',
         'KYC Officer',
@@ -109,11 +111,12 @@ export const authorize = (...allowedRoles: string[]) => {
       return next(new UnauthorizedError('Authentication required.'));
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
-      return next(new ForbiddenError(`Forbidden: Restricted access. Requires: [${allowedRoles.join(', ')}].`));
+    // Super Admin is the main controller handling all features across the platform
+    if (req.user.role === 'Super Admin' || allowedRoles.includes(req.user.role)) {
+      return next();
     }
 
-    next();
+    return next(new ForbiddenError(`Forbidden: Restricted access. Requires: [${allowedRoles.join(', ')}].`));
   };
 };
 export default authenticate;

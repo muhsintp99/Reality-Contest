@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { loadCurrentUserRequest, logoutRequest } from './store/authSlice';
@@ -7,53 +7,77 @@ import { AlertProvider } from './context/AlertContext';
 import { AdminDashboardLayout } from './layouts/AdminDashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PermissionGuard } from './components/PermissionGuard';
-import { DashboardHome } from './pages/DashboardHome';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { Login } from './pages/Login';
-import { ForgotPassword } from './pages/ForgotPassword';
-import { ContestManagement } from './pages/ContestManagement';
-import { QuizBuilder } from './pages/QuizBuilder';
-import { StageManagement } from './pages/StageManagement';
-import { UsersDirectory } from './pages/UsersDirectory';
-import { NotificationsPage } from './pages/NotificationsPage';
-import { CategoryManagement } from './pages/CategoryManagement';
-import { ContestDetails } from './pages/ContestDetails';
-import { StageBuilder } from './pages/StageBuilder';
-import { MyTeam } from './pages/MyTeam';
-import { ContestWizard } from './pages/ContestWizard';
-import { ContestantWizard } from './pages/ContestantWizard';
-import { KycDirectory } from './pages/KycDirectory';
 import { NotificationProvider } from './context/NotificationContext';
-import { UserManagementPage } from './pages/UserManagementPage';
-import { GrandContestManagement } from './pages/GrandContestManagement';
-import { QuestionBankPage } from './pages/QuestionBankPage';
-import { SurveyManagement } from './pages/SurveyManagement';
-import { TaskManagementPage } from './pages/TaskManagementPage';
-import { ChallengeManagement } from './pages/ChallengeManagement';
-import { LeaderboardPage } from './pages/LeaderboardPage';
-import { WalletManagementPage } from './pages/WalletManagementPage';
-import { WithdrawalManagementPage } from './pages/WithdrawalManagementPage';
-import { BannerManagement } from './pages/BannerManagement';
-import { ReferralManagement } from './pages/ReferralManagement';
-import { ReportsPage } from './pages/ReportsPage';
-import { CMSPage } from './pages/CMSPage';
-import { AdvertisementManagement } from './pages/AdvertisementManagement';
-import { CouponManagement } from './pages/CouponManagement';
-import { FraudDetection } from './pages/FraudDetection';
-import { RolesPermissionsPage } from './pages/RolesPermissionsPage';
-import { AllUsersPage } from './pages/AllUsersPage';
-import { KycStatusPage } from './pages/KycStatusPage';
-import { WalletBalancePage } from './pages/WalletBalancePage';
-import { ContestHistoryPage } from './pages/ContestHistoryPage';
-import { LoginHistoryPage } from './pages/LoginHistoryPage';
-import { DeviceDetailsPage } from './pages/DeviceDetailsPage';
-import { ReferralDetailsPage } from './pages/ReferralDetailsPage';
-import { HomeBannerPage } from './pages/HomeBannerPage';
-import { PopupBannerPage } from './pages/PopupBannerPage';
-import { FestivalBannerPage } from './pages/FestivalBannerPage';
-import { SponsoredBannerPage } from './pages/SponsoredBannerPage';
-import { AnnouncementBannerPage } from './pages/AnnouncementBannerPage';
+import { PageSkeleton } from './components/PageSkeleton';
+
+// Lazy-loaded page components for route-based code splitting and fast bundle initialization
+const DashboardHome = lazy(() => import('./pages/DashboardHome').then(m => ({ default: m.DashboardHome })));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ContestManagement = lazy(() => import('./pages/ContestManagement').then(m => ({ default: m.ContestManagement })));
+const QuizBuilder = lazy(() => import('./pages/QuizBuilder').then(m => ({ default: m.QuizBuilder })));
+const StageManagement = lazy(() => import('./pages/StageManagement').then(m => ({ default: m.StageManagement })));
+const UsersDirectory = lazy(() => import('./pages/UsersDirectory').then(m => ({ default: m.UsersDirectory })));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
+const CategoryManagement = lazy(() => import('./pages/CategoryManagement').then(m => ({ default: m.CategoryManagement })));
+const ContestDetails = lazy(() => import('./pages/ContestDetails').then(m => ({ default: m.ContestDetails })));
+const StageBuilder = lazy(() => import('./pages/StageBuilder').then(m => ({ default: m.StageBuilder })));
+const MyTeam = lazy(() => import('./pages/MyTeam').then(m => ({ default: m.MyTeam })));
+const ContestWizard = lazy(() => import('./pages/ContestWizard').then(m => ({ default: m.ContestWizard })));
+const ContestantWizard = lazy(() => import('./pages/ContestantWizard').then(m => ({ default: m.ContestantWizard })));
+const KycDirectory = lazy(() => import('./pages/KycDirectory').then(m => ({ default: m.KycDirectory })));
+const UserManagementPage = lazy(() => import('./pages/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
+const GrandContestManagement = lazy(() => import('./pages/GrandContestManagement').then(m => ({ default: m.GrandContestManagement })));
+const QuestionBankPage = lazy(() => import('./pages/QuestionBankPage').then(m => ({ default: m.QuestionBankPage })));
+const SurveyManagement = lazy(() => import('./pages/SurveyManagement').then(m => ({ default: m.SurveyManagement })));
+const TaskManagementPage = lazy(() => import('./pages/TaskManagementPage').then(m => ({ default: m.TaskManagementPage })));
+const ChallengeManagement = lazy(() => import('./pages/ChallengeManagement').then(m => ({ default: m.ChallengeManagement })));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
+const WalletManagementPage = lazy(() => import('./pages/WalletManagementPage').then(m => ({ default: m.WalletManagementPage })));
+const WithdrawalManagementPage = lazy(() => import('./pages/WithdrawalManagementPage').then(m => ({ default: m.WithdrawalManagementPage })));
+const BannerManagement = lazy(() => import('./pages/BannerManagement').then(m => ({ default: m.BannerManagement })));
+const ReferralManagement = lazy(() => import('./pages/ReferralManagement').then(m => ({ default: m.ReferralManagement })));
+const ReportsPage = lazy(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
+const CMSPage = lazy(() => import('./pages/CMSPage').then(m => ({ default: m.CMSPage })));
+const AdvertisementManagement = lazy(() => import('./pages/AdvertisementManagement').then(m => ({ default: m.AdvertisementManagement })));
+const CouponManagement = lazy(() => import('./pages/CouponManagement').then(m => ({ default: m.CouponManagement })));
+const FraudDetection = lazy(() => import('./pages/FraudDetection').then(m => ({ default: m.FraudDetection })));
+const RolesPermissionsPage = lazy(() => import('./pages/RolesPermissionsPage').then(m => ({ default: m.RolesPermissionsPage })));
+const AllUsersPage = lazy(() => import('./pages/AllUsersPage').then(m => ({ default: m.AllUsersPage })));
+const KycStatusPage = lazy(() => import('./pages/KycStatusPage').then(m => ({ default: m.KycStatusPage })));
+const WalletBalancePage = lazy(() => import('./pages/WalletBalancePage').then(m => ({ default: m.WalletBalancePage })));
+const ContestHistoryPage = lazy(() => import('./pages/ContestHistoryPage').then(m => ({ default: m.ContestHistoryPage })));
+const LoginHistoryPage = lazy(() => import('./pages/LoginHistoryPage').then(m => ({ default: m.LoginHistoryPage })));
+const DeviceDetailsPage = lazy(() => import('./pages/DeviceDetailsPage').then(m => ({ default: m.DeviceDetailsPage })));
+const ReferralDetailsPage = lazy(() => import('./pages/ReferralDetailsPage').then(m => ({ default: m.ReferralDetailsPage })));
+const HomeBannerPage = lazy(() => import('./pages/HomeBannerPage').then(m => ({ default: m.HomeBannerPage })));
+const PopupBannerPage = lazy(() => import('./pages/PopupBannerPage').then(m => ({ default: m.PopupBannerPage })));
+const FestivalBannerPage = lazy(() => import('./pages/FestivalBannerPage').then(m => ({ default: m.FestivalBannerPage })));
+const SponsoredBannerPage = lazy(() => import('./pages/SponsoredBannerPage').then(m => ({ default: m.SponsoredBannerPage })));
+const AnnouncementBannerPage = lazy(() => import('./pages/AnnouncementBannerPage').then(m => ({ default: m.AnnouncementBannerPage })));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsConditionsPage = lazy(() => import('./pages/TermsConditionsPage').then(m => ({ default: m.TermsConditionsPage })));
+const FaqPage = lazy(() => import('./pages/FaqPage').then(m => ({ default: m.FaqPage })));
+const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage').then(m => ({ default: m.HelpCenterPage })));
+const AboutUsPage = lazy(() => import('./pages/AboutUsPage').then(m => ({ default: m.AboutUsPage })));
+const BlogsPage = lazy(() => import('./pages/BlogsPage').then(m => ({ default: m.BlogsPage })));
+const NewsMediaPage = lazy(() => import('./pages/NewsMediaPage').then(m => ({ default: m.NewsMediaPage })));
+const SocialMediaPage = lazy(() => import('./pages/SocialMediaPage').then(m => ({ default: m.SocialMediaPage })));
+const CreateAdsPage = lazy(() => import('./pages/CreateAdsPage').then(m => ({ default: m.CreateAdsPage })));
+const SponsoredContestPage = lazy(() => import('./pages/SponsoredContestPage').then(m => ({ default: m.SponsoredContestPage })));
+const BannerAdsPage = lazy(() => import('./pages/BannerAdsPage').then(m => ({ default: m.BannerAdsPage })));
+const VideoAdsPage = lazy(() => import('./pages/VideoAdsPage').then(m => ({ default: m.VideoAdsPage })));
+const RewardAdsPage = lazy(() => import('./pages/RewardAdsPage').then(m => ({ default: m.RewardAdsPage })));
+const PartnerCampaignsPage = lazy(() => import('./pages/PartnerCampaignsPage').then(m => ({ default: m.PartnerCampaignsPage })));
+const PromoCodesPage = lazy(() => import('./pages/PromoCodesPage').then(m => ({ default: m.PromoCodesPage })));
+const DiscountEntryFeePage = lazy(() => import('./pages/DiscountEntryFeePage').then(m => ({ default: m.DiscountEntryFeePage })));
+const FreeEntryPage = lazy(() => import('./pages/FreeEntryPage').then(m => ({ default: m.FreeEntryPage })));
+const RewardCouponPage = lazy(() => import('./pages/RewardCouponPage').then(m => ({ default: m.RewardCouponPage })));
+const ReferralRulesPage = lazy(() => import('./pages/ReferralRulesPage').then(m => ({ default: m.ReferralRulesPage })));
+const ReferralEarningsPage = lazy(() => import('./pages/ReferralEarningsPage').then(m => ({ default: m.ReferralEarningsPage })));
+const ReferralAbusePage = lazy(() => import('./pages/ReferralAbusePage').then(m => ({ default: m.ReferralAbusePage })));
 
 const AppContent = () => {
   const dispatch = useDispatch();
@@ -110,88 +134,119 @@ const AppContent = () => {
   }, [initialized, isAuthenticated, user, location, navigate]);
 
   return (
-    <Routes>
-      <Route path="/login" element={
-        <Login
-          onForgotClick={() => navigate('/forgot-password')}
-          onLoginSuccess={() => navigate('/admin-dashboard/dashboard')}
-        />
-      } />
-      <Route path="/forgot-password" element={
-        <ForgotPassword
-          onBackToLogin={() => navigate('/login')}
-        />
-      } />
-      <Route path="/" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
-      <Route path="/admin-dashboard" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
-      
-      <Route path="/admin-dashboard/*" element={
-        <ProtectedRoute>
-          <AdminDashboardLayout
-            activeView={activeView}
-            onLogout={handleLogout}
-            selectedRole={selectedRole}
-            setSelectedRole={setSelectedRole}
-          >
-            <Routes>
-              <Route path="dashboard" element={<DashboardHome onViewChange={(view) => navigate(`/admin-dashboard/${view}`)} selectedRole={selectedRole} />} />
-              <Route path="user-management" element={<Navigate to="user-management/all-users" replace />} />
-              <Route path="user-management/all-users" element={<AllUsersPage />} />
-              <Route path="user-management/kyc-status" element={<KycStatusPage />} />
-              <Route path="user-management/wallet-balance" element={<WalletBalancePage />} />
-              <Route path="user-management/contest-history" element={<ContestHistoryPage />} />
-              <Route path="user-management/login-history" element={<LoginHistoryPage />} />
-              <Route path="user-management/device-details" element={<DeviceDetailsPage />} />
-              <Route path="user-management/referral-details" element={<ReferralDetailsPage />} />
-              <Route path="grand-contest" element={<GrandContestManagement />} />
-              <Route path="question-bank" element={<QuestionBankPage />} />
-              <Route path="surveys" element={<SurveyManagement />} />
-              <Route path="tasks" element={<TaskManagementPage />} />
-              <Route path="challenges" element={<ChallengeManagement />} />
-              <Route path="leaderboard" element={<LeaderboardPage />} />
-              <Route path="wallet" element={<WalletManagementPage />} />
-              <Route path="withdrawals" element={<WithdrawalManagementPage />} />
-              <Route path="banners" element={<Navigate to="banners/home" replace />} />
-              <Route path="banners/home" element={<HomeBannerPage />} />
-              <Route path="banners/popup" element={<PopupBannerPage />} />
-              <Route path="banners/festival" element={<FestivalBannerPage />} />
-              <Route path="banners/sponsored" element={<SponsoredBannerPage />} />
-              <Route path="banners/announcement" element={<AnnouncementBannerPage />} />
-              <Route path="referrals" element={<ReferralManagement />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="cms" element={<CMSPage />} />
-              <Route path="advertisements" element={<AdvertisementManagement />} />
-              <Route path="coupons" element={<CouponManagement />} />
-              <Route path="fraud-detection" element={<FraudDetection />} />
-              <Route path="roles-permissions" element={<RolesPermissionsPage />} />
-              <Route path="analytics" element={<Navigate to="analytics/dau-mau" replace />} />
-              <Route path="analytics/*" element={<AnalyticsPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="users" element={<Navigate to="/admin-dashboard/user-management" replace />} />
-              <Route path="contestants" element={<UsersDirectory type="Contestant" />} />
-              <Route path="kyc" element={<KycDirectory />} />
-              <Route path="contestants/create" element={<ContestantWizard />} />
-              <Route path="judges" element={<UsersDirectory type="Judge" />} />
-              <Route path="sponsors" element={<UsersDirectory type="Sponsor" />} />
-              <Route path="contests" element={<ContestManagement />} />
-              <Route path="contests/create" element={<ContestWizard />} />
-              <Route path="contests/edit/:contestId" element={<ContestWizard />} />
-              <Route path="contests/:contestId" element={<ContestDetails />} />
-              <Route path="contests/:contestId/stages/:stageId" element={<StageBuilder />} />
-              <Route path="stages" element={<StageManagement />} />
-              <Route path="categories" element={<CategoryManagement />} />
-              <Route path="quiz-builder" element={<QuizBuilder />} />
-              <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="myteam" element={<MyTeam />} />
-              <Route path="*" element={<Navigate to="dashboard" replace />} />
-            </Routes>
-          </AdminDashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
-    </Routes>
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route path="/login" element={
+          <Login
+            onForgotClick={() => navigate('/forgot-password')}
+            onLoginSuccess={() => navigate('/admin-dashboard/dashboard')}
+          />
+        } />
+        <Route path="/forgot-password" element={
+          <ForgotPassword
+            onBackToLogin={() => navigate('/login')}
+          />
+        } />
+        <Route path="/" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
+        <Route path="/admin-dashboard" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
+        
+        <Route path="/admin-dashboard/*" element={
+          <ProtectedRoute>
+            <AdminDashboardLayout
+              activeView={activeView}
+              onLogout={handleLogout}
+              selectedRole={selectedRole}
+              setSelectedRole={setSelectedRole}
+            >
+              <Suspense fallback={<PageSkeleton />}>
+                <Routes>
+                  <Route path="dashboard" element={<DashboardHome onViewChange={(view) => navigate(`/admin-dashboard/${view}`)} selectedRole={selectedRole} />} />
+                  <Route path="user-management" element={<Navigate to="user-management/all-users" replace />} />
+                  <Route path="user-management/all-users" element={<AllUsersPage />} />
+                  <Route path="user-management/kyc-status" element={<KycStatusPage />} />
+                  <Route path="user-management/wallet-balance" element={<WalletBalancePage />} />
+                  <Route path="user-management/contest-history" element={<ContestHistoryPage />} />
+                  <Route path="user-management/login-history" element={<LoginHistoryPage />} />
+                  <Route path="user-management/device-details" element={<DeviceDetailsPage />} />
+                  <Route path="user-management/referral-details" element={<ReferralDetailsPage />} />
+                  <Route path="grand-contest" element={<GrandContestManagement />} />
+                  <Route path="question-bank" element={<QuestionBankPage />} />
+                  <Route path="surveys" element={<SurveyManagement />} />
+                  <Route path="tasks" element={<TaskManagementPage />} />
+                  <Route path="challenges" element={<ChallengeManagement />} />
+                  <Route path="leaderboard" element={<LeaderboardPage />} />
+                  <Route path="wallet" element={<WalletManagementPage />} />
+                  <Route path="withdrawals" element={<WithdrawalManagementPage />} />
+                  <Route path="banners" element={<Navigate to="banners/home" replace />} />
+                  <Route path="banners/home" element={<HomeBannerPage />} />
+                  <Route path="banners/popup" element={<PopupBannerPage />} />
+                  <Route path="banners/festival" element={<FestivalBannerPage />} />
+                  <Route path="banners/sponsored" element={<SponsoredBannerPage />} />
+                  <Route path="banners/announcement" element={<AnnouncementBannerPage />} />
+                  {/* Referral Management Dedicated Sub-Pages */}
+                  <Route path="referrals" element={<Navigate to="referrals/rules" replace />} />
+                  <Route path="referrals/rules" element={<ReferralRulesPage />} />
+                  <Route path="referrals/earnings" element={<ReferralEarningsPage />} />
+                  <Route path="referrals/abuse" element={<ReferralAbusePage />} />
+                  <Route path="reports" element={<ReportsPage />} />
+                  {/* CMS Dedicated Sub-Pages */}
+                  <Route path="cms" element={<Navigate to="cms/privacy" replace />} />
+                  <Route path="cms/privacy" element={<PrivacyPolicyPage />} />
+                  <Route path="cms/terms" element={<TermsConditionsPage />} />
+                  <Route path="cms/faq" element={<FaqPage />} />
+                  <Route path="cms/help" element={<HelpCenterPage />} />
+                  <Route path="cms/about" element={<AboutUsPage />} />
+                  <Route path="cms/blogs" element={<BlogsPage />} />
+                  <Route path="cms/news" element={<NewsMediaPage />} />
+                  <Route path="cms/social" element={<SocialMediaPage />} />
+
+                  {/* Advertisement Management Dedicated Sub-Pages */}
+                  <Route path="advertisements" element={<Navigate to="advertisements/sponsored" replace />} />
+                  <Route path="advertisements/create" element={<CreateAdsPage />} />
+                  <Route path="advertisements/sponsored" element={<SponsoredContestPage />} />
+                  <Route path="advertisements/banner" element={<BannerAdsPage />} />
+                  <Route path="advertisements/video" element={<VideoAdsPage />} />
+                  <Route path="advertisements/reward" element={<RewardAdsPage />} />
+                  <Route path="advertisements/partner" element={<PartnerCampaignsPage />} />
+
+                  {/* Coupon Management Dedicated Sub-Pages */}
+                  <Route path="coupons" element={<Navigate to="coupons/promo" replace />} />
+                  <Route path="coupons/promo" element={<PromoCodesPage />} />
+                  <Route path="coupons/discount" element={<DiscountEntryFeePage />} />
+                  <Route path="coupons/free" element={<FreeEntryPage />} />
+                  <Route path="coupons/reward" element={<RewardCouponPage />} />
+                  <Route path="fraud-detection" element={<FraudDetection />} />
+                  <Route path="roles-permissions" element={<RolesPermissionsPage />} />
+                  <Route path="analytics" element={<Navigate to="analytics/dau-mau" replace />} />
+                  <Route path="analytics/*" element={<AnalyticsPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="users" element={<Navigate to="/admin-dashboard/user-management" replace />} />
+                  <Route path="contestants" element={<UsersDirectory type="Contestant" />} />
+                  <Route path="kyc" element={<KycDirectory />} />
+                  <Route path="contestants/create" element={<ContestantWizard />} />
+                  <Route path="judges" element={<UsersDirectory type="Judge" />} />
+                  <Route path="sponsors" element={<UsersDirectory type="Sponsor" />} />
+                  <Route path="contests" element={<ContestManagement />} />
+                  <Route path="contests/create" element={<ContestWizard />} />
+                  <Route path="contests/edit/:contestId" element={<ContestWizard />} />
+                  <Route path="contests/:contestId" element={<ContestDetails />} />
+                  <Route path="contests/:contestId/stages/:stageId" element={<StageBuilder />} />
+                  <Route path="stages" element={<StageManagement />} />
+                  <Route path="categories" element={<CategoryManagement />} />
+                  <Route path="quiz-builder" element={<QuizBuilder />} />
+                  <Route path="notifications" element={<NotificationsPage />} />
+                  <Route path="myteam" element={<MyTeam />} />
+                  <Route path="*" element={<Navigate to="dashboard" replace />} />
+                </Routes>
+              </Suspense>
+            </AdminDashboardLayout>
+          </ProtectedRoute>
+        } />
+        
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
+      </Routes>
+    </Suspense>
   );
 };
 

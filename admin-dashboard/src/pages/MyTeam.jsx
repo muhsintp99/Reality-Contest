@@ -16,8 +16,10 @@ const ROLE_COLORS = {
   'Super Admin': 'bg-rose-500/10 text-rose-400 border-rose-500/20',
   'Admin': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   'Contest Manager': 'bg-amber-500/10 text-amber-450 border-amber-500/20',
+  'Question Manager': 'bg-violet-500/10 text-violet-400 border-violet-500/20',
   'Finance Manager': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   'Support Manager': 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+  'Support Executive': 'bg-teal-500/10 text-teal-400 border-teal-500/20',
   'Marketing Manager': 'bg-pink-500/10 text-pink-400 border-pink-500/20',
   'Content Moderator': 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
   'KYC Officer': 'bg-blue-500/10 text-blue-455 border-blue-500/20',
@@ -52,7 +54,9 @@ export const MyTeam = () => {
   const availableRoles = [
     { value: 'Admin', label: 'Admin' },
     { value: 'Contest Manager', label: 'Contest Manager' },
+    { value: 'Question Manager', label: 'Question Manager' },
     { value: 'Finance Manager', label: 'Finance Manager' },
+    { value: 'Support Executive', label: 'Support Executive' },
     { value: 'Support Manager', label: 'Support Manager' },
     { value: 'Marketing Manager', label: 'Marketing Manager' },
     { value: 'Content Moderator', label: 'Content Moderator' },
@@ -260,11 +264,11 @@ export const MyTeam = () => {
       {/* Header section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold font-poppins text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold font-poppins text-slate-900 dark:text-white flex items-center gap-2">
             <Shield className="w-5 h-5 text-brandPrimary" />
             <span>My Team Directory</span>
           </h2>
-          <p className="text-xs text-white/50">Manage administrative staff credentials, roles, and console clearances.</p>
+          <p className="text-xs text-slate-600 dark:text-white/50">Manage administrative staff credentials, roles, and console clearances.</p>
         </div>
         {isSuperAdmin && (
           <button
@@ -280,13 +284,13 @@ export const MyTeam = () => {
       {/* Filter panel */}
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-3 w-4 h-4 text-white/30" />
+          <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 dark:text-white/30" />
           <input
             type="text"
             placeholder="Search team member by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#0c1322]/60 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brandPrimary/60"
+            className="w-full bg-white/90 dark:bg-[#0c1322]/60 border border-slate-300/80 dark:border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none focus:border-brandPrimary/60"
           />
         </div>
         <div className="w-full md:w-56">
@@ -308,24 +312,24 @@ export const MyTeam = () => {
       {/* Load Spinner */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px] animate-pulse">
-          <div className="flex flex-col items-center gap-3 text-white/55">
+          <div className="flex flex-col items-center gap-3 text-slate-600 dark:text-white/55">
             <div className="w-8 h-8 border-2 border-brandPrimary/30 border-t-brandPrimary rounded-full animate-spin" />
             <p className="text-[10px] font-bold uppercase tracking-widest">Loading Team Registry...</p>
           </div>
         </div>
       ) : filteredMembers.length === 0 ? (
-        <div className="glassmorphism p-12 rounded-2xl border border-white/5 text-center">
-          <ShieldAlert className="w-8 h-8 text-white/20 mx-auto mb-3" />
-          <h4 className="text-sm font-bold text-white/70">No Team Members Found</h4>
-          <p className="text-xs text-white/40 mt-1">There are no administrative accounts matching the filters.</p>
+        <div className="glassmorphism p-12 rounded-2xl border border-slate-200 dark:border-white/5 text-center">
+          <ShieldAlert className="w-8 h-8 text-slate-400 dark:text-white/20 mx-auto mb-3" />
+          <h4 className="text-sm font-bold text-slate-800 dark:text-white/70">No Team Members Found</h4>
+          <p className="text-xs text-slate-500 dark:text-white/40 mt-1">There are no administrative accounts matching the filters.</p>
         </div>
       ) : (
         /* Team Table Display with Pagination */
         <div className="space-y-6">
-          <div className="glassmorphism rounded-2xl border border-white/10 overflow-hidden divide-y divide-white/5 shadow-xl">
+          <div className="glassmorphism rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden divide-y divide-slate-200/50 dark:divide-white/5 shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-white/5 text-white/50 uppercase font-bold text-[10px] tracking-wider">
+                <thead className="bg-slate-100/70 dark:bg-white/5 text-slate-600 dark:text-white/50 uppercase font-bold text-[10px] tracking-wider">
                   <tr>
                     <th className="px-6 py-4">Member Info</th>
                     <th className="px-6 py-4">Username</th>
@@ -334,34 +338,41 @@ export const MyTeam = () => {
                     <th className="px-6 py-4 text-right pr-12">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-white/80">
+                <tbody className="divide-y divide-slate-200/50 dark:divide-white/5 text-slate-800 dark:text-white/80">
                   {paginatedMembersList.map((member) => {
                     const initials = getInitials(member.name);
                     const roleColorClass = ROLE_COLORS[member.role] || 'bg-white/10 text-white/70 border-white/20';
 
                     return (
-                      <tr key={member._id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 text-white">
+                      <tr key={member._id} className="hover:bg-slate-50/80 dark:hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 text-slate-900 dark:text-white">
                           <div className="flex items-start gap-3">
                             {member.avatar ? (
                               <img 
                                 src={member.avatar} 
-                                className="w-10 h-10 rounded-full border border-white/10 object-cover mt-0.5 shrink-0" 
+                                className="w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 object-cover mt-0.5 shrink-0" 
                                 alt="" 
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brandPrimary/20 to-brandSecondary/25 border border-white/10 flex items-center justify-center font-bold text-xs text-brandPrimary shrink-0 mt-0.5">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brandPrimary/20 to-brandSecondary/25 border border-slate-200 dark:border-white/10 flex items-center justify-center font-bold text-xs text-brandPrimary shrink-0 mt-0.5">
                                 {initials}
                               </div>
                             )}
                             <div className="flex flex-col gap-1">
-                              <span className="font-bold text-white text-sm leading-none">{member.name}</span>
-                              <span className="text-white/40 text-[11px] flex items-center gap-1.5 select-all">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900 dark:text-white text-sm leading-none">{member.name}</span>
+                                {(member._id === currentUser?._id || member.email === currentUser?.email) && (
+                                  <span className="px-1.5 py-0.5 rounded bg-brandPrimary/15 text-brandPrimary text-[9px] font-extrabold uppercase tracking-wider">
+                                    You
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-slate-500 dark:text-white/40 text-[11px] flex items-center gap-1.5 select-all">
                                 <Mail className="w-3 h-3 text-brandPrimary/60" />
                                 {member.email}
                               </span>
                               {member.phone && (
-                                <span className="text-white/40 text-[11px] flex items-center gap-1.5">
+                                <span className="text-slate-500 dark:text-white/40 text-[11px] flex items-center gap-1.5">
                                   <Phone className="w-3 h-3 text-brandPrimary/60" />
                                   {member.phone}
                                 </span>
@@ -369,7 +380,7 @@ export const MyTeam = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-white/60 font-mono">@{member.username}</td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-white/60 font-mono">@{member.username}</td>
                         <td className="px-6 py-4">
                           <span className={`text-[9px] font-bold uppercase border px-2 py-0.5 rounded ${roleColorClass}`}>
                             {member.role}
@@ -377,8 +388,8 @@ export const MyTeam = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${member.status === 'Active'
-                              ? 'bg-emerald-500/10 text-emerald-400'
-                              : 'bg-red-500/10 text-red-400'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
                             }`}>
                             {member.status}
                           </span>
@@ -391,34 +402,34 @@ export const MyTeam = () => {
                                 setShowViewDrawer(true);
                               }}
                               title="View Details"
-                              className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-full transition-all"
+                              className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 dark:text-blue-400 rounded-full transition-all"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {isSuperAdmin && (
+                            {isSuperAdmin && member._id !== currentUser?._id && member.email !== currentUser?.email && (
                               <>
                                 <button
                                   onClick={() => handleToggleStatus(member)}
                                   title={member.status === 'Active' ? 'Suspend Account' : 'Activate Account'}
-                                  className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all text-white"
+                                  className="p-1.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-full transition-all text-slate-700 dark:text-white"
                                 >
                                   {member.status === 'Active' ? (
-                                    <ToggleRight className="w-4 h-4 text-emerald-400" />
+                                    <ToggleRight className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                                   ) : (
-                                    <ToggleLeft className="w-4 h-4 text-red-400" />
+                                    <ToggleLeft className="w-4 h-4 text-rose-500 dark:text-rose-400" />
                                   )}
                                 </button>
                                 <button
                                   onClick={() => openEditDrawer(member)}
                                   title="Edit Clearance"
-                                  className="p-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-450 rounded-full transition-all"
+                                  className="p-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-450 rounded-full transition-all"
                                 >
                                   <Edit className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => handleDelete(member)}
                                   title="Delete Profile"
-                                  className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full transition-all"
+                                  className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-full transition-all"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -435,7 +446,7 @@ export const MyTeam = () => {
           </div>
 
           {/* Pagination controls */}
-          <div className="glassmorphism p-4 rounded-2xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/50 shadow-xl">
+          <div className="glassmorphism p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600 dark:text-white/50 shadow-xl">
             <div className="flex items-center gap-2">
               <span>Rows per page:</span>
               <select
@@ -444,7 +455,7 @@ export const MyTeam = () => {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-[#080b12] border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-brandPrimary transition-all cursor-pointer"
+                className="bg-white dark:bg-[#080b12] border border-slate-300 dark:border-white/10 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary transition-all cursor-pointer"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -459,15 +470,15 @@ export const MyTeam = () => {
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(prev => prev - 1)}
-                  className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-white"
+                  className="p-1.5 rounded-lg border border-slate-300 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-slate-700 dark:text-white"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="px-2 font-semibold text-white">Page {currentPage} of {totalPages}</span>
+                <span className="px-2 font-semibold text-slate-800 dark:text-white">Page {currentPage} of {totalPages}</span>
                 <button
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(prev => prev + 1)}
-                  className="p-1.5 rounded-lg border border-white/10 hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-white"
+                  className="p-1.5 rounded-lg border border-slate-300 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40 disabled:hover:bg-transparent text-slate-700 dark:text-white"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -493,7 +504,7 @@ export const MyTeam = () => {
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Full Name</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Full Name</label>
               <input
                 type="text"
                 name="name"
@@ -501,17 +512,17 @@ export const MyTeam = () => {
                 onChange={createFormik.handleChange}
                 onBlur={createFormik.handleBlur}
                 placeholder="e.g. Sarah Connor"
-                className={`w-full bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-white placeholder-white/20 focus:outline-none ${
-                  createFormik.touched.name && createFormik.errors.name ? 'border-red-500/60' : 'border-white/10'
+                className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none ${
+                  createFormik.touched.name && createFormik.errors.name ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                 }`}
               />
               {createFormik.touched.name && createFormik.errors.name && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{createFormik.errors.name}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{createFormik.errors.name}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Console Username</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Console Username</label>
               <input
                 type="text"
                 name="username"
@@ -519,17 +530,17 @@ export const MyTeam = () => {
                 onChange={createFormik.handleChange}
                 onBlur={createFormik.handleBlur}
                 placeholder="e.g. sarahc"
-                className={`w-full bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-white placeholder-white/20 focus:outline-none ${
-                  createFormik.touched.username && createFormik.errors.username ? 'border-red-500/60' : 'border-white/10'
+                className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none ${
+                  createFormik.touched.username && createFormik.errors.username ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                 }`}
               />
               {createFormik.touched.username && createFormik.errors.username && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{createFormik.errors.username}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{createFormik.errors.username}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Work Email Address</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Work Email Address</label>
               <input
                 type="email"
                 name="email"
@@ -537,17 +548,17 @@ export const MyTeam = () => {
                 onChange={createFormik.handleChange}
                 onBlur={createFormik.handleBlur}
                 placeholder="e.g. sarah@realitycontest.com"
-                className={`w-full bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-white placeholder-white/20 focus:outline-none ${
-                  createFormik.touched.email && createFormik.errors.email ? 'border-red-500/60' : 'border-white/10'
+                className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none ${
+                  createFormik.touched.email && createFormik.errors.email ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                 }`}
               />
               {createFormik.touched.email && createFormik.errors.email && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{createFormik.errors.email}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{createFormik.errors.email}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Mobile Phone Number</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Mobile Phone Number</label>
               <input
                 type="text"
                 name="phone"
@@ -555,17 +566,17 @@ export const MyTeam = () => {
                 onChange={createFormik.handleChange}
                 onBlur={createFormik.handleBlur}
                 placeholder="e.g. +919876543210"
-                className={`w-full bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-white placeholder-white/20 focus:outline-none ${
-                  createFormik.touched.phone && createFormik.errors.phone ? 'border-red-500/60' : 'border-white/10'
+                className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none ${
+                  createFormik.touched.phone && createFormik.errors.phone ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                 }`}
               />
               {createFormik.touched.phone && createFormik.errors.phone && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{createFormik.errors.phone}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{createFormik.errors.phone}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Initial Password</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Initial Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -574,14 +585,14 @@ export const MyTeam = () => {
                   onChange={createFormik.handleChange}
                   onBlur={createFormik.handleBlur}
                   placeholder="••••••••"
-                  className={`w-full bg-[#0c1322] border rounded-xl pl-3.5 pr-10 py-3 text-xs text-white placeholder-white/20 focus:outline-none ${
-                    createFormik.touched.password && createFormik.errors.password ? 'border-red-500/60' : 'border-white/10'
+                  className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl pl-3.5 pr-10 py-3 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none ${
+                    createFormik.touched.password && createFormik.errors.password ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3.5 text-white/40 hover:text-white transition-colors"
+                  className="absolute right-3 top-3.5 text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -591,12 +602,12 @@ export const MyTeam = () => {
                 </button>
               </div>
               {createFormik.touched.password && createFormik.errors.password && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{createFormik.errors.password}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{createFormik.errors.password}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Assigned Role</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Assigned Role</label>
               <CustomSelect
                 value={createFormik.values.role}
                 onChange={(val) => createFormik.setFieldValue('role', val)}
@@ -632,58 +643,58 @@ export const MyTeam = () => {
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Full Name</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Full Name</label>
               <input
                 type="text"
                 name="name"
                 value={editFormik.values.name}
                 onChange={editFormik.handleChange}
                 onBlur={editFormik.handleBlur}
-                className={`w-full bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-white focus:outline-none ${
-                  editFormik.touched.name && editFormik.errors.name ? 'border-red-500/60' : 'border-white/10'
+                className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white focus:outline-none ${
+                  editFormik.touched.name && editFormik.errors.name ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                 }`}
               />
               {editFormik.touched.name && editFormik.errors.name && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{editFormik.errors.name}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{editFormik.errors.name}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Work Email Address</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Work Email Address</label>
               <input
                 type="email"
                 name="email"
                 value={editFormik.values.email}
                 onChange={editFormik.handleChange}
                 onBlur={editFormik.handleBlur}
-                className={`w-full bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-white focus:outline-none ${
-                  editFormik.touched.email && editFormik.errors.email ? 'border-red-500/60' : 'border-white/10'
+                className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white focus:outline-none ${
+                  editFormik.touched.email && editFormik.errors.email ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                 }`}
               />
               {editFormik.touched.email && editFormik.errors.email && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{editFormik.errors.email}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{editFormik.errors.email}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Mobile Phone Number</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Mobile Phone Number</label>
               <input
                 type="text"
                 name="phone"
                 value={editFormik.values.phone}
                 onChange={editFormik.handleChange}
                 onBlur={editFormik.handleBlur}
-                className={`w-full bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-white focus:outline-none ${
-                  editFormik.touched.phone && editFormik.errors.phone ? 'border-red-500/60' : 'border-white/10'
+                className={`w-full bg-white/90 dark:bg-[#0c1322] border rounded-xl px-3.5 py-3 text-xs text-slate-900 dark:text-white focus:outline-none ${
+                  editFormik.touched.phone && editFormik.errors.phone ? 'border-rose-500/60' : 'border-slate-300 dark:border-white/10'
                 }`}
               />
               {editFormik.touched.phone && editFormik.errors.phone && (
-                <span className="text-[10px] text-red-400 mt-0.5 block">{editFormik.errors.phone}</span>
+                <span className="text-[10px] text-rose-500 font-semibold mt-0.5 block">{editFormik.errors.phone}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-white/40 uppercase font-bold">Override Clearance Role</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Override Clearance Role</label>
               <CustomSelect
                 value={editFormik.values.role}
                 onChange={(val) => editFormik.setFieldValue('role', val)}
@@ -715,21 +726,21 @@ export const MyTeam = () => {
       >
         {viewingMember && (
           <div className="space-y-6 text-left">
-            <div className="flex items-center gap-4 border-b border-white/10 pb-5">
+            <div className="flex items-center gap-4 border-b border-slate-200 dark:border-white/10 pb-5">
               {viewingMember.avatar ? (
                 <img 
                   src={viewingMember.avatar} 
-                  className="w-16 h-16 rounded-full border border-white/10 object-cover" 
+                  className="w-16 h-16 rounded-full border border-slate-200 dark:border-white/10 object-cover" 
                   alt="" 
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-brandPrimary/20 to-brandSecondary/25 border border-white/10 flex items-center justify-center font-bold text-base text-brandPrimary shrink-0">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-brandPrimary/20 to-brandSecondary/25 border border-slate-200 dark:border-white/10 flex items-center justify-center font-bold text-base text-brandPrimary shrink-0">
                   {getInitials(viewingMember.name)}
                 </div>
               )}
               <div>
-                <h3 className="text-base font-bold text-white leading-tight">{viewingMember.name}</h3>
-                <p className="text-xs text-white/40 mt-1">@{viewingMember.username}</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">{viewingMember.name}</h3>
+                <p className="text-xs text-slate-500 dark:text-white/40 mt-1">@{viewingMember.username}</p>
                 <span className="inline-block mt-2 bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">
                   {viewingMember.role}
                 </span>
@@ -738,46 +749,46 @@ export const MyTeam = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Contact Info</label>
-                <div className="mt-2 space-y-2.5 bg-white/5 border border-white/5 p-4 rounded-xl text-xs text-white/80">
-                  <p className="flex justify-between"><span className="text-white/40">Email:</span> <span className="font-semibold select-all">{viewingMember.email}</span></p>
-                  <p className="flex justify-between"><span className="text-white/40">Phone:</span> <span className="font-semibold">{viewingMember.phone || 'N/A'}</span></p>
+                <label className="block text-[10px] text-slate-500 dark:text-white/40 uppercase font-extrabold tracking-wider">Contact Info</label>
+                <div className="mt-2 space-y-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-4 rounded-xl text-xs text-slate-700 dark:text-white/80">
+                  <p className="flex justify-between"><span className="text-slate-500 dark:text-white/40">Email:</span> <span className="font-semibold select-all text-slate-900 dark:text-white">{viewingMember.email}</span></p>
+                  <p className="flex justify-between"><span className="text-slate-500 dark:text-white/40">Phone:</span> <span className="font-semibold text-slate-900 dark:text-white">{viewingMember.phone || 'N/A'}</span></p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Account Metrics & Status</label>
-                <div className="mt-2 space-y-2.5 bg-white/5 border border-white/5 p-4 rounded-xl text-xs text-white/80">
+                <label className="block text-[10px] text-slate-500 dark:text-white/40 uppercase font-extrabold tracking-wider">Account Metrics & Status</label>
+                <div className="mt-2 space-y-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/5 p-4 rounded-xl text-xs text-slate-700 dark:text-white/80">
                   <p className="flex justify-between">
-                    <span className="text-white/40">Status:</span> 
-                    <span className={`font-bold ${viewingMember.status === 'Active' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <span className="text-slate-500 dark:text-white/40">Status:</span> 
+                    <span className={`font-bold ${viewingMember.status === 'Active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                       {viewingMember.status}
                     </span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-white/40">Registration Date:</span> 
-                    <span className="font-semibold">{new Date(viewingMember.createdAt || new Date()).toLocaleString()}</span>
+                    <span className="text-slate-500 dark:text-white/40">Registration Date:</span> 
+                    <span className="font-semibold text-slate-900 dark:text-white">{new Date(viewingMember.createdAt || new Date()).toLocaleString()}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-white/40">Wallet Balance:</span> 
-                    <span className="font-extrabold text-brandSecondary">₹{(viewingMember.walletBalance || 0).toLocaleString()}</span>
+                    <span className="text-slate-500 dark:text-white/40">Wallet Balance:</span> 
+                    <span className="font-extrabold text-brandPrimary dark:text-brandSecondary">₹{(viewingMember.walletBalance || 0).toLocaleString()}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-white/40">Profile ID:</span> 
-                    <span className="font-mono text-[9px] text-white/45 select-all">{viewingMember._id}</span>
+                    <span className="text-slate-500 dark:text-white/40">Profile ID:</span> 
+                    <span className="font-mono text-[9px] text-slate-500 dark:text-white/45 select-all">{viewingMember._id}</span>
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/5">
+            <div className="pt-4 border-t border-slate-200 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => {
                   setShowViewDrawer(false);
                   setViewingMember(null);
                 }}
-                className="w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-bold transition-colors"
+                className="w-full py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white rounded-xl text-xs font-bold transition-colors"
               >
                 Close Details
               </button>

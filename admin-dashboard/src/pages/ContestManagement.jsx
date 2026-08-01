@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -12,6 +12,7 @@ import { RightDrawer } from '../components/RightDrawer';
 import { MultiSelect } from '../components/MultiSelect';
 import { CustomSelect } from '../components/CustomSelect';
 import { FileUploadPicker } from '../components/FileUploadPicker';
+import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 
@@ -278,16 +279,28 @@ export const ContestManagement = () => {
   };
 
   const handleDuplicateClick = (contest) => {
-    showConfirm('Duplicate Contest', `Create a duplicate copy of "${contest.title}"?`, () => {
-      const cloned = {
-        ...contest,
-        _id: `ct-${Date.now()}`,
-        title: `${contest.title} (Copy)`,
-        status: 'Registration Open',
-        createdAt: new Date().toISOString()
-      };
-      setContests([cloned, ...contests]);
-      showSnackbar(`Contest "${contest.title}" duplicated!`, 'success');
+    showConfirm('Duplicate Contest', `Create a duplicate copy of "${contest.title}"?`, async () => {
+      if (isMockMode) {
+        const cloned = {
+          ...contest,
+          _id: `ct-${Date.now()}`,
+          title: `${contest.title} (Copy)`,
+          status: 'Registration Open',
+          createdAt: new Date().toISOString()
+        };
+        setContests([cloned, ...contests]);
+        showSnackbar(`Contest "${contest.title}" duplicated!`, 'success');
+        return;
+      }
+      try {
+        const res = await axios.post(`/api/contests/${contest._id}/duplicate`, {}, { withCredentials: true });
+        if (res.data.success) {
+          showSnackbar(`Contest "${contest.title}" duplicated successfully!`, 'success');
+          fetchContests();
+        }
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Failed to duplicate contest', 'error');
+      }
     });
   };
 
@@ -321,13 +334,19 @@ export const ContestManagement = () => {
     setIsDrawerOpen(false);
   };
 
-  const filteredContests = contests.filter(c => {
-    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) || 
-                          (c.description && c.description.toLowerCase().includes(search.toLowerCase()));
-    const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
-    const matchesCategory = categoryFilter === 'All' || (c.categories && c.categories.includes(categoryFilter));
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
+  const filteredContests = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return contests.filter(c => {
+      const matchesSearch = 
+        !q ||
+        (c.title && c.title.toLowerCase().includes(q)) || 
+        (c.contestId && c.contestId.toLowerCase().includes(q)) || 
+        (c.description && c.description.toLowerCase().includes(q));
+      const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
+      const matchesCategory = categoryFilter === 'All' || (c.categories && c.categories.includes(categoryFilter));
+      return matchesSearch && matchesStatus && matchesCategory;
+    });
+  }, [contests, search, statusFilter, categoryFilter]);
 
   return (
     <div className="space-y-6 text-left animate-fade-in relative p-2">
@@ -343,7 +362,7 @@ export const ContestManagement = () => {
           </p>
         </div>
         <button
-          onClick={() => { resetForm(); setIsDrawerOpen(true); }}
+          onClick={() => navigate('/admin-dashboard/contests/create')}
           className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all"
         >
           <Plus className="w-4 h-4" /> Create Contest
@@ -379,58 +398,82 @@ export const ContestManagement = () => {
       </div>
 
       {/* Contest Grid / Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredContests.map(c => (
-          <div key={c._id} className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between hover:border-brandPrimary/30 transition-all">
-            <div className="space-y-3">
-              {c.imageUrl && (
-                <img src={c.imageUrl} className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-white/10" alt="Cover" />
-              )}
-              <div className="flex justify-between items-start gap-2">
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">{c.title}</h3>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  c.status === 'Registration Open' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                }`}>
-                  {c.status}
-                </span>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-4 animate-pulse">
+              <div className="w-full h-32 bg-slate-200 dark:bg-white/10 rounded-xl" />
+              <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-3/4" />
+              <div className="h-3 bg-slate-200 dark:bg-white/10 rounded w-full" />
+              <div className="h-10 bg-slate-100 dark:bg-white/5 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      ) : filteredContests.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl text-center space-y-3">
+          <Trophy className="w-10 h-10 text-slate-300 dark:text-white/20" />
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Contests Found</h3>
+          <p className="text-xs text-slate-400 max-w-sm">No contests match your current search query or filter settings.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredContests.map(c => (
+            <div key={c._id} className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between hover:border-brandPrimary/30 transition-all">
+              <div className="space-y-3">
+                {c.imageUrl && (
+                  <img src={c.imageUrl} loading="lazy" decoding="async" className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-white/10" alt="Cover" />
+                )}
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <span className="px-2 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold rounded text-[10px] inline-block mb-1">
+                      {c.contestId || `CNT-2026-${String(c._id).slice(-4).toUpperCase()}`}
+                    </span>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">{c.title}</h3>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    c.status === 'Registration Open' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                  }`}>
+                    {c.status}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{c.description}</p>
+                
+                {/* Financial & Logistics Info */}
+                <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl text-center text-xs">
+                  <div><span className="text-[10px] text-slate-400 block">Prize Pool</span><strong className="text-emerald-500 font-bold">₹{c.prizePool?.toLocaleString()}</strong></div>
+                  <div><span className="text-[10px] text-slate-400 block">Entry Fee</span><strong className="text-brandPrimary font-bold">₹{c.entryFee}</strong></div>
+                  <div><span className="text-[10px] text-slate-400 block">Timer</span><strong className="text-slate-800 dark:text-white font-bold">{c.timerLimit || 30} mins</strong></div>
+                </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{c.description}</p>
-              
-              {/* Financial & Logistics Info */}
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl text-center text-xs">
-                <div><span className="text-[10px] text-slate-400 block">Prize Pool</span><strong className="text-emerald-500 font-bold">₹{c.prizePool?.toLocaleString()}</strong></div>
-                <div><span className="text-[10px] text-slate-400 block">Entry Fee</span><strong className="text-brandPrimary font-bold">₹{c.entryFee}</strong></div>
-                <div><span className="text-[10px] text-slate-400 block">Timer</span><strong className="text-slate-800 dark:text-white font-bold">{c.timerLimit || 30} mins</strong></div>
+
+              {/* Card Action Buttons */}
+              <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleViewClick(c)} title="View Contest Details" className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => navigate(`/admin-dashboard/contests/edit/${c._id}`)} title="Edit Contest" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDuplicateClick(c)} title="Duplicate Contest" className="p-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-lg">
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDeleteClick(c._id, c.title)} title="Delete Contest" className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-lg">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => navigate(`/admin-dashboard/contests/${c._id}`)}
+                  className="px-3 py-1 bg-brandPrimary text-white rounded-lg text-[11px] font-bold hover:bg-brandPrimary/90"
+                >
+                  Manage Stages
+                </button>
               </div>
             </div>
-
-            {/* Card Action Buttons */}
-            <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
-              <div className="flex items-center gap-1">
-                <button onClick={() => handleViewClick(c)} title="View Contest Details" className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg">
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleEditClick(c)} title="Edit Contest" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg">
-                  <Settings className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleDuplicateClick(c)} title="Duplicate Contest" className="p-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-lg">
-                  <Copy className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleDeleteClick(c._id, c.title)} title="Delete Contest" className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-lg">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              <button
-                onClick={() => navigate(`/admin-dashboard/contests/${c._id}`)}
-                className="px-3 py-1 bg-brandPrimary text-white rounded-lg text-[11px] font-bold hover:bg-brandPrimary/90"
-              >
-                Manage Stages
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Create / Edit Drawer */}
       <RightDrawer
@@ -449,10 +492,13 @@ export const ContestManagement = () => {
             <textarea name="description" value={formik.values.description} onChange={formik.handleChange} rows={2} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white resize-none" />
           </div>
 
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contest Rules & Guidelines</label>
-            <textarea name="rules" value={formik.values.rules} onChange={formik.handleChange} rows={3} placeholder="Enter rules..." className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white resize-none" />
-          </div>
+          <RichTextEditor
+            label="Contest Rules & Guidelines"
+            value={formik.values.rules}
+            onChange={(val) => formik.setFieldValue('rules', val)}
+            placeholder="Enter rules, negative marking guidelines, disqualification policies..."
+            rows={4}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -478,6 +524,39 @@ export const ContestManagement = () => {
               <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Difficulty</label>
               <CustomSelect value={formik.values.difficulty} onChange={v => formik.setFieldValue('difficulty', v)} options={[{value:'Easy',label:'Easy'},{value:'Medium',label:'Medium'},{value:'Hard',label:'Hard'},{value:'Expert',label:'Expert'}]} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Questions Count</label>
+              <input type="number" name="questionsCount" value={formik.values.questionsCount} onChange={formik.handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contest Status</label>
+              <CustomSelect
+                value={formik.values.status}
+                onChange={v => formik.setFieldValue('status', v)}
+                options={[
+                  { value: 'Draft', label: 'Draft' },
+                  { value: 'Upcoming', label: 'Upcoming' },
+                  { value: 'Registration Open', label: 'Registration Open' },
+                  { value: 'Registration Closed', label: 'Registration Closed' },
+                  { value: 'Live', label: 'Live' },
+                  { value: 'Completed', label: 'Completed' },
+                  { value: 'Cancelled', label: 'Cancelled' }
+                ]}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contest Categories</label>
+            <MultiSelect
+              options={categories.map(c => ({ value: c._id, label: c.title || c.name || c._id }))}
+              selected={formik.values.selectedCategories}
+              onChange={(vals) => formik.setFieldValue('selectedCategories', vals)}
+              placeholder="Select Contest Categories..."
+            />
           </div>
 
           <FileUploadPicker
@@ -519,6 +598,7 @@ export const ContestManagement = () => {
             {viewingContest.imageUrl && (
               <img src={viewingContest.imageUrl} className="w-full h-40 object-cover rounded-xl border border-slate-200 dark:border-white/10" alt="Cover" />
             )}
+            <div><span className="text-[10px] font-bold text-slate-400 block">Contest ID</span><strong className="text-brandPrimary font-mono text-xs">{viewingContest.contestId || `CNT-2026-${String(viewingContest._id).slice(-4).toUpperCase()}`}</strong></div>
             <div><span className="text-[10px] font-bold text-slate-400 block">Title</span><strong className="text-slate-900 dark:text-white text-sm">{viewingContest.title}</strong></div>
             <div><span className="text-[10px] font-bold text-slate-400 block">Description</span><p className="text-slate-600 dark:text-slate-300">{viewingContest.description}</p></div>
             <div><span className="text-[10px] font-bold text-slate-400 block">Contest Rules</span><p className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl font-mono text-[11px]">{viewingContest.rules || 'Standard contest rules apply.'}</p></div>

@@ -8,8 +8,10 @@ export async function seedDatabase() {
       'Admin',
       'Super Admin',
       'Contest Manager',
+      'Question Manager',
       'Finance Manager',
       'Support Manager',
+      'Support Executive',
       'Marketing Manager',
       'Content Moderator',
       'KYC Officer',
@@ -86,7 +88,7 @@ export async function seedDatabase() {
       username: string;
       email: string;
       phone: string;
-      role: 'Contestant' | 'Judge' | 'Sponsor' | 'Admin' | 'Super Admin' | 'Contest Manager' | 'Finance Manager' | 'Support Manager' | 'Marketing Manager' | 'Content Moderator' | 'KYC Officer' | 'Analytics Manager' | 'Guest';
+      role: 'Contestant' | 'Judge' | 'Sponsor' | 'Admin' | 'Super Admin' | 'Contest Manager' | 'Question Manager' | 'Finance Manager' | 'Support Manager' | 'Support Executive' | 'Marketing Manager' | 'Content Moderator' | 'KYC Officer' | 'Analytics Manager' | 'Guest';
     }> = [
       { name: 'Default Contestant', username: 'contestant', email: 'contestant@rcp.com', phone: '+919876543210', role: 'Contestant' },
       { name: 'Default Judge', username: 'judge', email: 'judge@rcp.com', phone: '+919876543211', role: 'Judge' },
@@ -94,8 +96,10 @@ export async function seedDatabase() {
       { name: 'Default Admin', username: 'admin', email: 'admin@rcp.com', phone: '+919876543213', role: 'Admin' },
       { name: 'Default Super Admin', username: 'superadmin', email: 'superadmin@rcp.com', phone: '+919876543214', role: 'Super Admin' },
       { name: 'Default Contest Manager', username: 'contestmanager', email: 'contestmanager@rcp.com', phone: '+919876543215', role: 'Contest Manager' },
+      { name: 'Default Question Manager', username: 'questionmanager', email: 'questionmanager@rcp.com', phone: '+919876543222', role: 'Question Manager' },
       { name: 'Default Finance Manager', username: 'financemanager', email: 'financemanager@rcp.com', phone: '+919876543216', role: 'Finance Manager' },
       { name: 'Default Support Manager', username: 'supportmanager', email: 'supportmanager@rcp.com', phone: '+919876543217', role: 'Support Manager' },
+      { name: 'Default Support Executive', username: 'supportexecutive', email: 'supportexecutive@rcp.com', phone: '+919876543223', role: 'Support Executive' },
       { name: 'Default Marketing Manager', username: 'marketingmanager', email: 'marketingmanager@rcp.com', phone: '+919876543218', role: 'Marketing Manager' },
       { name: 'Default Content Moderator', username: 'contentmoderator', email: 'contentmoderator@rcp.com', phone: '+919876543219', role: 'Content Moderator' },
       { name: 'Default KYC Officer', username: 'kycofficer', email: 'kycofficer@rcp.com', phone: '+919876543220', role: 'KYC Officer' },

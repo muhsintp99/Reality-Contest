@@ -45,8 +45,10 @@ export class AdminController {
         'Admin',
         'Super Admin',
         'Contest Manager',
+        'Question Manager',
         'Finance Manager',
         'Support Manager',
+        'Support Executive',
         'Marketing Manager',
         'Content Moderator',
         'KYC Officer',
@@ -59,11 +61,11 @@ export class AdminController {
       if (isParamAdmin) {
         const { Admin } = require('../models/Admin');
         const query = role === 'Admin'
-          ? { role: { $in: adminRoles }, _id: { $ne: loggedInUserId } }
-          : { role, _id: { $ne: loggedInUserId } };
+          ? { role: { $in: adminRoles } }
+          : { role };
         users = await Admin.find(query).select('-password');
       } else {
-        const query = { role, _id: { $ne: loggedInUserId } };
+        const query = { role };
         users = await User.find(query).select('-password');
       }
 
@@ -118,8 +120,10 @@ export class AdminController {
         'Admin',
         'Super Admin',
         'Contest Manager',
+        'Question Manager',
         'Finance Manager',
         'Support Manager',
+        'Support Executive',
         'Marketing Manager',
         'Content Moderator',
         'KYC Officer',
@@ -220,8 +224,10 @@ export class AdminController {
         'Admin',
         'Super Admin',
         'Contest Manager',
+        'Question Manager',
         'Finance Manager',
         'Support Manager',
+        'Support Executive',
         'Marketing Manager',
         'Content Moderator',
         'KYC Officer',
@@ -328,8 +334,10 @@ export class AdminController {
         'Admin',
         'Super Admin',
         'Contest Manager',
+        'Question Manager',
         'Finance Manager',
         'Support Manager',
+        'Support Executive',
         'Marketing Manager',
         'Content Moderator',
         'KYC Officer',
@@ -389,8 +397,10 @@ export class AdminController {
         'Admin',
         'Super Admin',
         'Contest Manager',
+        'Question Manager',
         'Finance Manager',
         'Support Manager',
+        'Support Executive',
         'Marketing Manager',
         'Content Moderator',
         'KYC Officer',
@@ -417,6 +427,57 @@ export class AdminController {
       });
 
       res.status(200).json({ success: true, message: `User status updated to ${nextStatus} successfully.`, user: userToToggle });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async resetUserPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+      if (!password) throw new BadRequestError('New password is required.');
+
+      const user = await User.findById(id);
+      if (!user) throw new NotFoundError('Contestant user not found.');
+
+      user.password = password; // Pre-save hook hashes password if schema is configured or saved
+      await user.save();
+
+      res.status(200).json({ success: true, message: `Password reset successfully for contestant ${user.name}.` });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateKycStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { kycStatus } = req.body;
+      if (!kycStatus) throw new BadRequestError('KYC status is required.');
+
+      const user = await User.findByIdAndUpdate(id, { kycStatus }, { new: true });
+      if (!user) throw new NotFoundError('Contestant user not found.');
+
+      res.status(200).json({ success: true, message: `KYC status updated to ${kycStatus} for contestant ${user.name}.`, user });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async adjustWalletBalance(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { amount } = req.body;
+      if (amount === undefined) throw new BadRequestError('Adjustment amount is required.');
+
+      const user = await User.findById(id);
+      if (!user) throw new NotFoundError('Contestant user not found.');
+
+      user.walletBalance = (user.walletBalance || 0) + Number(amount);
+      await user.save();
+
+      res.status(200).json({ success: true, message: `Wallet balance adjusted by ₹${amount} for contestant ${user.name}.`, newBalance: user.walletBalance });
     } catch (err) {
       next(err);
     }

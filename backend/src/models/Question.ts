@@ -60,5 +60,8 @@ const questionSchema = new Schema<IQuestion>(
   }
 );
 
+questionSchema.index({ poolId: 1, category: 1 });
+questionSchema.index({ category: 1, difficulty: 1 });
+
 export const Question: Model<IQuestion> = mongoose.models.Question || mongoose.model<IQuestion>('Question', questionSchema);
 export default Question;

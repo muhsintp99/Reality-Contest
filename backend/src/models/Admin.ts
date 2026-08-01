@@ -15,7 +15,7 @@ export interface IAdmin extends Document {
   email: string;
   phone: string;
   password?: string;
-  role: 'Admin' | 'Super Admin' | 'Contest Manager' | 'Finance Manager' | 'Support Manager' | 'Marketing Manager' | 'Content Moderator' | 'KYC Officer' | 'Analytics Manager';
+  role: 'Admin' | 'Super Admin' | 'Contest Manager' | 'Question Manager' | 'Finance Manager' | 'Support Manager' | 'Support Executive' | 'Marketing Manager' | 'Content Moderator' | 'KYC Officer' | 'Analytics Manager';
   avatar: string;
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
@@ -58,7 +58,7 @@ const adminSchema = new Schema<IAdmin>(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ['Admin', 'Super Admin', 'Contest Manager', 'Finance Manager', 'Support Manager', 'Marketing Manager', 'Content Moderator', 'KYC Officer', 'Analytics Manager'],
+      enum: ['Admin', 'Super Admin', 'Contest Manager', 'Question Manager', 'Finance Manager', 'Support Manager', 'Support Executive', 'Marketing Manager', 'Content Moderator', 'KYC Officer', 'Analytics Manager'],
       default: 'Admin'
     },
     avatar: { type: String, default: '' },

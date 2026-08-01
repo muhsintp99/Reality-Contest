@@ -28,15 +28,15 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   }
 
   async findById(id: string, projection?: any, options?: QueryOptions): Promise<T | null> {
-    return this.model.findById(id, projection, options).exec();
+    return this.model.findById(id, projection, { lean: true, ...options }).exec() as any;
   }
 
   async findOne(filter: FilterQuery<T>, projection?: any, options?: QueryOptions): Promise<T | null> {
-    return this.model.findOne(filter, projection, options).exec();
+    return this.model.findOne(filter, projection, { lean: true, ...options }).exec() as any;
   }
 
   async find(filter: FilterQuery<T>, projection?: any, options?: QueryOptions): Promise<T[]> {
-    return this.model.find(filter, projection, options).exec();
+    return this.model.find(filter, projection, { lean: true, ...options }).exec() as any;
   }
 
   async update(id: string, update: UpdateQuery<T>, options?: QueryOptions): Promise<T | null> {
