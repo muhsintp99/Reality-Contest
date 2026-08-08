@@ -1,14 +1,18 @@
 export const swaggerDocument = {
   openapi: '3.0.0',
   info: {
-    title: 'Haka Auth & KYC API',
+    title: 'Haka Contest, Ads & Admin Desk API',
     version: '1.0.0',
-    description: 'Production-ready scalable Authentication & KYC system API documentation for Haka.',
+    description: 'Production-ready scalable API documentation for Haka Contests, Question Pools, Advertisements, CMS, and Admin Management Desk.',
   },
   servers: [
     {
+      url: 'http://localhost:10002',
+      description: 'Primary Active API Server (Port 10002)',
+    },
+    {
       url: 'http://localhost:10000',
-      description: 'Development server',
+      description: 'Alternative Server (Port 10000)',
     },
   ],
   tags: [
@@ -380,6 +384,50 @@ export const swaggerDocument = {
           questionText: { type: 'string', example: 'What is the capital of India?' },
           type: { type: 'string', example: 'Single Choice' },
           options: { type: 'array', items: { type: 'string' }, example: ['New Delhi', 'Mumbai', 'Chennai', 'Kolkata'] },
+        },
+      },
+      Advertisement: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '662bd890bca4871d34c89299' },
+          title: { type: 'string', example: 'RedBull Energy Grand Showdown 2026' },
+          type: { type: 'string', enum: ['sponsored', 'banner', 'video', 'reward', 'partner'], example: 'sponsored' },
+          sponsorName: { type: 'string', example: 'RedBull India' },
+          sponsorLogo: { type: 'string', example: 'https://example.com/logo.png' },
+          mediaUrl: { type: 'string', example: 'https://example.com/ad-media.mp4' },
+          imageUrl: { type: 'string', example: 'https://example.com/ad-image.jpg' },
+          videoUrl: { type: 'string', example: 'https://example.com/ad-video.mp4' },
+          redirectUrl: { type: 'string', example: 'https://redbull.com/contest' },
+          placement: { type: 'string', example: 'Grand Contest Header' },
+          targetAudience: { type: 'string', example: 'All Users' },
+          budget: { type: 'number', example: 150000 },
+          impressions: { type: 'number', example: 24500 },
+          clicks: { type: 'number', example: 3200 },
+          rewardPoints: { type: 'number', example: 50 },
+          rewardAmount: { type: 'number', example: 5 },
+          videoDuration: { type: 'number', example: 15 },
+          partnerCode: { type: 'string', example: 'REDBULL-VIP' },
+          status: { type: 'string', enum: ['Active', 'Paused'], example: 'Active' },
+          description: { type: 'string', example: 'Brand co-sponsored contest banner' },
+          createdAt: { type: 'string', format: 'date-time', example: '2026-08-08T18:00:00.000Z' },
+        },
+      },
+      CreateAdvertisementRequest: {
+        type: 'object',
+        required: ['title', 'type', 'sponsorName'],
+        properties: {
+          title: { type: 'string', example: 'Nike Air Max Summer Promo 2026' },
+          type: { type: 'string', enum: ['sponsored', 'banner', 'video', 'reward', 'partner'], example: 'banner' },
+          sponsorName: { type: 'string', example: 'Nike India' },
+          imageUrl: { type: 'string', example: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff' },
+          videoUrl: { type: 'string', example: '' },
+          redirectUrl: { type: 'string', example: 'https://nike.com' },
+          placement: { type: 'string', example: 'Home Screen Header' },
+          budget: { type: 'number', example: 50000 },
+          rewardPoints: { type: 'number', example: 50 },
+          videoDuration: { type: 'number', example: 15 },
+          partnerCode: { type: 'string', example: 'NIKE2026' },
+          status: { type: 'string', enum: ['Active', 'Paused'], default: 'Active' },
         },
       },
     },
@@ -2490,9 +2538,150 @@ export const swaggerDocument = {
       get: {
         tags: ['Advertisements'],
         summary: 'Get Public Advertisements',
-        description: 'Returns active sponsored and banner ad campaigns.',
-        responses: { 200: { description: 'Ads retrieved.' } },
+        description: 'Returns active advertisement campaigns filtered by ad type (`ads?type=sponsored`, `ads?type=banner`, `ads?type=video`, `ads?type=reward`, `ads?type=partner`).',
+        parameters: [
+          {
+            name: 'type',
+            in: 'query',
+            required: false,
+            description: 'Filter ads by campaign type',
+            schema: { type: 'string', enum: ['sponsored', 'banner', 'video', 'reward', 'partner'], example: 'sponsored' }
+          },
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            description: 'Filter by ad status',
+            schema: { type: 'string', enum: ['Active', 'Paused', 'All'], default: 'Active' }
+          },
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            description: 'Search term for ad title or sponsor name',
+            schema: { type: 'string', example: 'RedBull' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Advertisements retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    count: { type: 'number', example: 2 },
+                    ads: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/Advertisement' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/ads': {
+      get: {
+        tags: ['Advertisements'],
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'List All Ad Campaigns (Admin)',
+        description: 'Admin desk query to fetch advertisement campaigns filtered by type (`ads?type=sponsored`, `ads?type=banner`, `ads?type=video`, `ads?type=reward`, `ads?type=partner`).',
+        parameters: [
+          {
+            name: 'type',
+            in: 'query',
+            required: false,
+            description: 'Ad category filter',
+            schema: { type: 'string', enum: ['sponsored', 'banner', 'video', 'reward', 'partner'], example: 'sponsored' }
+          },
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            description: 'Filter status',
+            schema: { type: 'string', enum: ['Active', 'Paused', 'All'], example: 'All' }
+          },
+          {
+            name: 'search',
+            in: 'query',
+            required: false,
+            description: 'Search filter keyword',
+            schema: { type: 'string', example: 'Nike' }
+          }
+        ],
+        responses: {
+          200: { description: 'Ads list returned.' }
+        }
       },
+      post: {
+        tags: ['Advertisements'],
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Create New Ad Campaign (Admin)',
+        description: 'Creates a new sponsored, banner, video, reward, or partner advertisement campaign.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateAdvertisementRequest' }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Ad campaign created.' }
+        }
+      }
+    },
+    '/api/admin/ads/{id}': {
+      get: {
+        tags: ['Advertisements'],
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Get Ad Campaign by ID',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: '662bd890bca4871d34c89299' } }
+        ],
+        responses: { 200: { description: 'Ad campaign details returned.' } }
+      },
+      put: {
+        tags: ['Advertisements'],
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Update Ad Campaign',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: '662bd890bca4871d34c89299' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CreateAdvertisementRequest' }
+            }
+          }
+        },
+        responses: { 200: { description: 'Ad campaign updated.' } }
+      },
+      delete: {
+        tags: ['Advertisements'],
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Delete Ad Campaign',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: '662bd890bca4871d34c89299' } }
+        ],
+        responses: { 200: { description: 'Ad campaign deleted.' } }
+      }
+    },
+    '/api/admin/ads/{id}/status': {
+      patch: {
+        tags: ['Advertisements'],
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Toggle Ad Status (Active / Paused)',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: '662bd890bca4871d34c89299' } }
+        ],
+        responses: { 200: { description: 'Ad status toggled.' } }
+      }
     },
     '/api/coupons/validate': {
       post: {

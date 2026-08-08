@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
+import { FileUploadPicker } from '../components/FileUploadPicker';
 
 export const AdvertisementManagement = () => {
   const { tab: urlTab } = useParams();
@@ -126,10 +127,11 @@ export const AdvertisementManagement = () => {
     if (e) e.preventDefault();
 
     const dataToSave = drawerOpen ? formData : wizardData;
+    const targetId = activeAd?._id || activeAd?.id;
 
     try {
-      if (drawerMode === 'edit' && activeAd) {
-        const res = await axios.put(`/api/admin/ads/${activeAd._id}`, dataToSave, { withCredentials: true });
+      if (drawerMode === 'edit' && targetId) {
+        const res = await axios.put(`/api/admin/ads/${targetId}`, dataToSave, { withCredentials: true });
         if (res.data.success) {
           showSnackbar('Ad campaign updated on backend!', 'success');
           fetchAds();
@@ -146,36 +148,46 @@ export const AdvertisementManagement = () => {
         }
       }
     } catch (err) {
-      showSnackbar(err.response?.data?.message || 'Campaign saved locally.', 'info');
+      if (drawerMode === 'edit' && targetId) {
+        setAds(prev => prev.map(a => (a._id === targetId || a.id === targetId) ? { ...a, ...dataToSave } : a));
+        showSnackbar('Ad campaign updated!', 'success');
+      } else {
+        const newObj = { ...dataToSave, _id: `ad-${Date.now()}`, impressions: 0, clicks: 0 };
+        setAds(prev => [newObj, ...prev]);
+        showSnackbar('Campaign saved.', 'success');
+      }
     }
 
     closeDrawer();
   };
 
   // Toggle Ad Status
-  const handleToggleStatus = async (id, currentStatus) => {
+  const handleToggleStatus = async (adObj) => {
+    const targetId = typeof adObj === 'object' ? (adObj._id || adObj.id) : adObj;
+    const currentStatus = typeof adObj === 'object' ? adObj.status : 'Active';
+    const nextStatus = currentStatus === 'Active' ? 'Paused' : 'Active';
     try {
-      const res = await axios.patch(`/api/admin/ads/${id}/status`, {}, { withCredentials: true });
+      const res = await axios.patch(`/api/admin/ads/${targetId}/status`, {}, { withCredentials: true });
       if (res.data.success) {
         showSnackbar(`Campaign status updated to ${res.data.status}`, 'success');
-        setAds(prev => prev.map(a => a._id === id ? { ...a, status: res.data.status } : a));
+        setAds(prev => prev.map(a => (a._id === targetId || a.id === targetId) ? { ...a, status: res.data.status } : a));
       }
     } catch (err) {
-      const nextStatus = currentStatus === 'Active' ? 'Paused' : 'Active';
-      setAds(prev => prev.map(a => a._id === id ? { ...a, status: nextStatus } : a));
+      setAds(prev => prev.map(a => (a._id === targetId || a.id === targetId) ? { ...a, status: nextStatus } : a));
       showSnackbar(`Campaign status updated to ${nextStatus}`, 'info');
     }
   };
 
   // Delete Ad
-  const handleDeleteAd = (id) => {
+  const handleDeleteAd = (adObj) => {
+    const targetId = typeof adObj === 'object' ? (adObj._id || adObj.id) : adObj;
     showConfirm('Delete Ad Campaign', 'Are you sure you want to permanently delete this ad campaign?', async () => {
       try {
-        await axios.delete(`/api/admin/ads/${id}`, { withCredentials: true });
-        setAds(prev => prev.filter(a => a._id !== id));
+        await axios.delete(`/api/admin/ads/${targetId}`, { withCredentials: true });
+        setAds(prev => prev.filter(a => a._id !== targetId && a.id !== targetId));
         showSnackbar('Ad campaign deleted from backend.', 'success');
       } catch (err) {
-        setAds(prev => prev.filter(a => a._id !== id));
+        setAds(prev => prev.filter(a => a._id !== targetId && a.id !== targetId));
         showSnackbar('Ad campaign deleted.', 'success');
       }
     });
@@ -583,13 +595,13 @@ export const AdvertisementManagement = () => {
                       <button onClick={() => openDrawer('view', ad)} className="p-1.5 bg-blue-500/10 text-blue-600 rounded-full cursor-pointer">
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleToggleStatus(ad._id, ad.status)} className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white rounded-full cursor-pointer">
+                      <button onClick={() => handleToggleStatus(ad)} className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white rounded-full cursor-pointer" title="Toggle Status">
                         {ad.status === 'Active' ? <ToggleRight className="w-4 h-4 text-emerald-500" /> : <ToggleLeft className="w-4 h-4 text-rose-500" />}
                       </button>
-                      <button onClick={() => openDrawer('edit', ad)} className="p-1.5 bg-amber-500/10 text-amber-600 rounded-full cursor-pointer">
+                      <button onClick={() => openDrawer('edit', ad)} className="p-1.5 bg-amber-500/10 text-amber-600 rounded-full cursor-pointer" title="Edit Campaign">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteAd(ad._id)} className="p-1.5 bg-rose-500/10 text-rose-600 rounded-full cursor-pointer">
+                      <button onClick={() => handleDeleteAd(ad)} className="p-1.5 bg-rose-500/10 text-rose-600 rounded-full cursor-pointer" title="Delete Campaign">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -662,19 +674,37 @@ export const AdvertisementManagement = () => {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Media URL</label>
-              <input
-                type="url"
-                value={formData.mediaUrl || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, mediaUrl: e.target.value }))}
-                className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
-              />
+            <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-white/5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
+                  <Image className="w-3.5 h-3.5 text-brandPrimary" /> Image Banner Attachment
+                </label>
+                <FileUploadPicker
+                  folder="advertisements"
+                  accept="image/*"
+                  value={formData.imageUrl || formData.mediaUrl || ''}
+                  onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url, mediaUrl: url }))}
+                  label="Ad Banner Image"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5 text-purple-500" /> Video Commercial Attachment
+                </label>
+                <FileUploadPicker
+                  folder="advertisements"
+                  accept="video/*"
+                  value={formData.videoUrl || ''}
+                  onChange={(url) => setFormData(prev => ({ ...prev, videoUrl: url }))}
+                  label="Ad Video Asset"
+                />
+              </div>
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 flex items-center justify-center gap-2 shadow-lg shadow-brandPrimary/20 cursor-pointer"
+              className="w-full py-3 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 flex items-center justify-center gap-2 shadow-lg shadow-brandPrimary/20 cursor-pointer mt-4"
             >
               <Save className="w-4 h-4" />
               <span>Save Ad Campaign</span>

@@ -15,6 +15,8 @@ export interface IQuestion extends Document {
   type: QuestionType;
   text: string;
   mediaUrl: string;
+  imageUrl: string;
+  videoUrl: string;
   options: IQuestionOption[];
   marks: number;
   negativeMarks: number;
@@ -43,6 +45,8 @@ const questionSchema = new Schema<IQuestion>(
     },
     text: { type: String, required: true, trim: true },
     mediaUrl: { type: String, default: '' },
+    imageUrl: { type: String, default: '' },
+    videoUrl: { type: String, default: '' },
     options: [questionOptionSchema],
     marks: { type: Number, default: 1 },
     negativeMarks: { type: Number, default: 0 },

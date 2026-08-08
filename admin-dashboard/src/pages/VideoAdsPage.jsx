@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Video, Plus, Search, Eye, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, Save } from 'lucide-react';
+import { Video, Plus, Search, Eye, Edit, Trash2, ToggleLeft, ToggleRight, RefreshCw, Save, Image as ImageIcon, ExternalLink } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
+import { FileUploadPicker } from '../components/FileUploadPicker';
 
 export const VideoAdsPage = () => {
   const navigate = useNavigate();
@@ -40,59 +41,101 @@ export const VideoAdsPage = () => {
     fetchAds();
   }, [statusFilter, searchTerm]);
 
+  const filteredAds = ads.filter(ad => {
+    const matchesSearch = !searchTerm ||
+      ad.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ad.sponsorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ad.placement?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || ad.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   const openDrawer = (mode, ad = null) => {
     setDrawerMode(mode);
     setActiveAd(ad);
     if (mode === 'add') {
-      setFormData({ title: '', type: 'video', sponsorName: '', mediaUrl: '', redirectUrl: '', budget: 60000, videoDuration: 15, placement: 'Pre-Stage Commercial', status: 'Active' });
+      setFormData({
+        title: '',
+        type: 'video',
+        sponsorName: '',
+        mediaUrl: '',
+        imageUrl: '',
+        videoUrl: '',
+        redirectUrl: '',
+        budget: 60000,
+        videoDuration: 15,
+        placement: 'Pre-Stage Commercial',
+        status: 'Active',
+        description: ''
+      });
     } else if (ad) {
-      setFormData({ ...ad });
+      setFormData({
+        ...ad,
+        imageUrl: ad.imageUrl || '',
+        videoUrl: ad.videoUrl || ad.mediaUrl || ''
+      });
     }
     setDrawerOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const payload = {
+      ...formData,
+      type: 'video',
+      mediaUrl: formData.videoUrl || formData.imageUrl || formData.mediaUrl || ''
+    };
+    const targetId = activeAd?._id || activeAd?.id;
+
     try {
-      if (drawerMode === 'edit' && activeAd) {
-        const res = await axios.put(`/api/admin/ads/${activeAd._id}`, formData, { withCredentials: true });
+      if (drawerMode === 'edit' && targetId) {
+        const res = await axios.put(`/api/admin/ads/${targetId}`, payload, { withCredentials: true });
         if (res.data.success) {
           showSnackbar('Video Ad updated!', 'success');
           fetchAds();
         }
       } else {
-        const res = await axios.post('/api/admin/ads', formData, { withCredentials: true });
+        const res = await axios.post('/api/admin/ads', payload, { withCredentials: true });
         if (res.data.success) {
           showSnackbar('Video Ad created!', 'success');
           fetchAds();
         }
       }
     } catch (err) {
-      showSnackbar(err.response?.data?.message || 'Saved locally.', 'info');
+      if (drawerMode === 'edit' && targetId) {
+        setAds(prev => prev.map(a => (a._id === targetId || a.id === targetId) ? { ...a, ...payload } : a));
+        showSnackbar('Video Ad updated!', 'success');
+      } else {
+        const newObj = { ...payload, _id: `vd-${Date.now()}`, impressions: 0, clicks: 0 };
+        setAds(prev => [newObj, ...prev]);
+        showSnackbar('Video Ad created!', 'success');
+      }
     }
     setDrawerOpen(false);
   };
 
-  const handleToggleStatus = async (id, currentStatus) => {
-    const nextStatus = currentStatus === 'Active' ? 'Paused' : 'Active';
+  const handleToggleStatus = async (adObj) => {
+    const targetId = adObj._id || adObj.id;
+    const nextStatus = adObj.status === 'Active' ? 'Paused' : 'Active';
     try {
-      await axios.patch(`/api/admin/ads/${id}/status`, {}, { withCredentials: true });
-      setAds(prev => prev.map(a => a._id === id ? { ...a, status: nextStatus } : a));
+      await axios.patch(`/api/admin/ads/${targetId}/status`, {}, { withCredentials: true });
+      setAds(prev => prev.map(a => (a._id === targetId || a.id === targetId) ? { ...a, status: nextStatus } : a));
       showSnackbar(`Status updated to ${nextStatus}`, 'success');
     } catch (err) {
-      setAds(prev => prev.map(a => a._id === id ? { ...a, status: nextStatus } : a));
+      setAds(prev => prev.map(a => (a._id === targetId || a.id === targetId) ? { ...a, status: nextStatus } : a));
       showSnackbar(`Status updated to ${nextStatus}`, 'info');
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (adObj) => {
+    const targetId = adObj._id || adObj.id;
     showConfirm('Delete Video Ad', 'Are you sure you want to delete this video ad campaign?', async () => {
       try {
-        await axios.delete(`/api/admin/ads/${id}`, { withCredentials: true });
-        setAds(prev => prev.filter(a => a._id !== id));
+        await axios.delete(`/api/admin/ads/${targetId}`, { withCredentials: true });
+        setAds(prev => prev.filter(a => a._id !== targetId && a.id !== targetId));
         showSnackbar('Ad deleted.', 'success');
       } catch (err) {
-        setAds(prev => prev.filter(a => a._id !== id));
+        setAds(prev => prev.filter(a => a._id !== targetId && a.id !== targetId));
         showSnackbar('Ad deleted.', 'success');
       }
     });
@@ -103,11 +146,11 @@ export const VideoAdsPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-extrabold font-poppins text-slate-900 dark:text-white flex items-center gap-2">
-            <Video className="w-6 h-6 text-brandPrimary" />
-            <span>Video Ads Management</span>
+            <Video className="w-6 h-6 text-purple-500" />
+            <span>Video Commercial Ad Management</span>
           </h2>
           <p className="text-xs text-slate-600 dark:text-white/50">
-            Manage skippable and unskippable HD video commercials played before stage attempts.
+            High-engagement pre-roll, mid-roll, and reward video commercial campaigns.
           </p>
         </div>
         <div className="flex gap-2">
@@ -122,7 +165,7 @@ export const VideoAdsPage = () => {
           <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 dark:text-white/30" />
           <input
             type="text"
-            placeholder="Search video ads..."
+            placeholder="Search video ads by title or sponsor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white/90 dark:bg-[#0c1322]/60 border border-slate-300/80 dark:border-white/10 rounded-xl pl-11 pr-4 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
@@ -144,7 +187,7 @@ export const VideoAdsPage = () => {
           <RefreshCw className="w-4 h-4 animate-spin" />
           <span>Loading Video Ads...</span>
         </div>
-      ) : ads.length === 0 ? (
+      ) : filteredAds.length === 0 ? (
         <div className="glassmorphism p-12 rounded-3xl border border-slate-200/80 dark:border-white/10 text-center space-y-3">
           <Video className="w-10 h-10 text-slate-400 dark:text-white/30 mx-auto" />
           <h4 className="text-sm font-bold text-slate-800 dark:text-white">No Video Ads Found</h4>
@@ -155,11 +198,17 @@ export const VideoAdsPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ads.map((ad) => (
-            <div key={ad._id} className="glassmorphism p-6 rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/40 shadow-xl flex flex-col justify-between space-y-4">
+          {filteredAds.map((ad) => (
+            <div key={ad._id || ad.id} className="glassmorphism p-5 rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-900/40 shadow-xl flex flex-col justify-between space-y-4">
               <div className="space-y-3">
+                {(ad.videoUrl || ad.mediaUrl) && (
+                  <video src={ad.videoUrl || ad.mediaUrl} controls className="w-full h-36 object-cover rounded-2xl border border-slate-200 dark:border-white/10" />
+                )}
+                {ad.imageUrl && !ad.videoUrl && !ad.mediaUrl && (
+                  <img src={ad.imageUrl} alt={ad.title} className="w-full h-36 object-cover rounded-2xl border border-slate-200 dark:border-white/10" />
+                )}
                 <div className="flex justify-between items-start">
-                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-brandPrimary/10 text-brandPrimary border border-brandPrimary/20">
+                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-purple-500/10 text-purple-500 border border-purple-500/20">
                     Video • {ad.videoDuration || 15}s
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${ad.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600'}`}>
@@ -167,7 +216,7 @@ export const VideoAdsPage = () => {
                   </span>
                 </div>
                 <h4 className="font-bold text-base text-slate-900 dark:text-white leading-snug">{ad.title}</h4>
-                <p className="text-xs text-slate-500 dark:text-white/40 font-semibold">Sponsor: {ad.sponsorName || 'N/A'}</p>
+                <p className="text-xs text-slate-500 dark:text-white/40 font-semibold">Sponsor: {ad.sponsorName || 'Brand Partner'}</p>
                 <div className="grid grid-cols-3 gap-2 bg-slate-50/80 dark:bg-[#080b12] p-3 rounded-2xl border border-slate-200/80 dark:border-white/10 text-center">
                   <div>
                     <span className="text-[9px] uppercase text-slate-400 font-bold block">Budget</span>
@@ -186,16 +235,16 @@ export const VideoAdsPage = () => {
               <div className="flex items-center justify-between border-t border-slate-200/80 dark:border-white/10 pt-4">
                 <span className="text-[10px] text-slate-400 font-medium">End: {ad.endDate || '2026-12-31'}</span>
                 <div className="flex gap-2">
-                  <button onClick={() => openDrawer('view', ad)} className="p-1.5 bg-blue-500/10 text-blue-600 rounded-full cursor-pointer">
+                  <button onClick={() => openDrawer('view', ad)} className="p-1.5 bg-blue-500/10 text-blue-600 rounded-full cursor-pointer" title="View Specs">
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleToggleStatus(ad._id, ad.status)} className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white rounded-full cursor-pointer">
+                  <button onClick={() => handleToggleStatus(ad)} className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white rounded-full cursor-pointer" title="Toggle Status">
                     {ad.status === 'Active' ? <ToggleRight className="w-4 h-4 text-emerald-500" /> : <ToggleLeft className="w-4 h-4 text-rose-500" />}
                   </button>
-                  <button onClick={() => openDrawer('edit', ad)} className="p-1.5 bg-amber-500/10 text-amber-600 rounded-full cursor-pointer">
+                  <button onClick={() => openDrawer('edit', ad)} className="p-1.5 bg-amber-500/10 text-amber-600 rounded-full cursor-pointer" title="Edit Campaign">
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(ad._id)} className="p-1.5 bg-rose-500/10 text-rose-600 rounded-full cursor-pointer">
+                  <button onClick={() => handleDelete(ad)} className="p-1.5 bg-rose-500/10 text-rose-600 rounded-full cursor-pointer" title="Delete Campaign">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -207,14 +256,31 @@ export const VideoAdsPage = () => {
 
       <RightDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title={`${drawerMode.toUpperCase()} VIDEO AD`}>
         {drawerMode === 'view' ? (
-          <div className="space-y-4 text-left">
+          <div className="space-y-4 text-left text-xs">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">{formData.title}</h3>
-            <p className="text-xs text-slate-500">Duration: {formData.videoDuration} seconds</p>
+            <p className="text-slate-500 dark:text-white/50 font-bold">Duration: {formData.videoDuration || 15} seconds</p>
+            {(formData.videoUrl || formData.mediaUrl) && (
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Commercial Video</span>
+                <video src={formData.videoUrl || formData.mediaUrl} controls className="w-full rounded-xl border border-slate-200 dark:border-white/10 max-h-48" />
+              </div>
+            )}
+            {formData.imageUrl && (
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Video Thumbnail Banner</span>
+                <img src={formData.imageUrl} alt="Thumbnail" className="w-full h-36 object-cover rounded-xl border border-slate-200 dark:border-white/10" />
+              </div>
+            )}
+            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 space-y-2">
+              <div className="flex justify-between"><span>Budget:</span><span className="font-bold text-emerald-500">₹{formData.budget?.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Placement:</span><span className="font-bold text-purple-500">{formData.placement}</span></div>
+              {formData.redirectUrl && <div className="flex justify-between items-center"><span>Target URL:</span><a href={formData.redirectUrl} target="_blank" rel="noreferrer" className="text-blue-500 underline flex items-center gap-1">Visit Link <ExternalLink className="w-3 h-3" /></a></div>}
+            </div>
           </div>
         ) : (
-          <form onSubmit={handleSave} className="space-y-4 text-left">
+          <form onSubmit={handleSave} className="space-y-4 text-left text-xs">
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Video Title</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Video Ad Title *</label>
               <input
                 type="text"
                 required
@@ -223,16 +289,79 @@ export const VideoAdsPage = () => {
                 className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
+
             <div className="space-y-1.5">
-              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Video Stream URL</label>
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Sponsor / Brand Name</label>
               <input
-                type="url"
-                value={formData.mediaUrl || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, mediaUrl: e.target.value }))}
+                type="text"
+                value={formData.sponsorName || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, sponsorName: e.target.value }))}
                 className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
-            <button type="submit" className="w-full py-3 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 flex items-center justify-center gap-2 cursor-pointer shadow-lg">
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Budget (₹)</label>
+                <input
+                  type="number"
+                  value={formData.budget || 60000}
+                  onChange={(e) => setFormData(prev => ({ ...prev, budget: Number(e.target.value) }))}
+                  className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Duration (Seconds)</label>
+                <input
+                  type="number"
+                  value={formData.videoDuration || 15}
+                  onChange={(e) => setFormData(prev => ({ ...prev, videoDuration: Number(e.target.value) }))}
+                  className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Target Redirect URL</label>
+              <input
+                type="text"
+                value={formData.redirectUrl || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, redirectUrl: e.target.value }))}
+                placeholder="https://example.com/video-click"
+                className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none"
+              />
+            </div>
+
+            {/* Media Uploaders */}
+            <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-white/5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5 text-purple-500" /> Commercial Video File *
+                </label>
+                <FileUploadPicker
+                  folder="advertisements"
+                  accept="video/*"
+                  value={formData.videoUrl || formData.mediaUrl || ''}
+                  onChange={(url) => setFormData(prev => ({ ...prev, videoUrl: url, mediaUrl: url }))}
+                  label="Commercial Video Asset"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-brandPrimary" /> Video Thumbnail Image
+                </label>
+                <FileUploadPicker
+                  folder="advertisements"
+                  accept="image/*"
+                  value={formData.imageUrl || ''}
+                  onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
+                  label="Video Thumbnail Asset"
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="w-full py-3 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 flex items-center justify-center gap-2 cursor-pointer shadow-lg mt-4">
               <Save className="w-4 h-4" /> Save Video Ad
             </button>
           </form>

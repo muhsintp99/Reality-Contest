@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { Advertisement } from '../models/Advertisement';
 import { NotFoundError, BadRequestError } from '../core/errors';
 
@@ -34,6 +35,7 @@ export class AdvertisementController {
   async getAdById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) throw new NotFoundError('Advertisement campaign not found.');
       const ad = await Advertisement.findById(id);
       if (!ad) throw new NotFoundError('Advertisement campaign not found.');
       res.status(200).json({ success: true, ad });
@@ -60,6 +62,7 @@ export class AdvertisementController {
   async updateAd(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) throw new NotFoundError('Advertisement campaign not found.');
       const ad = await Advertisement.findByIdAndUpdate(id, req.body, { new: true });
       if (!ad) throw new NotFoundError('Advertisement campaign not found.');
       res.status(200).json({ success: true, message: 'Ad campaign updated successfully.', ad });
@@ -72,6 +75,7 @@ export class AdvertisementController {
   async deleteAd(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) throw new NotFoundError('Advertisement campaign not found.');
       const ad = await Advertisement.findByIdAndDelete(id);
       if (!ad) throw new NotFoundError('Advertisement campaign not found.');
       res.status(200).json({ success: true, message: 'Ad campaign deleted successfully.' });
@@ -84,6 +88,7 @@ export class AdvertisementController {
   async toggleAdStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) throw new NotFoundError('Advertisement campaign not found.');
       const ad = await Advertisement.findById(id);
       if (!ad) throw new NotFoundError('Advertisement campaign not found.');
 

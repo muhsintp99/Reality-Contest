@@ -142,7 +142,11 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/question-pools', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.listPools);
   router.get('/question-pools/all-questions', authenticate, questionController.listQuestions);
   router.get('/question-pools/questions', authenticate, questionController.listQuestions);
+  router.post('/question-pools/questions', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.createSingleQuestion);
+  router.put('/question-pools/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updateQuestion);
+  router.delete('/question-pools/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deleteQuestion);
   router.get('/questions', authenticate, questionController.listQuestions);
+  router.post('/questions', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.createSingleQuestion);
   router.put('/question-pools/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updatePool);
   router.delete('/question-pools/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deletePool);
   router.post('/question-pools/:poolId/questions', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.addQuestion);
@@ -151,6 +155,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/question-pools/:poolId/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deleteQuestion);
   router.put('/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updateQuestion);
   router.delete('/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deleteQuestion);
+  router.post('/question-pools/bulk-import', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.bulkImportQuestions);
   router.post('/question-pools/:poolId/import', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.importQuestions);
 
   // Category Management routes

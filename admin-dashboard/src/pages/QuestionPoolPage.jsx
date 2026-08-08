@@ -124,16 +124,71 @@ export const QuestionPoolPage = () => {
 
   const fetchQuestions = async () => {
     try {
+      const poolsRes = await axios.get('/api/question-pools', { withCredentials: true }).catch(() => null);
+      if (poolsRes && poolsRes.data && poolsRes.data.pools && poolsRes.data.pools.length > 0) {
+        let allQuestions = [];
+        for (const p of poolsRes.data.pools) {
+          const qRes = await axios.get(`/api/question-pools/${p._id}/questions`, { withCredentials: true }).catch(() => null);
+          if (qRes && qRes.data && qRes.data.questions) {
+            const formatted = qRes.data.questions.map((q, idx) => ({
+              id: q.id || `Q-${q._id?.slice(-4) || idx + 1000}`,
+              _id: q._id,
+              poolId: q.poolId,
+              category: q.category || p.category || 'General Knowledge',
+              question: q.question || q.text || '',
+              optionA: q.optionA || q.options?.[0]?.text || '',
+              optionB: q.optionB || q.options?.[1]?.text || '',
+              optionC: q.optionC || q.options?.[2]?.text || '',
+              optionD: q.optionD || q.options?.[3]?.text || '',
+              correctOption: q.correctOption || (q.options?.findIndex(o => o.isCorrect) >= 0
+                ? `Option ${String.fromCharCode(65 + q.options.findIndex(o => o.isCorrect))}`
+                : 'Option A'),
+              difficulty: q.difficulty || 'Medium',
+              explanation: q.explanation || '',
+              negativeMarks: q.negativeMarks ? `-${q.negativeMarks}` : '-0.25',
+              approvalStatus: q.approvalStatus || 'Approved',
+              imageUrl: q.imageUrl || q.mediaUrl || '',
+              videoUrl: q.videoUrl || '',
+              status: q.status || 'Active'
+            }));
+            allQuestions = [...allQuestions, ...formatted];
+          }
+        }
+        if (allQuestions.length > 0) {
+          setQuestions(allQuestions);
+          return;
+        }
+      }
+
+      // Fallback
       let res = await axios.get('/api/questions', { withCredentials: true }).catch(() => null);
       if (!res || !res.data) {
         res = await axios.get('/api/question-pools/all-questions', { withCredentials: true }).catch(() => null);
       }
-      if (!res || !res.data) {
-        res = await axios.get('/api/question-pools/questions', { withCredentials: true }).catch(() => null);
-      }
       if (res && res.data) {
         const qList = Array.isArray(res.data) ? res.data : (res.data.questions || res.data.data || []);
-        setQuestions(qList);
+        const formatted = qList.map((q, idx) => ({
+          id: q.id || `Q-${q._id?.slice(-4) || idx + 1000}`,
+          _id: q._id,
+          poolId: q.poolId,
+          category: q.category || 'General Knowledge',
+          question: q.question || q.text || '',
+          optionA: q.optionA || q.options?.[0]?.text || '',
+          optionB: q.optionB || q.options?.[1]?.text || '',
+          optionC: q.optionC || q.options?.[2]?.text || '',
+          optionD: q.optionD || q.options?.[3]?.text || '',
+          correctOption: q.correctOption || (q.options?.findIndex(o => o.isCorrect) >= 0
+            ? `Option ${String.fromCharCode(65 + q.options.findIndex(o => o.isCorrect))}`
+            : 'Option A'),
+          difficulty: q.difficulty || 'Medium',
+          explanation: q.explanation || '',
+          negativeMarks: q.negativeMarks ? `-${q.negativeMarks}` : '-0.25',
+          approvalStatus: q.approvalStatus || 'Approved',
+          imageUrl: q.imageUrl || q.mediaUrl || '',
+          videoUrl: q.videoUrl || '',
+          status: q.status || 'Active'
+        }));
+        setQuestions(formatted);
       }
     } catch (err) {
       console.warn('Error fetching questions:', err);
@@ -172,7 +227,7 @@ export const QuestionPoolPage = () => {
 
     try {
       if (editingQuestion) {
-        await axios.put(`/api/question-pools/questions/${editingQuestion.id || editingQuestion._id}`, questionForm, { withCredentials: true });
+        await axios.put(`/api/question-pools/questions/${editingQuestion._id || editingQuestion.id}`, questionForm, { withCredentials: true });
         showSnackbar('Question updated successfully!', 'success');
       } else {
         await axios.post('/api/question-pools/questions', questionForm, { withCredentials: true });
@@ -294,6 +349,23 @@ export const QuestionPoolPage = () => {
     if (itemsPerPage === 'All') return filteredQuestions;
     return filteredQuestions.slice(startIndex, endIndex);
   }, [filteredQuestions, startIndex, endIndex, itemsPerPage]);
+
+  const handleDownloadExcelTemplate = () => {
+    const csvContent = "\uFEFF" +
+      `Question,Option A,Option B,Option C,Option D,Correct Option,Difficulty,Explanation,Negative Marks,Image URL,Video URL\n` +
+      `"What is the capital city of France?","Berlin","Madrid","Paris","Rome","Option C","Easy","Paris has been the capital city of France since 987 AD.","-0.25","https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500",""\n` +
+      `"Which element has the chemical symbol 'O'?","Gold","Oxygen","Osmium","Silver","Option B","Easy","Oxygen is element number 8 on the periodic table.","-0.25","",""`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'question_import_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showSnackbar('Sample Excel/CSV template downloaded successfully!', 'success');
+  };
 
   return (
     <div className="space-y-6 text-left animate-fade-in relative p-2">
@@ -577,7 +649,7 @@ export const QuestionPoolPage = () => {
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteQuestion(q.id || q._id)}
+                            onClick={() => handleDeleteQuestion(q._id || q.id)}
                             className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors"
                             title="Delete Question"
                           >
@@ -877,18 +949,25 @@ export const QuestionPoolPage = () => {
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-white/5">
             <button
               type="button"
               onClick={() => setShowAddDrawer(false)}
-              className="flex-1 py-2.5 bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white font-bold rounded-xl"
+              className="px-4 py-2.5 bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white font-bold rounded-xl"
             >
               Cancel
             </button>
             <button
               type="button"
+              onClick={() => { resetQuestionForm(); showSnackbar('Form cleared.', 'info'); }}
+              className="px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 font-bold rounded-xl cursor-pointer"
+            >
+              Clear Form
+            </button>
+            <button
+              type="button"
               onClick={handleSaveQuestion}
-              className="flex-1 py-2.5 bg-brandPrimary text-white font-bold rounded-xl shadow-md hover:bg-brandPrimary/90"
+              className="flex-1 py-2.5 bg-brandPrimary text-white font-bold rounded-xl shadow-md hover:bg-brandPrimary/90 cursor-pointer"
             >
               {editingQuestion ? 'Update Question' : 'Save Question'}
             </button>
@@ -936,6 +1015,86 @@ export const QuestionPoolPage = () => {
                 <p className="text-slate-700 dark:text-slate-300">{viewingQuestion.explanation}</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* DOWNLOAD EXCEL FORMAT TEMPLATE MODAL */}
+      {showFormatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-3xl shadow-2xl space-y-4 text-xs text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-500" /> Excel / CSV Bulk Import Template Format
+              </h3>
+              <button onClick={() => setShowFormatModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+              Your Excel or CSV file must follow the exact column header structure listed below.
+            </p>
+
+            {/* Template Column Structure Badge List */}
+            <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10 font-mono text-[10px] flex flex-wrap gap-1.5">
+              <span className="px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded font-bold">Question*</span>
+              <span className="px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded font-bold">Option A*</span>
+              <span className="px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded font-bold">Option B*</span>
+              <span className="px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded font-bold">Option C*</span>
+              <span className="px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded font-bold">Option D*</span>
+              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 font-bold rounded">Correct Option*</span>
+              <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 font-bold rounded">Difficulty</span>
+              <span className="px-2 py-0.5 bg-slate-200 dark:bg-white/10 rounded">Explanation</span>
+              <span className="px-2 py-0.5 bg-rose-500/10 text-rose-500 font-bold rounded">Negative Marks</span>
+              <span className="px-2 py-0.5 bg-purple-500/10 text-purple-500 rounded">Image URL</span>
+              <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-500 rounded">Video URL</span>
+            </div>
+
+            {/* Sample Table Preview */}
+            <div className="overflow-x-auto border border-slate-200 dark:border-white/10 rounded-xl">
+              <table className="w-full text-left text-[11px]">
+                <thead className="bg-slate-100 dark:bg-white/10 font-bold text-slate-700 dark:text-slate-200">
+                  <tr>
+                    <th className="p-2 border-r border-slate-200 dark:border-white/10">Question</th>
+                    <th className="p-2 border-r border-slate-200 dark:border-white/10">Option A</th>
+                    <th className="p-2 border-r border-slate-200 dark:border-white/10">Option B</th>
+                    <th className="p-2 border-r border-slate-200 dark:border-white/10">Option C</th>
+                    <th className="p-2 border-r border-slate-200 dark:border-white/10">Option D</th>
+                    <th className="p-2 border-r border-slate-200 dark:border-white/10">Correct Option</th>
+                    <th className="p-2">Difficulty</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-mono text-[10px]">
+                  <tr>
+                    <td className="p-2">What is the capital of France?</td>
+                    <td className="p-2">Berlin</td>
+                    <td className="p-2">Madrid</td>
+                    <td className="p-2 font-bold text-emerald-500">Paris</td>
+                    <td className="p-2">Rome</td>
+                    <td className="p-2 font-bold text-emerald-500">Option C</td>
+                    <td className="p-2">Easy</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2">Chemical symbol for Oxygen?</td>
+                    <td className="p-2">Gold</td>
+                    <td className="p-2 font-bold text-emerald-500">Oxygen</td>
+                    <td className="p-2">Osmium</td>
+                    <td className="p-2">Silver</td>
+                    <td className="p-2 font-bold text-emerald-500">Option B</td>
+                    <td className="p-2">Easy</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+              <button onClick={() => setShowFormatModal(false)} className="px-4 py-2 font-semibold text-slate-400">Close</button>
+              <button
+                onClick={() => { setShowFormatModal(false); handleDownloadExcelTemplate(); }}
+                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl flex items-center gap-2 shadow-md cursor-pointer"
+              >
+                <Download className="w-4 h-4" /> Download Sample CSV Template
+              </button>
+            </div>
           </div>
         </div>
       )}

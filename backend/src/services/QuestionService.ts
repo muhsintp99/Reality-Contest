@@ -43,6 +43,47 @@ export class QuestionService {
     return this.questionRepo.create(qData);
   }
 
+  async createSingleQuestion(qData: any): Promise<IQuestion> {
+    const category = qData.category || 'General Knowledge';
+    const existingPools = await this.poolRepo.find({});
+    let pool = existingPools.find(p => p.category === category || p.name.toLowerCase() === `${category.toLowerCase()} pool`);
+    if (!pool) {
+      pool = await this.poolRepo.create({
+        name: `${category} Pool`,
+        category: category,
+        description: `Automatically created pool for category: ${category}`
+      } as any);
+    }
+
+    let optionsList: any[] = [];
+    if (qData.options && Array.isArray(qData.options)) {
+      optionsList = qData.options;
+    } else {
+      optionsList = [
+        { text: qData.optionA || 'Option A', isCorrect: qData.correctOption === 'Option A' },
+        { text: qData.optionB || 'Option B', isCorrect: qData.correctOption === 'Option B' },
+        { text: qData.optionC || 'Option C', isCorrect: qData.correctOption === 'Option C' },
+        { text: qData.optionD || 'Option D', isCorrect: qData.correctOption === 'Option D' }
+      ];
+    }
+
+    return this.questionRepo.create({
+      poolId: pool._id,
+      category: category,
+      type: qData.type || 'Single Choice',
+      text: qData.question || qData.text,
+      options: optionsList,
+      marks: parseFloat(qData.marks) || 1,
+      negativeMarks: Math.abs(parseFloat(qData.negativeMarks)) || 0.25,
+      difficulty: qData.difficulty || 'Medium',
+      explanation: qData.explanation || '',
+      mediaUrl: qData.imageUrl || qData.mediaUrl || '',
+      imageUrl: qData.imageUrl || qData.mediaUrl || '',
+      videoUrl: qData.videoUrl || '',
+      questionTimer: parseInt(qData.questionTimer, 10) || 0
+    });
+  }
+
   async listQuestions(poolId?: string): Promise<IQuestion[]> {
     if (!poolId || poolId === 'all' || poolId === 'questions' || !mongoose.Types.ObjectId.isValid(poolId)) {
       return this.questionRepo.find({});
@@ -51,10 +92,16 @@ export class QuestionService {
   }
 
   async updateQuestion(id: string, qData: Partial<IQuestion>): Promise<IQuestion | null> {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return null;
+    }
     return this.questionRepo.update(id, qData);
   }
 
   async deleteQuestion(id: string): Promise<boolean> {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return false;
+    }
     const deleted = await this.questionRepo.delete(id);
     return Boolean(deleted);
   }
@@ -101,9 +148,70 @@ export class QuestionService {
         difficulty: r.difficulty || 'Medium',
         explanation: r.explanation || '',
         mediaUrl: r.imageUrl || r.mediaUrl || '',
+        imageUrl: r.imageUrl || r.mediaUrl || '',
+        videoUrl: r.videoUrl || '',
         questionTimer: parseInt(r.questionTimer, 10) || 0
       });
       count++;
+    }
+
+    return { count };
+  }
+
+  async bulkImportQuestions(defaultCategory: string, questions: any[]): Promise<{ count: number }> {
+    let count = 0;
+    const existingPools = await this.poolRepo.find({});
+
+    const questionsByCategory: { [cat: string]: any[] } = {};
+    for (const q of questions) {
+      const cat = q.category || defaultCategory || 'General Knowledge';
+      if (!questionsByCategory[cat]) questionsByCategory[cat] = [];
+      questionsByCategory[cat].push(q);
+    }
+
+    for (const [catName, catQuestions] of Object.entries(questionsByCategory)) {
+      let pool = existingPools.find(p => p.category === catName || p.name.toLowerCase() === `${catName.toLowerCase()} pool`);
+      if (!pool) {
+        pool = await this.poolRepo.create({
+          name: `${catName} Pool`,
+          category: catName,
+          description: `Automatically created pool for category: ${catName}`
+        } as any);
+        existingPools.push(pool);
+      }
+
+      for (const r of catQuestions) {
+        if (!r.text && !r.question) continue;
+
+        let optionsList: any[] = [];
+        if (r.options && Array.isArray(r.options)) {
+          optionsList = r.options;
+        } else {
+          optionsList = [
+            { text: r.optionA || 'Option A', isCorrect: r.correctOption === 'Option A' },
+            { text: r.optionB || 'Option B', isCorrect: r.correctOption === 'Option B' },
+            { text: r.optionC || 'Option C', isCorrect: r.correctOption === 'Option C' },
+            { text: r.optionD || 'Option D', isCorrect: r.correctOption === 'Option D' }
+          ];
+        }
+
+        await this.questionRepo.create({
+          poolId: pool._id,
+          category: catName,
+          type: r.type || 'Single Choice',
+          text: r.text || r.question,
+          options: optionsList,
+          marks: parseFloat(r.marks) || 1,
+          negativeMarks: Math.abs(parseFloat(r.negativeMarks)) || 0.25,
+          difficulty: r.difficulty || 'Medium',
+          explanation: r.explanation || '',
+          mediaUrl: r.imageUrl || r.mediaUrl || '',
+          imageUrl: r.imageUrl || r.mediaUrl || '',
+          videoUrl: r.videoUrl || '',
+          questionTimer: parseInt(r.questionTimer, 10) || 0
+        });
+        count++;
+      }
     }
 
     return { count };

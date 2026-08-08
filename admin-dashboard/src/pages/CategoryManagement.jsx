@@ -36,38 +36,38 @@ const ICON_OPTIONS = [
 ];
 
 const MOCK_CATEGORIES = [
-  { _id: 'cat-1', title: 'GK', icon: 'Brain', description: 'General knowledge questions covering historical facts, trivia, science, and world events.', status: 'Active' },
-  { _id: 'cat-2', title: 'Current Affairs', icon: 'Globe', description: 'Latest news, global occurrences, political trends, and dynamic international updates.', status: 'Active' },
-  { _id: 'cat-3', title: 'Sports', icon: 'Trophy', description: 'Athletic achievements, player statistics, historical championships, and rules across world sports.', status: 'Active' },
-  { _id: 'cat-4', title: 'Science', icon: 'Atom', description: 'Physics, chemistry, biology, space exploration, research breakthroughs, and scientific inquiry.', status: 'Active' },
-  { _id: 'cat-5', title: 'Technology', icon: 'Code', description: 'Information systems, digital security, computer languages, and consumer electronics.', status: 'Active' },
-  { _id: 'cat-6', title: 'Movies', icon: 'Film', description: 'Cinema history, Hollywood and regional blockbusters, directors, actors, and awards trivia.', status: 'Active' },
-  { _id: 'cat-7', title: 'Music', icon: 'Music', description: 'Historical genres, dynamic tracks, global pop charts, instruments, and classical symphonies.', status: 'Active' },
-  { _id: 'cat-8', title: 'History', icon: 'BookOpen', description: 'Ancient civilisations, world wars, historical leaders, and timeline milestones.', status: 'Active' },
-  { _id: 'cat-9', title: 'Geography', icon: 'Compass', description: 'Topographical maps, flags, countries, capitals, landmarks, and oceanic boundaries.', status: 'Active' },
-  { _id: 'cat-10', title: 'Politics', icon: 'Shield', description: 'Government frameworks, democratic systems, constitution articles, and diplomatic updates.', status: 'Active' },
-  { _id: 'cat-11', title: 'Business', icon: 'Briefcase', description: 'Global commerce, management models, corporate merges, and entrepreneurial leadership.', status: 'Active' },
-  { _id: 'cat-12', title: 'Finance', icon: 'Coins', description: 'Capital markets, cryptocurrency trends, inflation indexes, and accounting rules.', status: 'Active' },
-  { _id: 'cat-13', title: 'Travel', icon: 'Compass', description: 'Wanderlust directories, cultural milestones, geography expeditions, and vacation landmarks.', status: 'Active' },
-  { _id: 'cat-14', title: 'Food', icon: 'Heart', description: 'Global cuisines, culinary techniques, historical recipes, and nutrition metrics.', status: 'Active' },
-  { _id: 'cat-15', title: 'Automobiles', icon: 'Zap', description: 'Supercar specs, internal combustion engines, electric vehicles, and motorsport leagues.', status: 'Active' },
-  { _id: 'cat-16', title: 'Gaming', icon: 'Gamepad2', description: 'Console generations, strategy guides, virtual worlds, and global e-sports tournaments.', status: 'Active' },
-  { _id: 'cat-17', title: 'Artificial Intelligence', icon: 'Brain', description: 'Machine learning algorithms, neural network systems, natural language processing, and robotics.', status: 'Active' },
-  { _id: 'cat-18', title: 'Health', icon: 'HeartPulse', description: 'Human anatomy, diet plans, physical fitness, mental wellbeing, and disease prevention.', status: 'Active' },
-  { _id: 'cat-19', title: 'Space', icon: 'Atom', description: 'Astrophysics, stellar constellations, spacecraft launches, and alien search theories.', status: 'Active' },
-  { _id: 'cat-20', title: 'Nature', icon: 'Leaf', description: 'Ecosystem conservation, animal kingdoms, flora diversity, and climate tracking.', status: 'Active' },
-  { _id: 'cat-21', title: 'Kerala', icon: 'Globe', description: 'Local culture, historical rulers, traditional art forms, geography, and language milestones in God\'s Own Country.', status: 'Active' },
-  { _id: 'cat-22', title: 'India', icon: 'Globe', description: 'National heritage, federal state directories, constitution laws, freedom struggle milestones, and cultural diversity.', status: 'Active' },
-  { _id: 'cat-23', title: 'World', icon: 'Globe', description: 'International organizations, treaties, geopolitical unions, and globally shared historical epochs.', status: 'Active' },
-  { _id: 'cat-24', title: 'Entertainment', icon: 'Tv', description: 'Celebrity news, reality television formats, popular shows, and general media trends.', status: 'Active' },
-  { _id: 'cat-25', title: 'Fashion', icon: 'Palette', description: 'Designer lines, textile histories, couture events, and styling aesthetics.', status: 'Active' },
-  { _id: 'cat-26', title: 'Social Media', icon: 'Video', description: 'Platform algorithms, viral video content creation, internet memes, and influencer markets.', status: 'Active' },
-  { _id: 'cat-27', title: 'Startup', icon: 'Briefcase', description: 'Venture capital strategies, pitch decks, business modeling, and scaling metrics.', status: 'Active' },
-  { _id: 'cat-28', title: 'Cricket', icon: 'Trophy', description: 'Match statistics, historical records, tournament profiles, and pitch layouts.', status: 'Active' },
-  { _id: 'cat-29', title: 'Football', icon: 'Trophy', description: 'European leagues, World Cup archives, club histories, and referee rules.', status: 'Active' },
-  { _id: 'cat-30', title: 'Olympics', icon: 'Trophy', description: 'Summer and winter games registries, historic athletes, medals, and event categories.', status: 'Active' },
-  { _id: 'cat-31', title: 'Mathematics', icon: 'Brain', description: 'Algebra formulas, calculus theories, geometry proofs, and statistics calculations.', status: 'Active' },
-  { _id: 'cat-32', title: 'Logical Reasoning', icon: 'Brain', description: 'Aptitude tests, spatial pattern recognition, syllogisms, and puzzle solving arenas.', status: 'Active' }
+  { _id: 'cat-1', title: 'GK', icon: 'Brain', status: 'Active' },
+  { _id: 'cat-2', title: 'Current Affairs', icon: 'Globe', status: 'Active' },
+  { _id: 'cat-3', title: 'Sports', icon: 'Trophy', status: 'Active' },
+  { _id: 'cat-4', title: 'Science', icon: 'Atom', status: 'Active' },
+  { _id: 'cat-5', title: 'Technology', icon: 'Code', status: 'Active' },
+  { _id: 'cat-6', title: 'Movies', icon: 'Film', status: 'Active' },
+  { _id: 'cat-7', title: 'Music', icon: 'Music', status: 'Active' },
+  { _id: 'cat-8', title: 'History', icon: 'BookOpen', status: 'Active' },
+  { _id: 'cat-9', title: 'Geography', icon: 'Compass', status: 'Active' },
+  { _id: 'cat-10', title: 'Politics', icon: 'Shield', status: 'Active' },
+  { _id: 'cat-11', title: 'Business', icon: 'Briefcase', status: 'Active' },
+  { _id: 'cat-12', title: 'Finance', icon: 'Coins', status: 'Active' },
+  { _id: 'cat-13', title: 'Travel', icon: 'Compass', status: 'Active' },
+  { _id: 'cat-14', title: 'Food', icon: 'Heart', status: 'Active' },
+  { _id: 'cat-15', title: 'Automobiles', icon: 'Zap', status: 'Active' },
+  { _id: 'cat-16', title: 'Gaming', icon: 'Gamepad2', status: 'Active' },
+  { _id: 'cat-17', title: 'Artificial Intelligence', icon: 'Brain', status: 'Active' },
+  { _id: 'cat-18', title: 'Health', icon: 'HeartPulse', status: 'Active' },
+  { _id: 'cat-19', title: 'Space', icon: 'Atom', status: 'Active' },
+  { _id: 'cat-20', title: 'Nature', icon: 'Leaf', status: 'Active' },
+  { _id: 'cat-21', title: 'Kerala', icon: 'Globe', status: 'Active' },
+  { _id: 'cat-22', title: 'India', icon: 'Globe', status: 'Active' },
+  { _id: 'cat-23', title: 'World', icon: 'Globe', status: 'Active' },
+  { _id: 'cat-24', title: 'Entertainment', icon: 'Tv', status: 'Active' },
+  { _id: 'cat-25', title: 'Fashion', icon: 'Palette', status: 'Active' },
+  { _id: 'cat-26', title: 'Social Media', icon: 'Video', status: 'Active' },
+  { _id: 'cat-27', title: 'Startup', icon: 'Briefcase', status: 'Active' },
+  { _id: 'cat-28', title: 'Cricket', icon: 'Trophy', status: 'Active' },
+  { _id: 'cat-29', title: 'Football', icon: 'Trophy', status: 'Active' },
+  { _id: 'cat-30', title: 'Olympics', icon: 'Trophy', status: 'Active' },
+  { _id: 'cat-31', title: 'Mathematics', icon: 'Brain', status: 'Active' },
+  { _id: 'cat-32', title: 'Logical Reasoning', icon: 'Brain', status: 'Active' }
 ];
 
 const DynamicIcon = ({ name, className }) => {
@@ -94,7 +94,6 @@ export const CategoryManagement = () => {
   const formik = useFormik({
     initialValues: {
       title: '',
-      description: '',
       icon: 'Brain',
       status: 'Active'
     },
@@ -102,15 +101,11 @@ export const CategoryManagement = () => {
     validationSchema: Yup.object({
       title: Yup.string()
         .max(50, 'Title must be 50 characters or less')
-        .required('Category title is required'),
-      description: Yup.string()
-        .max(300, 'Description must be 300 characters or less')
-        .required('Category description is required')
+        .required('Category title is required')
     }),
     onSubmit: async (values) => {
       const data = {
         title: values.title,
-        description: values.description,
         icon: values.icon,
         status: values.status
       };
@@ -181,7 +176,6 @@ export const CategoryManagement = () => {
     setEditingId(c._id);
     formik.setValues({
       title: c.title,
-      description: c.description || '',
       icon: c.icon || 'Brain',
       status: c.status || 'Active'
     });
@@ -250,8 +244,7 @@ export const CategoryManagement = () => {
 
   const filteredCategories = categories.filter(c => {
     const matchesSearch = 
-      c.title.toLowerCase().includes(search.toLowerCase()) ||
-      (c.description || '').toLowerCase().includes(search.toLowerCase());
+      c.title.toLowerCase().includes(search.toLowerCase());
 
     const matchesStatus = statusFilter === 'All' ? true : c.status === statusFilter;
 
@@ -297,7 +290,7 @@ export const CategoryManagement = () => {
               <Icons.Search className="absolute left-3.5 top-3 w-4 h-4 text-white/30" />
               <input
                 type="text"
-                placeholder="Search categories by title or description..."
+                placeholder="Search categories by title..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-[#0c1322]/60 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brandPrimary/60"
@@ -353,9 +346,6 @@ export const CategoryManagement = () => {
                     <h4 className="text-sm font-bold text-white group-hover:text-brandSecondary transition-colors">
                       {c.title}
                     </h4>
-                    <p className="text-[11px] text-white/50 mt-1.5 line-clamp-2 leading-relaxed">
-                      {c.description || 'No description provided.'}
-                    </p>
                   </div>
 
                   <div className="border-t border-white/5 pt-3.5 mt-4 flex justify-between items-center text-[10px] text-white/40">
@@ -423,26 +413,6 @@ export const CategoryManagement = () => {
                     />
                     {formik.touched.title && formik.errors.title && (
                       <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{formik.errors.title}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Description</label>
-                    <textarea
-                      name="description"
-                      value={formik.values.description}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                      placeholder="Brief summary of contestants or challenge scopes in this category."
-                      rows={3}
-                      className={`w-full bg-black/45 border rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none transition-all resize-none ${
-                        formik.touched.description && formik.errors.description
-                          ? 'border-red-500/60 focus:border-red-500'
-                          : 'border-white/10 focus:border-brandPrimary'
-                      }`}
-                    />
-                    {formik.touched.description && formik.errors.description && (
-                      <span className="text-[10px] text-red-400 mt-1 block animate-fade-in">{formik.errors.description}</span>
                     )}
                   </div>
                 </div>
@@ -634,13 +604,6 @@ export const CategoryManagement = () => {
                   <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Syndication Path / Slug</label>
                   <p className="font-mono text-xs text-brandSecondary mt-1">
                     /{viewingCategory.slug || viewingCategory.title.toLowerCase().replace(/\s+/g, '-')}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Description</label>
-                  <p className="text-xs text-white/70 leading-relaxed mt-1.5 bg-white/5 border border-white/5 p-4 rounded-xl">
-                    {viewingCategory.description || 'No description provided.'}
                   </p>
                 </div>
 

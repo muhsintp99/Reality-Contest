@@ -5,11 +5,12 @@ import axios from 'axios';
 import {
   Clock, Plus, Trophy, Award, Sparkles, RefreshCw, Eye, Edit3, Trash2,
   CheckCircle, Play, ShieldAlert, Search, Filter, AlertTriangle, Users, Landmark, Flame,
-  Check, X, ToggleLeft, ToggleRight, DollarSign
+  Check, X, ToggleLeft, ToggleRight, DollarSign, Image as ImageIcon, Video, FileText
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
+import { FileUploadPicker } from '../components/FileUploadPicker';
 
 
 
@@ -54,9 +55,14 @@ export const DailyContestPage = () => {
     prizePool: '10000',
     timerLimit: '3 mins',
     questionsCount: '20',
+    difficulty: 'Medium',
     description: '',
+    rules: '',
     status: 'Registration Open',
-    autoReset: true
+    isActive: true,
+    autoReset: true,
+    imageUrl: '',
+    videoUrl: ''
   });
 
   useEffect(() => {
@@ -142,6 +148,7 @@ export const DailyContestPage = () => {
     const payload = {
       title: formData.title,
       category: formData.category,
+      categories: [formData.category],
       entryFee: Number(formData.entryFee) || 0,
       prizePool: Number(formData.prizePool) || 10000,
       timerLimit: formData.timerLimit,
@@ -176,24 +183,30 @@ export const DailyContestPage = () => {
     }
 
     setShowAddDrawer(false);
-    setFormData({ title: '', category: 'Speed Battle', entryFee: '0', prizePool: '10000', timerLimit: '3 mins', questionsCount: '20', description: '', status: 'Active', autoReset: true });
+    setFormData({ title: '', category: 'Speed Battle', entryFee: '0', prizePool: '10000', timerLimit: '3 mins', questionsCount: '20', description: '', status: 'Registration Open', autoReset: true });
   };
 
   const handleUpdateDailyContest = async (e) => {
     e.preventDefault();
     if (!editingContest) return;
 
-    const id = editingContest._id || editingContest.id;
+    const id = editingContest._id || editingContest.id || editingContest.dailyContestId;
     const payload = {
       title: editFormData.title,
       category: editFormData.category,
+      categories: [editFormData.category],
       entryFee: Number(editFormData.entryFee) || 0,
       prizePool: Number(editFormData.prizePool) || 10000,
       timerLimit: editFormData.timerLimit,
       questionsCount: Number(editFormData.questionsCount) || 20,
+      difficulty: editFormData.difficulty || 'Medium',
       description: editFormData.description || '',
+      rules: editFormData.rules || '',
       status: editFormData.status,
-      autoReset: editFormData.autoReset
+      isActive: editFormData.isActive,
+      autoReset: editFormData.autoReset,
+      imageUrl: editFormData.imageUrl || '',
+      videoUrl: editFormData.videoUrl || ''
     };
 
     if (!isMockMode) {
@@ -206,15 +219,34 @@ export const DailyContestPage = () => {
         return;
       }
     } else {
-      setDailyContests(dailyContests.map(c => (c._id || c.id) === id ? { ...c, ...payload } : c));
+      setDailyContests(dailyContests.map(c => ((c._id || c.id || c.dailyContestId) === id ? { ...c, ...payload } : c)));
       showSnackbar(`Daily Contest "${editFormData.title}" updated!`, 'info');
     }
 
     setEditingContest(null);
   };
 
+  const handleToggleActive = async (contest) => {
+    const id = contest._id || contest.id || contest.dailyContestId;
+    const newActive = !(contest.isActive !== false);
+    const updatedStatus = newActive ? 'Registration Open' : 'Draft';
+
+    if (!isMockMode) {
+      try {
+        await axios.put(`/api/admin/daily-contests/${id}`, { isActive: newActive, status: updatedStatus }, { withCredentials: true });
+        showSnackbar(`Daily Contest "${contest.title}" ${newActive ? 'Activated 🟢' : 'Paused 🔴'}`, 'success');
+        fetchDailyContests();
+      } catch (err) {
+        showSnackbar(err.response?.data?.message || 'Failed to toggle status.', 'error');
+      }
+    } else {
+      setDailyContests(dailyContests.map(c => ((c._id || c.id || c.dailyContestId) === id ? { ...c, isActive: newActive, status: updatedStatus } : c)));
+      showSnackbar(`Daily Contest "${contest.title}" ${newActive ? 'Activated 🟢' : 'Paused 🔴'}`, 'info');
+    }
+  };
+
   const handleInstantResetLeaderboard = async (contest) => {
-    const id = contest._id || contest.id;
+    const id = contest._id || contest.id || contest.dailyContestId;
     showConfirm('Instant 24h Reset', `Instantly reset daily standings and timer countdown for "${contest.title}"?`, async () => {
       if (!isMockMode) {
         try {
@@ -225,14 +257,14 @@ export const DailyContestPage = () => {
           showSnackbar(err.response?.data?.message || 'Failed to reset daily contest.', 'error');
         }
       } else {
-        setDailyContests(dailyContests.map(c => (c._id || c.id) === id ? { ...c, participants: 0, resetTimer: '24h 00m 00s' } : c));
+        setDailyContests(dailyContests.map(c => ((c._id || c.id || c.dailyContestId) === id ? { ...c, participants: 0, resetTimer: '24h 00m 00s' } : c)));
         showSnackbar(`Daily Contest "${contest.title}" standings reset!`, 'success');
       }
     });
   };
 
   const handleDeleteDaily = (contest) => {
-    const id = contest._id || contest.id;
+    const id = contest._id || contest.id || contest.dailyContestId;
     showConfirm('Delete Daily Contest', `Delete daily contest "${contest.title}"?`, async () => {
       if (!isMockMode) {
         try {
@@ -243,7 +275,7 @@ export const DailyContestPage = () => {
           showSnackbar(err.response?.data?.message || 'Failed to delete contest.', 'error');
         }
       } else {
-        setDailyContests(dailyContests.filter(c => (c._id || c.id) !== id));
+        setDailyContests(dailyContests.filter(c => (c._id || c.id || c.dailyContestId) !== id));
         showSnackbar('Daily contest deleted.', 'info');
       }
     });
@@ -253,14 +285,19 @@ export const DailyContestPage = () => {
     setEditingContest(contest);
     setEditFormData({
       title: contest.title || '',
-      category: contest.category || 'Speed Battle',
+      category: contest.category || (Array.isArray(contest.categories) && contest.categories[0]) || 'Speed Battle',
       entryFee: String(contest.entryFee ?? '0'),
       prizePool: String(contest.prizePool ?? '10000'),
       timerLimit: contest.timerLimit || '3 mins',
       questionsCount: String(contest.questionsCount ?? '20'),
+      difficulty: contest.difficulty || 'Medium',
       description: contest.description || '',
-      status: contest.status || 'Active',
-      autoReset: contest.autoReset ?? true
+      rules: contest.rules || '',
+      status: contest.status || 'Registration Open',
+      isActive: contest.isActive !== false,
+      autoReset: contest.autoReset ?? true,
+      imageUrl: contest.imageUrl || '',
+      videoUrl: contest.videoUrl || ''
     });
   };
 
@@ -443,28 +480,45 @@ export const DailyContestPage = () => {
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex items-center justify-between gap-1.5">
+              <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex items-center justify-between gap-1 flex-wrap">
                 <button
                   onClick={() => setViewingContest(c)}
-                  className="p-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  className="p-1.5 px-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" /> Specs
                 </button>
                 <button
                   onClick={() => openEditDrawer(c)}
-                  className="p-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  className="p-1.5 px-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" /> Edit
                 </button>
                 <button
+                  onClick={() => handleToggleActive(c)}
+                  className={`p-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer ${
+                    c.isActive !== false && c.status !== 'Draft' && c.status !== 'In Progress'
+                      ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                      : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
+                  }`}
+                  title={c.isActive !== false ? 'Pause Contest' : 'Activate Contest'}
+                >
+                  {c.isActive !== false && c.status !== 'Draft' && c.status !== 'In Progress' ? (
+                    <><ToggleRight className="w-3.5 h-3.5" /> Pause</>
+                  ) : (
+                    <><ToggleLeft className="w-3.5 h-3.5" /> Activate</>
+                  )}
+                </button>
+                <button
                   onClick={() => handleInstantResetLeaderboard(c)}
-                  className="p-2 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  className="p-1.5 px-2 bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                  title="Instant 24h Reset"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Reset
                 </button>
                 <button
                   onClick={() => handleDeleteDaily(c)}
-                  className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 rounded-xl text-xs font-bold cursor-pointer"
+                  className="p-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 rounded-xl text-[11px] font-bold cursor-pointer"
+                  title="Delete Daily Contest"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -477,14 +531,14 @@ export const DailyContestPage = () => {
       {/* Drawer: Edit Daily Contest */}
       <RightDrawer isOpen={!!editingContest} onClose={() => setEditingContest(null)} title="Edit Daily Contest Controls ✏️">
         {editingContest && (
-          <form onSubmit={handleUpdateDailyContest} className="space-y-4 text-left">
+          <form onSubmit={handleUpdateDailyContest} className="space-y-4 text-left text-xs">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contest Title</label>
               <input
                 type="text"
                 value={editFormData.title}
                 onChange={e => setEditFormData({ ...editFormData, title: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
 
@@ -500,62 +554,231 @@ export const DailyContestPage = () => {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Entry Fee (Coins 🪙)</label>
+                <input
+                  type="number"
+                  value={editFormData.entryFee}
+                  onChange={e => setEditFormData({ ...editFormData, entryFee: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Prize Pool (Coins 🪙)</label>
+                <input
+                  type="number"
+                  value={editFormData.prizePool}
+                  onChange={e => setEditFormData({ ...editFormData, prizePool: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Timer Limit</label>
+                <input
+                  type="text"
+                  value={editFormData.timerLimit}
+                  onChange={e => setEditFormData({ ...editFormData, timerLimit: e.target.value })}
+                  placeholder="3 mins"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Questions Count</label>
+                <input
+                  type="number"
+                  value={editFormData.questionsCount}
+                  onChange={e => setEditFormData({ ...editFormData, questionsCount: e.target.value })}
+                  placeholder="20"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Difficulty Level</label>
+                <CustomSelect
+                  value={editFormData.difficulty}
+                  onChange={val => setEditFormData({ ...editFormData, difficulty: val })}
+                  options={[
+                    { value: 'Easy', label: 'Easy' },
+                    { value: 'Medium', label: 'Medium' },
+                    { value: 'Hard', label: 'Hard' }
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status</label>
+                <CustomSelect
+                  value={editFormData.status}
+                  onChange={val => setEditFormData({ ...editFormData, status: val })}
+                  options={[
+                    { value: 'Registration Open', label: 'Registration Open' },
+                    { value: 'In Progress', label: 'In Progress' },
+                    { value: 'Draft', label: 'Draft' },
+                    { value: 'Completed', label: 'Completed' }
+                  ]}
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Entry Fee (Coins 🪙)</label>
-              <input
-                type="number"
-                value={editFormData.entryFee}
-                onChange={e => setEditFormData({ ...editFormData, entryFee: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Description</label>
+              <textarea
+                rows={2}
+                value={editFormData.description}
+                onChange={e => setEditFormData({ ...editFormData, description: e.target.value })}
+                placeholder="Daily contest description..."
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Prize Pool (Coins 🪙)</label>
-              <input
-                type="number"
-                value={editFormData.prizePool}
-                onChange={e => setEditFormData({ ...editFormData, prizePool: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rules & Instructions</label>
+              <textarea
+                rows={2}
+                value={editFormData.rules}
+                onChange={e => setEditFormData({ ...editFormData, rules: e.target.value })}
+                placeholder="Contest rules..."
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
               />
             </div>
 
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status</label>
-              <CustomSelect
-                value={editFormData.status}
-                onChange={val => setEditFormData({ ...editFormData, status: val })}
-                options={[
-                  { value: 'Registration Open', label: 'Registration Open' },
-                  { value: 'In Progress', label: 'In Progress' },
-                  { value: 'Draft', label: 'Draft' },
-                  { value: 'Completed', label: 'Completed' }
-                ]}
-              />
+            {/* Media Attachments */}
+            <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-white/5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-amber-500" /> Contest Banner Image
+                </label>
+                <FileUploadPicker
+                  folder="daily-contests"
+                  accept="image/*"
+                  value={editFormData.imageUrl}
+                  onChange={(url) => setEditFormData({ ...editFormData, imageUrl: url })}
+                  label="Contest Banner Image"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5 text-purple-500" /> Promo Video / Teaser
+                </label>
+                <FileUploadPicker
+                  folder="daily-contests"
+                  accept="video/*"
+                  value={editFormData.videoUrl}
+                  onChange={(url) => setEditFormData({ ...editFormData, videoUrl: url })}
+                  label="Contest Teaser Video"
+                />
+              </div>
             </div>
 
-            <div className="pt-3 flex justify-end gap-2">
-              <button type="button" onClick={() => setEditingContest(null)} className="px-4 py-2 text-xs text-slate-400">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-amber-500 text-slate-950 rounded-xl text-xs font-extrabold shadow">Save Contest Specs</button>
+            <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingContest(null)}
+                className="px-4 py-2.5 bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold shadow cursor-pointer"
+              >
+                Save Contest Specs
+              </button>
             </div>
           </form>
         )}
       </RightDrawer>
 
       {/* Drawer: View Daily Contest Specs */}
-      <RightDrawer isOpen={!!viewingContest} onClose={() => setViewingContest(null)} title="Daily Contest Specs">
+      <RightDrawer isOpen={!!viewingContest} onClose={() => setViewingContest(null)} title="Daily Contest Specs 📜">
         {viewingContest && (
           <div className="space-y-4 text-xs text-left">
-            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">{viewingContest.title}</h3>
-            <p className="text-slate-400">Category: {viewingContest.category || 'Daily Contest'}</p>
-            <p className="text-slate-500 dark:text-slate-300">{viewingContest.description || 'Automated 24h battle arena.'}</p>
-
-            <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl space-y-2">
-              <div className="flex justify-between"><span>Entry Fee:</span><span className="font-bold text-emerald-500">₹{viewingContest.entryFee}</span></div>
-              <div className="flex justify-between"><span>Daily Prize Pool:</span><span className="font-bold text-amber-500">₹{Number(viewingContest.prizePool).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>Reset Timer:</span><span className="font-mono text-emerald-500 font-bold">24 Hours Auto-Reset</span></div>
-              <div className="flex justify-between"><span>Status:</span><span className="font-bold text-brandPrimary">{viewingContest.status || 'Active'}</span></div>
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">{viewingContest.title}</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20 mt-1 inline-block">
+                  {viewingContest.category || 'Speed Battle'}
+                </span>
+              </div>
+              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border ${
+                viewingContest.isActive !== false && viewingContest.status !== 'Draft'
+                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+              }`}>
+                {viewingContest.isActive !== false ? '🟢 Active' : '🔴 Paused'}
+              </span>
             </div>
+
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Description</div>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-white/5 p-3 rounded-xl">
+                {viewingContest.description || 'Automated 24h daily quiz showdown arena.'}
+              </p>
+            </div>
+
+            {viewingContest.rules && (
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Rules & Guidelines</div>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-white/5 p-3 rounded-xl">
+                  {viewingContest.rules}
+                </p>
+              </div>
+            )}
+
+            <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl space-y-2.5 border border-slate-200 dark:border-white/10">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Entry Fee:</span>
+                <span className="font-extrabold text-emerald-500">{viewingContest.entryFee === 0 ? 'FREE ENTRY' : `${viewingContest.entryFee} Coins 🪙`}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Daily Prize Pool:</span>
+                <span className="font-extrabold text-amber-500">{Number(viewingContest.prizePool).toLocaleString()} Coins 🪙</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Timer Limit:</span>
+                <span className="font-bold text-slate-800 dark:text-white">{viewingContest.timerLimit || '3 mins'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Questions Count:</span>
+                <span className="font-bold text-slate-800 dark:text-white">{viewingContest.questionsCount || 20} Questions</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Difficulty:</span>
+                <span className="font-bold text-brandPrimary">{viewingContest.difficulty || 'Medium'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Reset Schedule:</span>
+                <span className="font-mono text-emerald-500 font-bold">24-Hour Automated Reset</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-bold">Status:</span>
+                <span className="font-extrabold text-brandPrimary">{viewingContest.status || 'Registration Open'}</span>
+              </div>
+            </div>
+
+            {viewingContest.imageUrl && (
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Banner Image</div>
+                <img src={viewingContest.imageUrl} alt="Contest Banner" className="w-full h-36 object-cover rounded-xl border border-slate-200 dark:border-white/10" />
+              </div>
+            )}
+
+            {viewingContest.videoUrl && (
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Teaser Video</div>
+                <video src={viewingContest.videoUrl} controls className="w-full rounded-xl border border-slate-200 dark:border-white/10 max-h-48" />
+              </div>
+            )}
           </div>
         )}
       </RightDrawer>

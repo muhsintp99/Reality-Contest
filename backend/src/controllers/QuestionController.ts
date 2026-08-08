@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { questionService } from '../services/QuestionService';
 
 export class QuestionController {
@@ -47,9 +48,21 @@ export class QuestionController {
     }
   }
 
+  async createSingleQuestion(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const question = await questionService.createSingleQuestion(req.body);
+      res.status(201).json({ success: true, question });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async listQuestions(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const poolId = req.params.poolId || (req.query.poolId as string);
+      let poolId: string | undefined = req.params.poolId || (req.query.poolId as string);
+      if (poolId === 'questions' || poolId === 'all-questions' || poolId === 'all' || (poolId && !mongoose.Types.ObjectId.isValid(poolId))) {
+        poolId = undefined;
+      }
       const questions = await questionService.listQuestions(poolId);
       res.status(200).json({ success: true, questions });
     } catch (err) {
@@ -93,6 +106,21 @@ export class QuestionController {
         return;
       }
       const result = await questionService.importQuestions(poolId, rows);
+      res.status(200).json({ success: true, message: 'Questions imported successfully.', ...result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async bulkImportQuestions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { category, questions } = req.body;
+      const questionList = Array.isArray(questions) ? questions : (Array.isArray(req.body) ? req.body : []);
+      if (!Array.isArray(questionList) || questionList.length === 0) {
+        res.status(400).json({ success: false, message: 'Invalid payload: questions array is required.' });
+        return;
+      }
+      const result = await questionService.bulkImportQuestions(category || 'General Knowledge', questionList);
       res.status(200).json({ success: true, message: 'Questions imported successfully.', ...result });
     } catch (err) {
       next(err);

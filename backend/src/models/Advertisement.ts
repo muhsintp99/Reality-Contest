@@ -6,6 +6,10 @@ export interface IAdvertisement extends Document {
   sponsorName: string;
   sponsorLogo: string;
   mediaUrl: string;
+  imageUrl: string;
+  videoUrl: string;
+  mediaType: string;
+  description: string;
   redirectUrl: string;
   placement: string;
   targetAudience: string;
@@ -32,6 +36,10 @@ const AdvertisementSchema: Schema = new Schema(
     sponsorName: { type: String, default: 'Brand Partner' },
     sponsorLogo: { type: String, default: '' },
     mediaUrl: { type: String, default: '' },
+    imageUrl: { type: String, default: '' },
+    videoUrl: { type: String, default: '' },
+    mediaType: { type: String, default: 'Image' },
+    description: { type: String, default: '' },
     redirectUrl: { type: String, default: '' },
     placement: { type: String, default: 'Home Screen' },
     targetAudience: { type: String, default: 'All Users' },
@@ -45,7 +53,7 @@ const AdvertisementSchema: Schema = new Schema(
     rewardPoints: { type: Number, default: 50 },
     rewardAmount: { type: Number, default: 5 },
     videoDuration: { type: Number, default: 15 },
-    partnerCode: { type: Number, default: '' },
+    partnerCode: { type: String, default: '' },
     startDate: { type: String, default: () => new Date().toISOString().split('T')[0] },
     endDate: { type: String, default: '2026-12-31' },
     status: { type: String, default: 'Active', index: true }

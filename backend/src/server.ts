@@ -65,16 +65,15 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     initKycWorker();
     initWalletWorker();
 
-    // Serve API documentation via Swagger UI
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
     // Parser and Compression Middlewares
     app.use(
       helmet({
         crossOriginEmbedderPolicy: false,
-        crossOriginResourcePolicy: { policy: 'cross-origin' }
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
+        contentSecurityPolicy: false
       })
     );
+
     app.use(cookieParser());
     app.use(compression()); // Compress text response payloads
     app.use(express.json({ limit: '50mb' }));
@@ -122,6 +121,20 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       legacyHeaders: false,
       message: { success: false, message: 'Too many requests. Please try again later.' }
     });
+
+    // Serve API documentation via Swagger UI
+    app.get('/api-docs.json', (_req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.json(swaggerDocument);
+    });
+
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+      customSiteTitle: 'Haka Platform API & Admin Docs',
+      swaggerOptions: {
+        persistAuthorization: true,
+        displayRequestDuration: true
+      }
+    }));
 
     // Apply general API rate limiting and mount standard API routes
     app.use('/api', generalApiLimiter, createApiRouter(authLimiter));

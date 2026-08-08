@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Megaphone, Plus, Trophy, Image, Video, Gift, Users, Check, Sparkles } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
+import { FileUploadPicker } from '../components/FileUploadPicker';
 
 export const CreateAdsPage = () => {
   const navigate = useNavigate();
@@ -131,7 +132,7 @@ export const CreateAdsPage = () => {
             <h4 className="text-sm font-bold text-slate-800 dark:text-white">Step 2: Creative & Brand Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Campaign Title</label>
+                <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Campaign Title *</label>
                 <input
                   type="text"
                   required
@@ -151,17 +152,7 @@ export const CreateAdsPage = () => {
                   className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Media Asset URL (Image/Video)</label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={wizardData.mediaUrl}
-                  onChange={(e) => setWizardData(prev => ({ ...prev, mediaUrl: e.target.value }))}
-                  className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
-                />
-              </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 col-span-1 sm:col-span-2">
                 <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Destination Redirect URL</label>
                 <input
                   type="url"
@@ -172,6 +163,32 @@ export const CreateAdsPage = () => {
                 />
               </div>
             </div>
+
+            {/* Upload fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-white/5">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Image Creative Upload</label>
+                <FileUploadPicker
+                  folder="advertisements"
+                  accept="image/*"
+                  value={wizardData.imageUrl || wizardData.mediaUrl || ''}
+                  onChange={(url) => setWizardData(prev => ({ ...prev, imageUrl: url, mediaUrl: url }))}
+                  label="Ad Banner Image"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase">Video Commercial Upload</label>
+                <FileUploadPicker
+                  folder="advertisements"
+                  accept="video/*"
+                  value={wizardData.videoUrl || ''}
+                  onChange={(url) => setWizardData(prev => ({ ...prev, videoUrl: url }))}
+                  label="Ad Commercial Video"
+                />
+              </div>
+            </div>
+
             <div className="flex justify-between pt-4">
               <button onClick={() => setWizardStep(1)} className="px-4 py-2.5 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white rounded-xl text-xs font-bold cursor-pointer">
                 ← Back

@@ -45,6 +45,61 @@ export const QuestionBankPage = ({ defaultTab }) => {
   const [importFile, setImportFile] = useState(null);
   const [parsedRows, setParsedRows] = useState([]);
   const [importCategory, setImportCategory] = useState('');
+  const [editingImportRow, setEditingImportRow] = useState(null);
+  const [showEditImportDrawer, setShowEditImportDrawer] = useState(false);
+  const [importFilterTab, setImportFilterTab] = useState('all');
+  const [importSearchQuery, setImportSearchQuery] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  const handleOpenAddImportRow = () => {
+    const newRow = validateRow({
+      id: `Q-IMP-${Date.now()}`,
+      category: importCategory || categories[0] || 'General Knowledge',
+      question: '',
+      optionA: '',
+      optionB: '',
+      optionC: '',
+      optionD: '',
+      correctOption: 'Option A',
+      difficulty: 'Medium',
+      explanation: '',
+      negativeMarks: '-0.25',
+      imageUrl: '',
+      videoUrl: '',
+      approvalStatus: 'Approved',
+      status: 'Active'
+    });
+    setEditingImportRow(newRow);
+    setShowEditImportDrawer(true);
+  };
+
+  const handleOpenEditImportRow = (row) => {
+    setEditingImportRow({ ...row });
+    setShowEditImportDrawer(true);
+  };
+
+  const handleSaveEditingImportRow = () => {
+    if (!editingImportRow) return;
+    const validated = validateRow(editingImportRow);
+    setParsedRows(prev => {
+      const idx = prev.findIndex(r => r.id === validated.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = validated;
+        return copy;
+      } else {
+        return [validated, ...prev];
+      }
+    });
+    setShowEditImportDrawer(false);
+    setEditingImportRow(null);
+    showSnackbar('Import row updated & validated!', 'success');
+  };
+
+  const handleDeleteImportRow = (id) => {
+    setParsedRows(prev => prev.filter(r => r.id !== id));
+    showSnackbar('Row deleted from preview', 'info');
+  };
 
   // Formik / Single Question State
   const [questionForm, setQuestionForm] = useState({
@@ -198,7 +253,9 @@ export const QuestionBankPage = ({ defaultTab }) => {
         difficulty: questionForm.difficulty,
         explanation: questionForm.explanation,
         negativeMarks: Math.abs(parseFloat(questionForm.negativeMarks) || 0.25),
-        mediaUrl: questionForm.imageUrl
+        mediaUrl: questionForm.imageUrl || '',
+        imageUrl: questionForm.imageUrl || '',
+        videoUrl: questionForm.videoUrl || ''
       }, { withCredentials: true });
 
       if (saveRes.data.question) {
@@ -236,7 +293,9 @@ export const QuestionBankPage = ({ defaultTab }) => {
           difficulty: editingQuestion.difficulty,
           explanation: editingQuestion.explanation,
           negativeMarks: Math.abs(parseFloat(editingQuestion.negativeMarks) || 0.25),
-          mediaUrl: editingQuestion.imageUrl
+          mediaUrl: editingQuestion.imageUrl || '',
+          imageUrl: editingQuestion.imageUrl || '',
+          videoUrl: editingQuestion.videoUrl || ''
         }, { withCredentials: true });
       } catch (err) {
         console.error('Failed to update question via API:', err);
@@ -295,15 +354,10 @@ export const QuestionBankPage = ({ defaultTab }) => {
 
   // CSV Template Download Action
   const handleDownloadExcelTemplate = () => {
-    const defaultCat1 = categories[0] || 'General Knowledge';
-    const defaultCat2 = categories[1] || categories[0] || 'Science';
-    const defaultCat3 = categories[2] || categories[0] || 'Technology';
-
-    const csvContent =
-      `Category,Question,Option A,Option B,Option C,Option D,Correct Answer,Difficulty,Explanation,Negative Marks,Image URL,Video URL\n` +
-      `"${defaultCat1}","What is the capital city of France?","Berlin","Madrid","Paris","Rome","Option C","Easy","Paris has been the capital city of France since 987 AD.","-0.25","https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500",""\n` +
-      `"${defaultCat2}","Which element has the chemical symbol 'O'?","Gold","Oxygen","Osmium","Silver","Option B","Easy","Oxygen is element number 8 on the periodic table.","-0.25","",""\n` +
-      `"${defaultCat3}","Who is credited with co-founding Apple Inc. along with Steve Jobs?","Bill Gates","Steve Wozniak","Mark Zuckerberg","Elon Musk","Option B","Medium","Steve Wozniak co-founded Apple Computers in 1976.","-0.50","",""`;
+    const csvContent = "\uFEFF" +
+      `Question,Option A,Option B,Option C,Option D,Correct Option,Difficulty,Explanation,Negative Marks,Image URL,Video URL\n` +
+      `"What is the capital city of France?","Berlin","Madrid","Paris","Rome","Option C","Easy","Paris has been the capital city of France since 987 AD.","-0.25","https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500",""\n` +
+      `"Which element has the chemical symbol 'O'?","Gold","Oxygen","Osmium","Silver","Option B","Easy","Oxygen is element number 8 on the periodic table.","-0.25","",""`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -316,6 +370,54 @@ export const QuestionBankPage = ({ defaultTab }) => {
     showSnackbar('Sample Excel/CSV template downloaded successfully!', 'success');
   };
 
+  // Row Validator Helper
+  const validateRow = (r, catList = categories) => {
+    const errors = [];
+    if (!r.question || !r.question.trim()) {
+      errors.push('Question text is required');
+    }
+
+    const catName = r.category ? r.category.trim() : '';
+    if (!catName) {
+      errors.push('Category is required');
+    } else if (catList && catList.length > 0) {
+      const match = catList.some(c => c.toLowerCase() === catName.toLowerCase());
+      if (!match) {
+        errors.push(`Category "${catName}" does not exist in platform categories`);
+      }
+    }
+
+    if (!r.optionA || !r.optionA.trim()) {
+      errors.push('Option A is required');
+    }
+    if (!r.optionB || !r.optionB.trim()) {
+      errors.push('Option B is required');
+    }
+
+    let normCorrect = r.correctOption ? r.correctOption.trim() : '';
+
+    if (/^[A-D]$/i.test(normCorrect)) {
+      normCorrect = `Option ${normCorrect.toUpperCase()}`;
+    }
+
+    if (r.optionA && normCorrect.toLowerCase() === r.optionA.trim().toLowerCase()) normCorrect = 'Option A';
+    else if (r.optionB && normCorrect.toLowerCase() === r.optionB.trim().toLowerCase()) normCorrect = 'Option B';
+    else if (r.optionC && normCorrect.toLowerCase() === r.optionC.trim().toLowerCase()) normCorrect = 'Option C';
+    else if (r.optionD && normCorrect.toLowerCase() === r.optionD.trim().toLowerCase()) normCorrect = 'Option D';
+
+    const validOptions = ['Option A', 'Option B', 'Option C', 'Option D'];
+    if (!validOptions.includes(normCorrect)) {
+      errors.push('Correct Option must be Option A, Option B, Option C, or Option D');
+    }
+
+    return {
+      ...r,
+      correctOption: normCorrect || 'Option A',
+      errors,
+      isValid: errors.length === 0
+    };
+  };
+
   // Bulk File Upload Parsing
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -325,94 +427,111 @@ export const QuestionBankPage = ({ defaultTab }) => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = evt.target.result;
-      const lines = text.split('\n').filter(l => l.trim() !== '');
+      const lines = text.split(/\r\n|\n/).filter(l => l.trim() !== '');
       if (lines.length <= 1) {
         showSnackbar('The uploaded CSV file contains no data rows.', 'warning');
         return;
       }
 
-      const rows = [];
+      const headerLine = lines[0].toLowerCase();
+      const hasCategoryCol = headerLine.includes('category');
+
+      const rawRows = [];
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.replace(/^"(.*)"$/, '$1').trim());
-        if (cols.length >= 6) {
-          rows.push({
+        const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+        if (cols.length >= 3) {
+          let cat = importCategory || categories[0] || 'General Knowledge';
+          let qIdx = 0;
+
+          if (hasCategoryCol && cols.length >= 7) {
+            cat = cols[0] || importCategory || categories[0] || 'General Knowledge';
+            qIdx = 1;
+          }
+
+          const raw = {
             id: `Q-IMP-${Date.now().toString().slice(-4)}-${i}`,
-            category: cols[0] || importCategory || categories[0] || 'General',
-            question: cols[1] || `Sample Question ${i}`,
-            optionA: cols[2] || 'Option A',
-            optionB: cols[3] || 'Option B',
-            optionC: cols[4] || 'Option C',
-            optionD: cols[5] || 'Option D',
-            correctOption: cols[6] || 'Option A',
-            difficulty: cols[7] || 'Medium',
-            explanation: cols[8] || '',
-            negativeMarks: cols[9] || '-0.25',
-            imageUrl: cols[10] || '',
-            videoUrl: cols[11] || '',
+            category: cat,
+            question: cols[qIdx] || '',
+            optionA: cols[qIdx + 1] || '',
+            optionB: cols[qIdx + 2] || '',
+            optionC: cols[qIdx + 3] || '',
+            optionD: cols[qIdx + 4] || '',
+            correctOption: cols[qIdx + 5] || 'Option A',
+            difficulty: cols[qIdx + 6] || 'Medium',
+            explanation: cols[qIdx + 7] || '',
+            negativeMarks: cols[qIdx + 8] || '-0.25',
+            imageUrl: cols[qIdx + 9] || '',
+            videoUrl: cols[qIdx + 10] || '',
             approvalStatus: 'Approved',
             status: 'Active'
-          });
+          };
+          rawRows.push(validateRow(raw));
         }
       }
-      setParsedRows(rows);
-      showSnackbar(`Parsed ${rows.length} valid question rows from file!`, 'info');
+      setParsedRows(rawRows);
+      const validCount = rawRows.filter(r => r.isValid).length;
+      const errCount = rawRows.length - validCount;
+      if (errCount > 0) {
+        showSnackbar(`Parsed ${rawRows.length} rows (${validCount} valid, ${errCount} with errors)`, 'warning');
+      } else {
+        showSnackbar(`Parsed ${rawRows.length} valid question rows from file!`, 'success');
+      }
     };
     reader.readAsText(file);
   };
 
-  const handleConfirmImport = async () => {
-    if (parsedRows.length === 0) {
-      showSnackbar('No valid questions to import.', 'warning');
+  const handleConfirmImportClick = () => {
+    const validQuestions = parsedRows.filter(r => r.isValid !== false);
+    if (validQuestions.length === 0) {
+      showSnackbar('No valid questions to import. Please edit the rows to fix errors first.', 'warning');
       return;
     }
+    setShowConfirmModal(true);
+  };
+
+  const executeImport = async () => {
+    setShowConfirmModal(false);
+    const validQuestions = parsedRows.filter(r => r.isValid !== false);
+    if (validQuestions.length === 0) return;
 
     try {
+      const targetCat = importCategory || categories[0] || 'General Knowledge';
       const poolsRes = await axios.get('/api/question-pools', { withCredentials: true });
       const existingPools = poolsRes.data.pools || [];
 
-      // Group rows by category
-      const rowsByCategory = {};
-      for (const r of parsedRows) {
-        const cat = r.category || importCategory || categories[0] || 'General';
-        if (!rowsByCategory[cat]) rowsByCategory[cat] = [];
-        rowsByCategory[cat].push(r);
+      let pool = existingPools.find(p => p.category === targetCat || (p.name && p.name.toLowerCase().includes(targetCat.toLowerCase())));
+      if (!pool) {
+        const createPoolRes = await axios.post('/api/question-pools', {
+          name: `${targetCat} Pool`,
+          category: targetCat
+        }, { withCredentials: true });
+        pool = createPoolRes.data.pool;
       }
 
-      for (const [catName, catRows] of Object.entries(rowsByCategory)) {
-        let pool = existingPools.find(p => p.category === catName || (p.name && p.name.toLowerCase().includes(catName.toLowerCase())));
-        if (!pool) {
-          const createPoolRes = await axios.post('/api/question-pools', {
-            name: `${catName} Pool`,
-            category: catName
-          }, { withCredentials: true });
-          pool = createPoolRes.data.pool;
-        }
+      const apiRows = validQuestions.map(r => ({
+        text: r.question,
+        category: targetCat,
+        type: 'Single Choice',
+        options: [
+          { text: r.optionA, isCorrect: r.correctOption === 'Option A' },
+          { text: r.optionB, isCorrect: r.correctOption === 'Option B' },
+          { text: r.optionC, isCorrect: r.correctOption === 'Option C' },
+          { text: r.optionD, isCorrect: r.correctOption === 'Option D' }
+        ],
+        difficulty: r.difficulty || 'Medium',
+        explanation: r.explanation || '',
+        negativeMarks: Math.abs(parseFloat(r.negativeMarks) || 0.25),
+        imageUrl: r.imageUrl || '',
+        videoUrl: r.videoUrl || ''
+      }));
 
-        const apiRows = catRows.map(r => ({
-          text: r.question,
-          category: catName,
-          type: 'Single Choice',
-          options: [
-            { text: r.optionA, isCorrect: r.correctOption === 'Option A' },
-            { text: r.optionB, isCorrect: r.correctOption === 'Option B' },
-            { text: r.optionC, isCorrect: r.correctOption === 'Option C' },
-            { text: r.optionD, isCorrect: r.correctOption === 'Option D' }
-          ],
-          difficulty: r.difficulty || 'Medium',
-          explanation: r.explanation || '',
-          negativeMarks: Math.abs(parseFloat(r.negativeMarks) || 0.25),
-          imageUrl: r.imageUrl || '',
-          videoUrl: r.videoUrl || ''
-        }));
-
-        await axios.post(`/api/question-pools/${pool._id}/import`, { rows: apiRows }, { withCredentials: true });
-      }
+      await axios.post(`/api/question-pools/${pool._id}/import`, { rows: apiRows }, { withCredentials: true });
     } catch (err) {
       console.error('API import error:', err);
     }
 
-    setQuestions(prev => [...parsedRows, ...prev]);
-    showSnackbar(`Successfully imported ${parsedRows.length} questions into Question Bank!`, 'success');
+    await fetchQuestions();
+    showSnackbar(`Successfully imported ${validQuestions.length} questions into Category "${importCategory || 'General'}"!`, 'success');
     setParsedRows([]);
     setImportFile(null);
     setActiveTab('directory');
@@ -1051,38 +1170,173 @@ export const QuestionBankPage = ({ defaultTab }) => {
               </div>
             </div>
 
-            {/* Parsed Preview Table */}
+            {/* Parsed Preview Table & Interactive Controls */}
             {parsedRows.length > 0 && (
-              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-white/5">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-wider">
-                    {parsedRows.length} Questions Ready for Import
-                  </h4>
-                  <button
-                    onClick={handleConfirmImport}
-                    className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Confirm & Import Questions
-                  </button>
+              <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5 animate-fade-in">
+                {/* Error Summary Notice Card */}
+                {parsedRows.filter(r => r.isValid === false).length > 0 && (
+                  <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl space-y-2 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-rose-500 uppercase tracking-wider flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-rose-500" />
+                        <span>Sheet Validation Error Notice ({parsedRows.filter(r => r.isValid === false).length} {parsedRows.filter(r => r.isValid === false).length === 1 ? 'Row Has Errors' : 'Rows Have Errors'})</span>
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setImportFilterTab('errors')}
+                        className="text-[11px] font-bold text-rose-400 hover:text-rose-300 underline flex items-center gap-1 cursor-pointer"
+                      >
+                        Show Errors Only &rarr;
+                      </button>
+                    </div>
+                    <p className="text-xs text-rose-300 leading-relaxed">
+                      Some rows in your file contain errors (e.g. category not found in platform categories, missing question, or option fields). Please review the <strong>Error Note</strong> under each affected row and click <strong>Edit</strong> to fix them.
+                    </p>
+                  </div>
+                )}
+
+                {/* Header Toolbar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200 dark:border-white/10">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-emerald-500" />
+                      <span>Preview Data ({parsedRows.length})</span>
+                    </h4>
+                    <div className="flex gap-1.5 text-xs">
+                      <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold rounded-lg flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {parsedRows.filter(r => r.isValid !== false).length} Valid
+                      </span>
+                      {parsedRows.filter(r => r.isValid === false).length > 0 && (
+                        <span className="px-2.5 py-1 bg-rose-500/10 text-rose-500 border border-rose-500/20 font-bold rounded-lg flex items-center gap-1 animate-pulse">
+                          <AlertCircle className="w-3.5 h-3.5" /> {parsedRows.filter(r => r.isValid === false).length} Errors
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <button
+                      onClick={handleOpenAddImportRow}
+                      className="px-3 py-1.5 bg-brandPrimary/10 hover:bg-brandPrimary/20 text-brandPrimary border border-brandPrimary/20 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Question Row</span>
+                    </button>
+                    <button
+                      onClick={handleConfirmImportClick}
+                      className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Confirm & Import Questions
+                    </button>
+                  </div>
                 </div>
 
-                <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-white/10 rounded-xl">
+                {/* Filter Tabs & Search Bar */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center bg-slate-100 dark:bg-black/40 p-1 rounded-xl border border-slate-200 dark:border-white/10 text-xs">
+                    <button
+                      onClick={() => setImportFilterTab('all')}
+                      className={`px-3 py-1 font-bold rounded-lg transition-all ${importFilterTab === 'all' ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}
+                    >
+                      All ({parsedRows.length})
+                    </button>
+                    <button
+                      onClick={() => setImportFilterTab('valid')}
+                      className={`px-3 py-1 font-bold rounded-lg transition-all ${importFilterTab === 'valid' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500'}`}
+                    >
+                      Valid Only ({parsedRows.filter(r => r.isValid !== false).length})
+                    </button>
+                    <button
+                      onClick={() => setImportFilterTab('errors')}
+                      className={`px-3 py-1 font-bold rounded-lg transition-all ${importFilterTab === 'errors' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500'}`}
+                    >
+                      Errors Only ({parsedRows.filter(r => r.isValid === false).length})
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search preview rows..."
+                      value={importSearchQuery}
+                      onChange={e => setImportSearchQuery(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary"
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto border border-slate-200 dark:border-white/10 rounded-xl scrollbar-hide">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 dark:bg-white/5 font-bold uppercase text-[10px]">
+                    <thead className="bg-slate-50 dark:bg-white/5 font-bold uppercase text-[10px] sticky top-0 backdrop-blur-md z-10">
                       <tr>
+                        <th className="p-2">#</th>
+                        <th className="p-2">Status</th>
                         <th className="p-2">Category</th>
-                        <th className="p-2">Question</th>
-                        <th className="p-2">Correct Answer</th>
+                        <th className="p-2">Question Text & Error Note</th>
+                        <th className="p-2">Correct Option</th>
                         <th className="p-2">Difficulty</th>
+                        <th className="p-2 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                      {parsedRows.map((r, idx) => (
-                        <tr key={idx}>
-                          <td className="p-2 font-bold">{r.category}</td>
-                          <td className="p-2 truncate max-w-xs">{r.question}</td>
+                      {parsedRows.filter(r => {
+                        const matchesTab = importFilterTab === 'all' ? true : importFilterTab === 'valid' ? r.isValid !== false : r.isValid === false;
+                        const qStr = importSearchQuery.toLowerCase();
+                        const matchesSearch = !qStr || r.question.toLowerCase().includes(qStr) || r.category.toLowerCase().includes(qStr);
+                        return matchesTab && matchesSearch;
+                      }).map((r, idx) => (
+                        <tr key={r.id || idx} className={r.isValid === false ? 'bg-rose-500/5' : 'hover:bg-slate-50 dark:hover:bg-white/5'}>
+                          <td className="p-2 font-mono font-bold text-slate-400 align-top">{idx + 1}</td>
+                          <td className="p-2 align-top">
+                            {r.isValid !== false ? (
+                              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-bold rounded-full">Valid</span>
+                            ) : (
+                              <div className="group relative w-fit">
+                                <span className="px-2 py-0.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-bold rounded-full cursor-pointer flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" /> {r.errors?.length || 1} {r.errors?.length === 1 ? 'Error' : 'Errors'}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2 font-bold text-brandPrimary align-top">{r.category}</td>
+                          <td className="p-2 max-w-xs align-top">
+                            <div className="font-bold truncate" title={r.question}>
+                              {r.question || <span className="text-rose-400 italic font-normal">[Missing Question]</span>}
+                            </div>
+                            {r.isValid === false && (
+                              <div className="mt-1.5 p-2 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] text-rose-400 space-y-0.5 animate-fade-in">
+                                <span className="font-extrabold uppercase text-[9px] text-rose-400 block border-b border-rose-500/20 pb-0.5 mb-1">
+                                  ⚠️ Error Note:
+                                </span>
+                                {r.errors?.map((err, eIdx) => (
+                                  <div key={eIdx} className="flex items-center gap-1 font-medium">
+                                    • {err}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-2 text-emerald-500 font-bold">{r.correctOption}</td>
                           <td className="p-2">{r.difficulty}</td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleOpenEditImportRow(r)}
+                                title="Edit Question Row"
+                                className="p-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded transition-all cursor-pointer"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteImportRow(r.id)}
+                                title="Delete Row"
+                                className="p-1 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 rounded transition-all cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1092,6 +1346,157 @@ export const QuestionBankPage = ({ defaultTab }) => {
             )}
           </div>
         </div>
+      )}
+
+      {/* EDIT IMPORT ROW DRAWER */}
+      {editingImportRow && (
+        <RightDrawer
+          isOpen={showEditImportDrawer}
+          onClose={() => { setShowEditImportDrawer(false); setEditingImportRow(null); }}
+          title={editingImportRow.question ? 'Edit Preview Question' : 'Add New Question Row'}
+        >
+          <div className="space-y-4 text-xs text-left">
+            {editingImportRow.errors && editingImportRow.errors.length > 0 && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-1 text-rose-400">
+                <div className="font-bold flex items-center gap-1.5 text-xs">
+                  <AlertCircle className="w-4 h-4" /> Please fix validation errors before saving:
+                </div>
+                {editingImportRow.errors.map((e, idx) => (
+                  <div key={idx} className="text-[11px] pl-5">• {e}</div>
+                ))}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1">
+                Category <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <CustomSelect
+                value={editingImportRow.category}
+                onChange={val => setEditingImportRow(validateRow({ ...editingImportRow, category: val }))}
+                options={categories.map(c => ({ value: c, label: c }))}
+                searchable={true}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1">
+                Question Text <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <textarea
+                rows={3}
+                value={editingImportRow.question}
+                onChange={e => setEditingImportRow(validateRow({ ...editingImportRow, question: e.target.value }))}
+                placeholder="Enter full question text..."
+                className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white resize-none focus:outline-none focus:border-brandPrimary"
+              />
+            </div>
+
+            <div className="space-y-3 border-t border-b border-slate-100 dark:border-white/5 py-3">
+              <label className="block text-slate-400 font-bold uppercase text-[10px]">
+                OMR Options (A, B, C, D) <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div>
+                <label className="block text-[10px] text-slate-400 mb-1">Option A (Mandatory)</label>
+                <input
+                  type="text"
+                  value={editingImportRow.optionA}
+                  onChange={e => setEditingImportRow(validateRow({ ...editingImportRow, optionA: e.target.value }))}
+                  className="w-full p-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-slate-400 mb-1">Option B (Mandatory)</label>
+                <input
+                  type="text"
+                  value={editingImportRow.optionB}
+                  onChange={e => setEditingImportRow(validateRow({ ...editingImportRow, optionB: e.target.value }))}
+                  className="w-full p-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-slate-400 mb-1">Option C (Optional)</label>
+                <input
+                  type="text"
+                  value={editingImportRow.optionC}
+                  onChange={e => setEditingImportRow(validateRow({ ...editingImportRow, optionC: e.target.value }))}
+                  className="w-full p-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-slate-400 mb-1">Option D (Optional)</label>
+                <input
+                  type="text"
+                  value={editingImportRow.optionD}
+                  onChange={e => setEditingImportRow(validateRow({ ...editingImportRow, optionD: e.target.value }))}
+                  className="w-full p-2 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1.5">
+                Correct Option <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {['Option A', 'Option B', 'Option C', 'Option D'].map(opt => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setEditingImportRow(validateRow({ ...editingImportRow, correctOption: opt }))}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center ${editingImportRow.correctOption === opt ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60 hover:border-slate-300'}`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1">Difficulty</label>
+              <CustomSelect
+                value={editingImportRow.difficulty}
+                onChange={val => setEditingImportRow(validateRow({ ...editingImportRow, difficulty: val }))}
+                options={[
+                  { value: 'Easy', label: 'Easy' },
+                  { value: 'Medium', label: 'Medium' },
+                  { value: 'Hard', label: 'Hard' },
+                  { value: 'Expert', label: 'Expert' }
+                ]}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1">Explanation / Solution Note</label>
+              <textarea
+                rows={2}
+                value={editingImportRow.explanation}
+                onChange={e => setEditingImportRow(validateRow({ ...editingImportRow, explanation: e.target.value }))}
+                placeholder="Explanation for correct answer..."
+                className="w-full p-2.5 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-white/5">
+              <button
+                type="button"
+                onClick={() => { setShowEditImportDrawer(false); setEditingImportRow(null); }}
+                className="flex-1 py-2.5 bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white font-bold rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditingImportRow}
+                className="flex-1 py-2.5 bg-emerald-500 text-white font-bold rounded-xl shadow-md hover:bg-emerald-600 cursor-pointer"
+              >
+                Save & Validate Row
+              </button>
+            </div>
+          </div>
+        </RightDrawer>
       )}
 
       {/* CREATE SINGLE QUESTION DRAWER */}
@@ -1267,12 +1672,29 @@ export const QuestionBankPage = ({ defaultTab }) => {
             />
           </div>
 
-          <button
-            onClick={handleSaveQuestion}
-            className="w-full py-3 bg-brandPrimary hover:bg-brandPrimary/90 text-white font-bold rounded-xl transition-all shadow-md mt-4"
-          >
-            Create Question
-          </button>
+          <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-white/5">
+            <button
+              type="button"
+              onClick={() => setShowAddDrawer(false)}
+              className="px-4 py-2.5 bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white font-bold rounded-xl"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => { resetQuestionForm(); showSnackbar('Form cleared.', 'info'); }}
+              className="px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 font-bold rounded-xl cursor-pointer"
+            >
+              Clear Form
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveQuestion}
+              className="flex-1 py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white font-bold rounded-xl shadow-md cursor-pointer"
+            >
+              Create Question
+            </button>
+          </div>
         </div>
       </RightDrawer>
 
@@ -1598,6 +2020,58 @@ export const QuestionBankPage = ({ defaultTab }) => {
                 className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl flex items-center gap-2 shadow-md"
               >
                 <Download className="w-4 h-4" /> Download Sample CSV Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION IMPORT MODAL BOX */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-5 text-left">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Confirm Question Import</h3>
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1">
+                  "please check your select caterory and Question files"
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/10 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Selected Target Category:</span>
+                <span className="font-bold text-brandPrimary">{importCategory || categories[0] || 'General Knowledge'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Uploaded File:</span>
+                <span className="font-bold text-slate-700 dark:text-white truncate max-w-[200px]">{importFile?.name || 'CSV / Excel File'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Valid Questions to Import:</span>
+                <span className="font-bold text-emerald-500">{parsedRows.filter(r => r.isValid !== false).length} Questions</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-white/5">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="px-4 py-2.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeImport}
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Confirm & Import OK</span>
               </button>
             </div>
           </div>

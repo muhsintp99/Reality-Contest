@@ -3,7 +3,6 @@ import { z } from 'zod';
 export const createCategorySchema = z.object({
   title: z.string().optional(),
   name: z.string().optional(),
-  description: z.string().optional(),
   icon: z.string().optional().default('Folder'),
   status: z.enum(['Active', 'Inactive']).optional().default('Active')
 }).refine(data => Boolean(data.title || data.name), {
@@ -14,7 +13,6 @@ export const createCategorySchema = z.object({
 export const updateCategorySchema = z.object({
   title: z.string().optional(),
   name: z.string().optional(),
-  description: z.string().optional(),
   icon: z.string().optional(),
   status: z.enum(['Active', 'Inactive']).optional()
 });
