@@ -14,7 +14,9 @@ export const errorHandler = (
   const isClientValidationError = err.name === 'ValidationError';
 
   // Log error via Winston
-  if (isOperational || isClientValidationError) {
+  if (err instanceof AppError && (err.statusCode === 401 || err.statusCode === 403)) {
+    logger.info(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
+  } else if (isOperational || isClientValidationError) {
     logger.warn(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
   } else {
     logger.error(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip} \nStack: ${err.stack}`);

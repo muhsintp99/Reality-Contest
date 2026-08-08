@@ -19,9 +19,15 @@ export const swaggerDocument = {
     { name: 'KYC Verification', description: 'KYC upload and administrator review workflows' },
     { name: 'Multipart Uploads', description: 'Large file multi-part upload operations' },
     { name: 'Contests', description: 'Contest list, details, creation, and participant registrations' },
+    { name: 'Daily Contests', description: 'Daily challenge contests, participant entries, reset, and admin controls' },
+    { name: 'Grand Seasons', description: 'Grand season tournament management' },
     { name: 'Stages', description: 'Group stages, attempt activations, and quiz submissions' },
     { name: 'Wallet', description: 'Balance deposits and ledger transaction logs' },
     { name: 'Question Pools', description: 'Quiz pools builder and question banks management' },
+    { name: 'Advertisements', description: 'Public & admin ad campaigns and banners' },
+    { name: 'Coupons & Referrals', description: 'Discount codes, entry fee vouchers, and referral rules' },
+    { name: 'CMS & Content', description: 'Public & admin CMS documents, FAQs, blogs, news, and help articles' },
+    { name: 'Surveys & Tasks', description: 'Surveys, tasks, challenges, and withdrawal management' },
     { name: 'Admin Controls', description: 'Super Admin overrides, user role promotions, and system audit logs' },
     { name: 'Single Uploads', description: 'Standard file upload endpoints' },
   ],
@@ -111,6 +117,55 @@ export const swaggerDocument = {
           favoriteCategories: { type: 'array', items: { type: 'string' }, default: [] },
           skills: { type: 'array', items: { type: 'string' }, default: [] },
           interests: { type: 'array', items: { type: 'string' }, default: [] },
+        },
+      },
+      StartEmailRequest: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email', example: 'contestant@example.com' },
+          referralCode: { type: 'string', example: 'REF12345' },
+        },
+      },
+      VerifyEmailOtpRequest: {
+        type: 'object',
+        required: ['sessionId', 'otp'],
+        properties: {
+          sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+          otp: { type: 'string', length: 6, example: '123456' },
+        },
+      },
+      StartMobileRequest: {
+        type: 'object',
+        required: ['sessionId', 'countryCode', 'phone'],
+        properties: {
+          sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+          countryCode: { type: 'string', example: '+91' },
+          phone: { type: 'string', minLength: 10, example: '9876543210' },
+        },
+      },
+      VerifyMobileOtpRequest: {
+        type: 'object',
+        required: ['sessionId', 'otp'],
+        properties: {
+          sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+          otp: { type: 'string', length: 6, example: '654321' },
+        },
+      },
+      SaveProfileRequest: {
+        type: 'object',
+        required: ['sessionId', 'name', 'username', 'password', 'confirmPassword', 'dob', 'avatar'],
+        properties: {
+          sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+          name: { type: 'string', minLength: 2, example: 'John Doe' },
+          username: { type: 'string', minLength: 3, example: 'johndoe' },
+          password: { type: 'string', minLength: 6, example: 'password123' },
+          confirmPassword: { type: 'string', minLength: 6, example: 'password123' },
+          dob: { type: 'string', format: 'date', example: '2000-05-15' },
+          avatar: { type: 'string', example: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John' },
+          gender: { type: 'string', enum: ['Male', 'Female', 'Other'], default: 'Male' },
+          state: { type: 'string', example: 'Kerala' },
+          district: { type: 'string', example: 'Ernakulam' },
         },
       },
       LoginRequest: {
@@ -356,11 +411,175 @@ export const swaggerDocument = {
         },
       },
     },
+    '/api/auth/register/email': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'Step 1: Start Email Verification',
+        description: 'Inputs email address, checks uniqueness, creates registration session and sends 6-digit email OTP.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/StartEmailRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Email OTP code generated and sent.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Email OTP generated and sent successfully.' },
+                    sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+                    mockOtp: { type: 'string', example: '123456' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/auth/register/email/otp': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'Step 1: Verify Email OTP',
+        description: 'Verifies email OTP and advances registration session to mobile verification.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/VerifyEmailOtpRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Email verified successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Email verified successfully.' },
+                    sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/auth/register/mobile': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'Step 2: Start Mobile Verification',
+        description: 'Inputs country code and phone number, checks uniqueness, and sends 6-digit SMS OTP.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/StartMobileRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Mobile OTP generated and sent.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Mobile OTP generated and sent successfully.' },
+                    sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+                    mockOtp: { type: 'string', example: '654321' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/auth/register/otp': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'Step 2: Verify Mobile OTP',
+        description: 'Verifies 6-digit SMS OTP and returns a temporary registration token for profile setup.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/VerifyMobileOtpRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Mobile OTP verified successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    registrationToken: { type: 'string', example: 'eyJhbGciOi...' },
+                    sessionId: { type: 'string', example: '662bcf98bca4871d34c89280' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/auth/register/profile': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'Step 3: Profile & Account Creation (No KYC Required)',
+        description: 'Saves profile details (avatar, full name, username, password, DOB), creates active contestant account with kycStatus: Pending, and returns authentication tokens.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/SaveProfileRequest' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Contestant registration completed successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Contestant registration completed successfully.' },
+                    user: { $ref: '#/components/schemas/User' },
+                    accessToken: { type: 'string', example: 'access_jwt_token' },
+                    refreshToken: { type: 'string', example: 'refresh_jwt_token' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/api/auth/register': {
       post: {
         tags: ['Authentication'],
-        summary: 'Register a New User',
-        description: 'Creates a user account and schedules verification OTPs to email and phone via background workers.',
+        summary: 'Register a New User (Direct API)',
+        description: 'Direct single-call user registration endpoint.',
         requestBody: {
           required: true,
           content: {
@@ -620,11 +839,81 @@ export const swaggerDocument = {
         },
       },
     },
+    '/api/auth/google': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'Google Register & Login',
+        description: 'Authenticates a user via Google ID Token or Google OAuth user profile. Automatically registers new users.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  idToken: { type: 'string', description: 'Google ID Token from Google Auth' },
+                  googleId: { type: 'string', example: '10982347109283' },
+                  email: { type: 'string', example: 'contestant@gmail.com' },
+                  name: { type: 'string', example: 'Rahul Sharma' },
+                  avatar: { type: 'string', example: 'https://lh3.googleusercontent.com/a/default-avatar' },
+                  referralCode: { type: 'string', example: 'WELCOME100' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Google authentication successful.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Google authentication successful.' },
+                    user: { type: 'object' },
+                    accessToken: { type: 'string' },
+                    refreshToken: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/auth/guest-login': {
+      post: {
+        tags: ['Authentication'],
+        summary: 'Guest Login',
+        description: 'Creates a temporary Guest account and logs in instantly.',
+        responses: {
+          200: {
+            description: 'Logged in as Guest user.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Logged in as Guest user.' },
+                    user: { type: 'object' },
+                    accessToken: { type: 'string' },
+                    refreshToken: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     '/api/auth/oauth': {
       post: {
         tags: ['Authentication'],
-        summary: 'Simulated OAuth Login',
-        description: 'Simulates a Google/Facebook OAuth response payload return.',
+        summary: 'OAuth Login',
+        description: 'Authenticates user using OAuth social login payload.',
         responses: {
           200: {
             description: 'OAuth simulated success.',
@@ -1967,6 +2256,275 @@ export const swaggerDocument = {
             },
           },
         },
+      },
+    },
+    '/api/daily-contests': {
+      get: {
+        tags: ['Daily Contests'],
+        summary: 'List Active Daily Contests',
+        description: 'Returns a list of all active daily challenge contests for contestants.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Daily contests retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          _id: { type: 'string', example: 'dc_12345' },
+                          title: { type: 'string', example: 'Daily Rapid Trivia Quiz' },
+                          category: { type: 'string', example: 'General Knowledge' },
+                          entryFee: { type: 'number', example: 10 },
+                          prizePool: { type: 'string', example: '5,000' },
+                          totalParticipants: { type: 'number', example: 150 },
+                          maxParticipants: { type: 'number', example: 500 },
+                          status: { type: 'string', example: 'Active' },
+                          startTime: { type: 'string', format: 'date-time' },
+                          endTime: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/daily-contests/{id}': {
+      get: {
+        tags: ['Daily Contests'],
+        summary: 'Get Daily Contest Detail',
+        description: 'Returns details and status of a single daily contest.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Daily contest ID' },
+        ],
+        responses: {
+          200: {
+            description: 'Daily contest detail fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'object' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/api/daily-contests/{id}/join': {
+      post: {
+        tags: ['Daily Contests'],
+        summary: 'Join Daily Contest',
+        description: 'Registers the contestant into a daily contest, deducting entry fee from wallet.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'Daily contest ID' },
+        ],
+        responses: {
+          200: {
+            description: 'Joined daily contest successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Successfully joined daily contest.' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Insufficient balance or contest full.' },
+        },
+      },
+    },
+    '/api/admin/daily-contests': {
+      get: {
+        tags: ['Daily Contests'],
+        summary: 'List All Daily Contests (Admin)',
+        description: 'Returns full admin listing of all daily contests.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: {
+          200: { description: 'Daily contests listed.' },
+        },
+      },
+      post: {
+        tags: ['Daily Contests'],
+        summary: 'Create Daily Contest (Admin)',
+        description: 'Creates a new daily contest schedule.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title', 'category', 'entryFee', 'prizePool'],
+                properties: {
+                  title: { type: 'string', example: 'Daily Rapid Trivia Quiz' },
+                  category: { type: 'string', example: 'General Knowledge' },
+                  entryFee: { type: 'number', example: 10 },
+                  prizePool: { type: 'string', example: '5000' },
+                  maxParticipants: { type: 'number', example: 500 },
+                  startTime: { type: 'string', format: 'date-time' },
+                  endTime: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Daily contest created successfully.' },
+        },
+      },
+    },
+    '/api/admin/daily-contests/{id}': {
+      put: {
+        tags: ['Daily Contests'],
+        summary: 'Update Daily Contest (Admin)',
+        description: 'Updates daily contest details.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          200: { description: 'Daily contest updated.' },
+        },
+      },
+      delete: {
+        tags: ['Daily Contests'],
+        summary: 'Delete Daily Contest (Admin)',
+        description: 'Removes a daily contest.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          200: { description: 'Daily contest deleted.' },
+        },
+      },
+    },
+    '/api/admin/daily-contests/{id}/reset': {
+      post: {
+        tags: ['Daily Contests'],
+        summary: 'Reset Daily Contest State (Admin)',
+        description: 'Resets daily contest participants and leaderboard rankings.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          200: { description: 'Daily contest reset completed.' },
+        },
+      },
+    },
+    '/api/admin/grand-seasons': {
+      get: {
+        tags: ['Grand Seasons'],
+        summary: 'List Grand Seasons (Admin)',
+        description: 'Fetches all tournament grand season events.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Grand seasons fetched.' } },
+      },
+      post: {
+        tags: ['Grand Seasons'],
+        summary: 'Create Grand Season (Admin)',
+        description: 'Creates a new grand season tournament.',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 201: { description: 'Grand season created.' } },
+      },
+    },
+    '/api/admin/surveys': {
+      get: {
+        tags: ['Surveys & Tasks'],
+        summary: 'List Surveys (Admin)',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Surveys list.' } },
+      },
+      post: {
+        tags: ['Surveys & Tasks'],
+        summary: 'Create Survey (Admin)',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 201: { description: 'Survey created.' } },
+      },
+    },
+    '/api/admin/tasks': {
+      get: {
+        tags: ['Surveys & Tasks'],
+        summary: 'List Tasks (Admin)',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Tasks list.' } },
+      },
+      post: {
+        tags: ['Surveys & Tasks'],
+        summary: 'Create Task (Admin)',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 201: { description: 'Task created.' } },
+      },
+    },
+    '/api/admin/withdrawals': {
+      get: {
+        tags: ['Surveys & Tasks'],
+        summary: 'List Withdrawal Requests (Admin)',
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Withdrawal requests.' } },
+      },
+    },
+    '/api/ads': {
+      get: {
+        tags: ['Advertisements'],
+        summary: 'Get Public Advertisements',
+        description: 'Returns active sponsored and banner ad campaigns.',
+        responses: { 200: { description: 'Ads retrieved.' } },
+      },
+    },
+    '/api/coupons/validate': {
+      post: {
+        tags: ['Coupons & Referrals'],
+        summary: 'Validate Coupon Code',
+        description: 'Checks promo code validity and calculates entry fee discount.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['code'],
+                properties: {
+                  code: { type: 'string', example: 'WELCOME50' },
+                },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Coupon validated.' } },
+      },
+    },
+    '/api/cms/doc/{type}': {
+      get: {
+        tags: ['CMS & Content'],
+        summary: 'Get Public Legal CMS Document',
+        description: 'Retrieves public document by type (privacy, terms, about).',
+        parameters: [
+          { name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['privacy', 'terms', 'about'] } },
+        ],
+        responses: { 200: { description: 'Document content returned.' } },
       },
     },
   },

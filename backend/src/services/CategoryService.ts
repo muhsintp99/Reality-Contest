@@ -17,16 +17,21 @@ export class CategoryService {
   }
 
   async createCategory(data: Partial<ICategory>): Promise<ICategory> {
-    if (!data.title || !data.icon) {
-      throw new BadRequestError('Title and icon are required.');
+    const title = data.title || (data as any).name;
+    const icon = data.icon || 'Folder';
+
+    if (!title) {
+      throw new BadRequestError('Title or name is required.');
     }
 
-    const existing = await this.categoryRepo.findOne({ title: data.title });
+    const existing = await this.categoryRepo.findOne({
+      $or: [{ title }, { name: title }]
+    });
     if (existing) {
       throw new BadRequestError('A category with this title already exists.');
     }
 
-    const slug = this.slugify(data.title);
+    const slug = this.slugify(title);
     const existingSlug = await this.categoryRepo.findOne({ slug });
     if (existingSlug) {
       throw new BadRequestError('A category with a similar title (slug collision) already exists.');
@@ -34,10 +39,13 @@ export class CategoryService {
 
     const categoryData = {
       ...data,
+      title,
+      name: (data as any).name || title,
+      icon,
       slug
     };
 
-    return this.categoryRepo.create(categoryData);
+    return this.categoryRepo.create(categoryData as any);
   }
 
   async getCategoryById(id: string): Promise<ICategory> {

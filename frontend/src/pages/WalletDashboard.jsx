@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { updateWalletBalance } from '../store/authSlice';
-import { Wallet, ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Calendar, FileText, Check } from 'lucide-react';
+import { Wallet, ArrowDownLeft, ArrowUpRight, Plus, RefreshCw, Calendar, FileText, Check, Shield, AlertTriangle, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Badge } from '../components/common/Badges';
 
 export const WalletDashboard = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const [balance, setBalance] = useState(user?.walletBalance || 0);
   const [amount, setAmount] = useState('500');
@@ -36,8 +38,16 @@ export const WalletDashboard = () => {
     fetchWalletData();
   }, [user?.walletBalance]);
 
+  const isKycApproved = user?.kycStatus === 'Approved';
+
   const handleDeposit = async (e) => {
     e.preventDefault();
+    if (!isKycApproved) {
+      alert('KYC Verification Required: Please complete and get your KYC documents approved before depositing or using wallet funds.');
+      navigate('/kyc');
+      return;
+    }
+
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) return;
 
@@ -62,6 +72,34 @@ export const WalletDashboard = () => {
         </h2>
         <p className="text-xs text-slate-450 dark:text-white/40 mt-1">Load funds, review receipts, and pay contest entry fees.</p>
       </div>
+
+      {/* KYC Warning Banner if KYC is not Approved */}
+      {!isKycApproved && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 rounded-[20px] bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">KYC Verification Required for Wallet Use</h4>
+              <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-0.5">
+                KYC is not required to register, but you must verify your identity (Aadhaar / Passport) before using wallet features, deposits, or prize withdrawals. Status: <span className="font-bold underline">{user?.kycStatus || 'Pending'}</span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/kyc')}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl transition-all shadow-md shrink-0 flex items-center gap-1.5"
+          >
+            <span>Complete KYC Now</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
         
@@ -89,7 +127,7 @@ export const WalletDashboard = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glassmorphism p-6 rounded-[24px] border border-slate-200/50 dark:border-white/5 md:col-span-2 space-y-4 bg-white/70 dark:bg-slate-900/40 shadow-premium"
+          className="glassmorphism p-6 rounded-[24px] border border-slate-200/50 dark:border-white/5 md:col-span-2 space-y-4 bg-white/70 dark:bg-slate-900/40 shadow-premium relative"
         >
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-850 dark:text-white">Quick deposit window</h3>
           <form onSubmit={handleDeposit} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">

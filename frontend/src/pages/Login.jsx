@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { loginRequest, sendOtpRequest } from '../store/authSlice';
-import { Eye, EyeOff, Lock, Mail, Phone, KeyRound, Sparkles, Chrome, Github, Facebook } from 'lucide-react';
+import { loginRequest, googleAuthRequest, guestLoginRequest, sendOtpRequest } from '../store/authSlice';
+import { signInWithGoogle } from '../config/firebase';
+import { Eye, EyeOff, Lock, Mail, Phone, KeyRound, Sparkles, Chrome, Facebook, User as UserIcon } from 'lucide-react';
 import { HakaLogo } from '../components/HakaLogo';
 import { motion } from 'framer-motion';
 
@@ -32,7 +33,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
 
   const handleSendOtp = () => {
     if (!loginId) {
-      alert('Please enter your email or mobile number first.');
+      alert('Please enter your username, email, or mobile number first.');
       return;
     }
     dispatch(sendOtpRequest({
@@ -44,11 +45,34 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
     }));
   };
 
-  const handleSocialLogin = (provider) => {
+  const handleSocialLogin = async (provider) => {
+    if (provider === 'Google') {
+      try {
+        const googleData = await signInWithGoogle();
+        dispatch(googleAuthRequest({
+          data: googleData,
+          callback: (success) => {
+            if (success) onLoginSuccess();
+          }
+        }));
+      } catch (err) {
+        console.error('Google sign in error:', err);
+      }
+      return;
+    }
+
     dispatch(loginRequest({
       loginId: `${provider.toLowerCase()}-user@realitycontest.in`,
       password: 'password',
       isAdminLogin: false,
+      callback: (success) => {
+        if (success) onLoginSuccess();
+      }
+    }));
+  };
+
+  const handleGuestLogin = () => {
+    dispatch(guestLoginRequest({
       callback: (success) => {
         if (success) onLoginSuccess();
       }
@@ -141,11 +165,17 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-white/40">
-                  Email Address or Mobile Number
+                  Username, Email or Mobile Number
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-white/30">
-                    {loginId.includes('@') ? <Mail className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+                    {loginId.includes('@') ? (
+                      <Mail className="w-4 h-4 text-brandPrimary" />
+                    ) : /^\+?[0-9\s-]{7,15}$/.test(loginId.trim()) ? (
+                      <Phone className="w-4 h-4 text-brandSecondary" />
+                    ) : (
+                      <UserIcon className="w-4 h-4 text-brandPrimary" />
+                    )}
                   </div>
                   <input
                     type="text"
@@ -153,7 +183,7 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
                     autoComplete="username"
-                    placeholder="name@domain.com or +919876543210"
+                    placeholder="username, email@domain.com or +919876543210"
                     className="block w-full pl-10 pr-4 py-2.5 bg-white/90 dark:bg-[#080b12]/40 border border-slate-300/80 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary focus:ring-1 focus:ring-brandPrimary/20 text-xs transition-all font-medium"
                   />
                 </div>
@@ -262,32 +292,33 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
               <span className="text-[10px] text-slate-500 dark:text-white/40 font-extrabold uppercase tracking-wider block mb-4">
                 Or Continue With
               </span>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('Google')}
-                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
+                  className="flex items-center justify-center py-2.5 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
                 >
                   <Chrome className="w-4 h-4 text-red-500" />
                   <span>Google</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSocialLogin('GitHub')}
-                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
-                >
-                  <Github className="w-4 h-4 text-slate-800 dark:text-white" />
-                  <span>GitHub</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => handleSocialLogin('Facebook')}
-                  className="flex items-center justify-center py-2 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
+                  className="flex items-center justify-center py-2.5 border border-slate-200 dark:border-white/10 hover:border-slate-350 dark:hover:border-white/20 bg-white/90 dark:bg-white/5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all text-xs font-bold gap-2 shadow-sm active:scale-[0.98]"
                 >
                   <Facebook className="w-4 h-4 text-blue-500" />
                   <span>Facebook</span>
                 </button>
               </div>
+
+              <button
+                type="button"
+                onClick={handleGuestLogin}
+                className="w-full py-2.5 border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+              >
+                <UserIcon className="w-4 h-4" />
+                <span>Continue as Guest</span>
+              </button>
             </div>
           </div>
 

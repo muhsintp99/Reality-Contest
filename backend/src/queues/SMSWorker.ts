@@ -28,6 +28,8 @@ export const initSMSWorker = () => {
     worker.on('failed', (job, err) => {
       logger.error(`[WORKER] [sms-queue] Job ${job?.id} failed: ${err.message}`);
     });
+
+    logger.info('SMS Worker initialized successfully.');
   } catch (err: any) {
     logger.error(`Failed to init SMS Worker: ${err.message}`);
   }

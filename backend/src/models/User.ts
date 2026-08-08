@@ -13,8 +13,9 @@ export interface IUser extends Document {
   name: string;
   username: string;
   email: string;
-  phone: string;
+  phone?: string;
   password?: string;
+  googleId?: string;
   role: 'Contestant' | 'Judge' | 'Sponsor' | 'Guest';
   avatar: string;
   isEmailVerified: boolean;
@@ -62,8 +63,9 @@ const userSchema = new Schema<IUser>(
     name: { type: String, required: true, trim: true },
     username: { type: String, required: true, unique: true, trim: true, lowercase: true, index: true },
     email: { type: String, required: true, unique: true, trim: true, lowercase: true, index: true },
-    phone: { type: String, required: true, unique: true, trim: true, index: true },
-    password: { type: String, required: true },
+    phone: { type: String, required: false, unique: true, sparse: true, trim: true, index: true },
+    password: { type: String, required: false },
+    googleId: { type: String, unique: true, sparse: true, index: true },
     role: {
       type: String,
       enum: ['Contestant', 'Judge', 'Sponsor', 'Guest'],
@@ -120,7 +122,7 @@ const userSchema = new Schema<IUser>(
 // Compound Indexes for fast logins and filtering
 userSchema.index({ email: 1, status: 1 });
 userSchema.index({ username: 1, status: 1 });
-userSchema.index({ phone: 1, status: 1 });
+userSchema.index({ phone: 1, status: 1 }, { sparse: true });
 
 // Pre-save password hashing hook
 userSchema.pre<IUser>('save', async function (next) {

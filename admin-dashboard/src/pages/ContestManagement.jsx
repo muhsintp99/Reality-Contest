@@ -62,6 +62,8 @@ export const ContestManagement = () => {
   const { showAlert, showSnackbar, showConfirm } = useAlert();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
   const { markModuleAsRead } = useNotification();
+  // Sub-Tab State: 'all' | 'daily' | 'grand' | 'special'
+  const [activeTab, setActiveTab] = useState('all');
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -214,7 +216,6 @@ export const ContestManagement = () => {
       let data = res.data.contests || [];
       data.sort((a, b) => new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime());
       setContests(data);
-      markModuleAsRead('Contest');
     } catch (err) {
       console.error(err);
     } finally {
@@ -344,9 +345,19 @@ export const ContestManagement = () => {
         (c.description && c.description.toLowerCase().includes(q));
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
       const matchesCategory = categoryFilter === 'All' || (c.categories && c.categories.includes(categoryFilter));
-      return matchesSearch && matchesStatus && matchesCategory;
+
+      let matchesTab = true;
+      if (activeTab === 'daily') {
+        matchesTab = (c.type === 'Daily Contest') || (c.title && c.title.toLowerCase().includes('daily')) || (c.categories && c.categories.includes('Daily Contest'));
+      } else if (activeTab === 'grand') {
+        matchesTab = (c.type === 'Grand Audition') || (c.title && c.title.toLowerCase().includes('grand'));
+      } else if (activeTab === 'special') {
+        matchesTab = (c.type === 'Special Event') || (c.title && c.title.toLowerCase().includes('special'));
+      }
+
+      return matchesSearch && matchesStatus && matchesCategory && matchesTab;
     });
-  }, [contests, search, statusFilter, categoryFilter]);
+  }, [contests, search, statusFilter, categoryFilter, activeTab]);
 
   return (
     <div className="space-y-6 text-left animate-fade-in relative p-2">
@@ -369,7 +380,76 @@ export const ContestManagement = () => {
         </button>
       </div>
 
-      {/* Filters Bar */}
+      {/* Sub-Tabs Navigation Bar */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-white/10 no-scrollbar">
+        {[
+          { id: 'all', label: 'All Contests', icon: Trophy },
+          { id: 'daily', label: 'Daily Contest ⚡', icon: Clock },
+          { id: 'grand', label: 'Grand Auditions 🏆', icon: Award },
+          { id: 'special', label: 'Special Events 🎉', icon: Sparkles }
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-brandPrimary text-white shadow-md shadow-brandPrimary/20'
+                  : 'bg-white dark:bg-[#0B1120] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/5'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Daily Contest Featured Banner (Shown when activeTab === 'daily') */}
+      {activeTab === 'daily' && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-brandPrimary/10 to-purple-500/10 border border-amber-500/20 rounded-2xl p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950 uppercase tracking-wider">Daily Arena Live</span>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Clock className="w-5 h-5 text-amber-500" /> Daily Contests & 24h Reset Arena
+                </h3>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Automated 24-hour daily quiz battles, speed tappers, and instant daily prize challenges with auto-reset leaderboards.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/admin-dashboard/contests/create')}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Create Daily Contest
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Daily Battles Active</div>
+              <div className="text-lg font-extrabold text-amber-500">4 Live Battles</div>
+            </div>
+            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Daily Reset Countdown</div>
+              <div className="text-lg font-extrabold text-emerald-500 font-mono">14h 22m 10s</div>
+            </div>
+            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Daily Prize Money Pool</div>
+              <div className="text-lg font-extrabold text-slate-900 dark:text-white">₹50,000</div>
+            </div>
+            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
+              <div className="text-[10px] text-slate-400 font-bold uppercase">Today's Daily Joins</div>
+              <div className="text-lg font-extrabold text-brandPrimary">2,840 Participants</div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-[#0B1120] p-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />

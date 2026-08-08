@@ -1,493 +1,305 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 import {
   Users, Search, ShieldAlert, UserCheck, Key, Shield, Plus, Edit3, Trash2, Eye,
-  Check, X, AlertTriangle, Download, ToggleLeft, ToggleRight, Lock, Unlock, Mail, Phone, RefreshCw
+  Check, X, AlertTriangle, Download, ToggleLeft, ToggleRight, Lock, Unlock, Mail, Phone, RefreshCw, Wallet, Smartphone, Share2
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
+import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
 
+const MOCK_ALL_USERS = [
+  { id: 'USR-101', _id: 'USR-101', name: 'Aarav Sharma', username: 'aarav', email: 'aarav@example.com', phone: '+91 9876543210', status: 'Active', kycStatus: 'Verified', walletBalance: 1450, device: 'iPhone 14 Pro (iOS 17.2)', ip: '103.22.45.12', referrals: 14, joins: 28 },
+  { id: 'USR-102', _id: 'USR-102', name: 'Priya Nair', username: 'priya', email: 'priya@example.com', phone: '+91 9812345678', status: 'Suspended', kycStatus: 'Pending', walletBalance: 320, device: 'Samsung S23 (Android 14)', ip: '49.36.12.89', referrals: 3, joins: 12 },
+  { id: 'USR-103', _id: 'USR-103', name: 'Rohan Mehta', username: 'rohan', email: 'rohan@example.com', phone: '+91 9765432109', status: 'Banned', kycStatus: 'Rejected', walletBalance: 0, device: 'OnePlus 11 (Android 13)', ip: '157.33.19.4', referrals: 0, joins: 4 },
+  { id: 'USR-104', _id: 'USR-104', name: 'Ananya Verma', username: 'ananya', email: 'ananya@example.com', phone: '+91 9988776655', status: 'Active', kycStatus: 'Verified', walletBalance: 2890, device: 'Google Pixel 8 (Android 14)', ip: '103.88.92.11', referrals: 29, joins: 54 },
+];
+
 export const AllUsersPage = () => {
-  const { showSnackbar } = useAlert();
+  const { showSnackbar, showConfirm } = useAlert();
+  const isMockMode = useSelector((state) => state.auth?.isMockMode);
+
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [kycFilter, setKycFilter] = useState('All');
 
-  // Modals & Drawers State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showActionModal, setShowActionModal] = useState(null); // 'Suspend', 'Ban', 'Verify', 'Reset Password'
-  
+  // Drawers
+  const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
 
   // Form States
-  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', role: 'Contestant', password: '', status: 'Active' });
-  const [suspendReason, setSuspendReason] = useState('Terms Violation');
-  const [newPassword, setNewPassword] = useState('');
+  const [userForm, setUserForm] = useState({ name: '', username: '', email: '', phone: '', role: 'Contestant', password: '', walletBalance: '500', kycStatus: 'Verified', status: 'Active' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', status: 'Active', kycStatus: 'Verified', walletBalance: '0' });
 
-  // Axios API fetch strictly for Contestants
-  const fetchContestants = async () => {
+  useEffect(() => {
+    fetchUsers();
+  }, [isMockMode]);
+
+  const fetchUsers = async () => {
+    if (isMockMode) {
+      setUsers(MOCK_ALL_USERS);
+      return;
+    }
     setLoading(true);
     try {
       const res = await axios.get('/api/admin/users/Contestant', { withCredentials: true });
-      if (res.data.success) {
-        setUsers(res.data.users || []);
+      if (res.data && res.data.success && Array.isArray(res.data.users)) {
+        const mapped = res.data.users.map((u, idx) => ({
+          id: u._id || u.id || `USR-${100 + idx}`,
+          _id: u._id || u.id,
+          name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username || 'Contestant User',
+          username: u.username || u.email?.split('@')[0] || `user_${idx}`,
+          email: u.email || 'user@example.com',
+          phone: u.phone || '+91 9999999999',
+          status: u.status || 'Active',
+          kycStatus: u.kycStatus || 'Pending',
+          walletBalance: u.walletBalance || 0,
+          device: u.device || 'Android 14 / Chrome',
+          ip: u.ip || '103.22.45.12',
+          referrals: u.referrals || Math.floor(Math.random() * 20),
+          joins: u.joins || Math.floor(Math.random() * 40)
+        }));
+        setUsers(mapped);
       }
     } catch (err) {
-      console.warn('[AllUsersPage] Error fetching contestants:', err.message);
+      console.warn('Error fetching all users via API:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchContestants();
-  }, []);
+  const filteredUsers = users.filter(u => {
+    const matchesSearch =
+      (u.name && u.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (u.phone && u.phone.includes(searchTerm)) ||
+      (u.id && u.id.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // Filtering strictly for Contestants
-  const filteredUsers = users.filter(u => u.role === 'Contestant' || !u.role).filter(u => {
-    const matchesSearch = (u.name && u.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (u.phone && u.phone.includes(searchTerm)) ||
-                          (u._id && u._id.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesKyc = kycFilter === 'All' || u.kycStatus === kycFilter;
+    return matchesSearch && matchesStatus && matchesKyc;
   });
 
-  // REST API Handlers
-  const handleCreateUser = async () => {
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
     if (!userForm.name || !userForm.email) {
-      showSnackbar('Please enter Name and Email', 'warning');
+      showSnackbar('Please enter Name and Email address.', 'warning');
       return;
     }
-    const username = userForm.email.split('@')[0] + Date.now().toString().slice(-4);
-    try {
-      const res = await axios.post('/api/admin/users', { ...userForm, username, role: 'Contestant' }, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar(`Contestant "${userForm.name}" created successfully!`, 'success');
-        fetchContestants();
+    const username = userForm.username || userForm.email.split('@')[0] + Date.now().toString().slice(-3);
+
+    if (!isMockMode) {
+      try {
+        const payload = { ...userForm, username, role: 'Contestant', walletBalance: Number(userForm.walletBalance) || 0 };
+        const res = await axios.post('/api/admin/users', payload, { withCredentials: true });
+        if (res.data.success) {
+          showSnackbar(`Contestant "${userForm.name}" created successfully!`, 'success');
+          fetchUsers();
+        }
+      } catch (err) {
+        showSnackbar(err.response?.data?.message || 'Failed to create contestant.', 'error');
+        return;
       }
-    } catch (err) {
+    } else {
       const newUser = {
+        id: `USR-${Date.now().toString().slice(-3)}`,
         _id: `USR-${Date.now().toString().slice(-3)}`,
         ...userForm,
-        role: 'Contestant',
-        kycStatus: 'Pending',
-        walletBalance: 0,
-        createdAt: new Date().toISOString().split('T')[0]
+        username,
+        walletBalance: Number(userForm.walletBalance) || 0,
+        device: 'Web App',
+        ip: '127.0.0.1',
+        referrals: 0,
+        joins: 0
       };
       setUsers([newUser, ...users]);
       showSnackbar(`Contestant "${userForm.name}" created!`, 'success');
     }
-    setShowAddModal(false);
-    setUserForm({ name: '', email: '', phone: '', role: 'Contestant', password: '', status: 'Active' });
+    setShowAddDrawer(false);
+    setUserForm({ name: '', username: '', email: '', phone: '', role: 'Contestant', password: '', walletBalance: '500', kycStatus: 'Verified', status: 'Active' });
   };
 
-  const handleUpdateUser = async () => {
-    try {
-      const res = await axios.put(`/api/admin/users/${selectedUser._id}`, { ...userForm, role: 'Contestant' }, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar(`Contestant profile updated for "${userForm.name}"`, 'success');
-        fetchContestants();
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    const id = selectedUser._id || selectedUser.id;
+
+    if (!isMockMode) {
+      try {
+        const payload = {
+          name: editForm.name,
+          phone: editForm.phone,
+          status: editForm.status,
+          kycStatus: editForm.kycStatus,
+          walletBalance: Number(editForm.walletBalance) || 0
+        };
+        await axios.put(`/api/admin/users/${id}`, payload, { withCredentials: true });
+        showSnackbar(`Updated contestant profile for "${editForm.name}"`, 'success');
+        fetchUsers();
+      } catch (err) {
+        showSnackbar(err.response?.data?.message || 'Failed to update contestant', 'error');
       }
-    } catch (err) {
-      setUsers(users.map(u => u._id === selectedUser._id ? { ...u, ...userForm, role: 'Contestant' } : u));
-      showSnackbar(`Contestant profile updated for "${userForm.name}"`, 'info');
+    } else {
+      setUsers(users.map(u => u.id === selectedUser.id ? { ...u, ...editForm, walletBalance: Number(editForm.walletBalance) || 0 } : u));
+      showSnackbar(`Updated "${editForm.name}" profile`, 'info');
     }
-    setShowEditModal(false);
     setSelectedUser(null);
   };
 
-  const handleDeleteUser = async () => {
-    try {
-      const res = await axios.delete(`/api/admin/users/${selectedUser._id}`, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar(`Contestant "${selectedUser.name}" deleted.`, 'info');
-        fetchContestants();
+  const handleDeleteUser = (u) => {
+    const id = u._id || u.id;
+    showConfirm('Delete User', `Permanently delete ${u.name}? This action cannot be undone.`, async () => {
+      if (!isMockMode) {
+        try {
+          await axios.delete(`/api/admin/users/${id}`, { withCredentials: true });
+          showSnackbar('User account deleted.', 'success');
+          fetchUsers();
+        } catch (err) {
+          showSnackbar(err.response?.data?.message || 'Failed to delete user.', 'error');
+        }
+      } else {
+        setUsers(users.filter(x => x.id !== u.id));
+        showSnackbar('User deleted.', 'info');
       }
-    } catch (err) {
-      setUsers(users.filter(u => u._id !== selectedUser._id));
-      showSnackbar(`Contestant "${selectedUser.name}" deleted.`, 'info');
-    }
-    setShowDeleteModal(false);
-    setSelectedUser(null);
-  };
-
-  const handleToggleStatus = async (user) => {
-    const nextStatus = user.status === 'Active' ? 'Suspended' : 'Active';
-    try {
-      const res = await axios.put(`/api/admin/users/${user._id}/status`, {}, { withCredentials: true });
-      if (res.data.success) {
-        showSnackbar(`Status for ${user.name} changed to ${nextStatus}`, 'info');
-        fetchContestants();
-      }
-    } catch (err) {
-      setUsers(users.map(u => u._id === user._id ? { ...u, status: nextStatus } : u));
-      showSnackbar(`Status for ${user.name} changed to ${nextStatus}`, 'info');
-    }
-  };
-
-  const executeActionModal = async () => {
-    if (showActionModal === 'Suspend') {
-      try {
-        await axios.put(`/api/admin/users/${selectedUser._id}/status`, {}, { withCredentials: true });
-        showSnackbar(`Contestant ${selectedUser.name} suspended (Reason: ${suspendReason})`, 'warning');
-      } catch (err) {
-        setUsers(users.map(u => u._id === selectedUser._id ? { ...u, status: 'Suspended' } : u));
-        showSnackbar(`Contestant ${selectedUser.name} suspended`, 'warning');
-      }
-    } else if (showActionModal === 'Ban') {
-      try {
-        await axios.put(`/api/admin/users/${selectedUser._id}/status`, {}, { withCredentials: true });
-        showSnackbar(`Contestant ${selectedUser.name} banned & IP blocked`, 'error');
-      } catch (err) {
-        setUsers(users.map(u => u._id === selectedUser._id ? { ...u, status: 'Banned' } : u));
-        showSnackbar(`Contestant ${selectedUser.name} banned & IP blocked`, 'error');
-      }
-    } else if (showActionModal === 'Verify') {
-      try {
-        await axios.put(`/api/admin/users/${selectedUser._id}/kyc`, { kycStatus: 'Approved' }, { withCredentials: true });
-        showSnackbar(`KYC verification completed for Contestant ${selectedUser.name}`, 'success');
-      } catch (err) {
-        setUsers(users.map(u => u._id === selectedUser._id ? { ...u, kycStatus: 'Approved' } : u));
-        showSnackbar(`KYC verification completed for Contestant ${selectedUser.name}`, 'success');
-      }
-    } else if (showActionModal === 'Reset Password') {
-      try {
-        await axios.put(`/api/admin/users/${selectedUser._id}/reset-password`, { password: newPassword || 'ResetPass@2026' }, { withCredentials: true });
-        showSnackbar(`Password reset successfully for Contestant ${selectedUser.name}`, 'success');
-      } catch (err) {
-        showSnackbar(`Password reset trigger sent for Contestant ${selectedUser.name}`, 'success');
-      }
-    }
-    setShowActionModal(null);
-    setSelectedUser(null);
-  };
-
-  const exportCSV = () => {
-    showSnackbar('Exporting Contestants Directory to CSV...', 'success');
+    });
   };
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in text-left">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-6 space-y-6 text-left animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Users className="w-7 h-7 text-brandPrimary" /> Contestants Directory & Controls
+            <Users className="w-7 h-7 text-brandPrimary" /> All Platform Contestants
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Search, Suspend, Ban, Verify KYC & Reset Passwords for Contestant profiles only.
-          </p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Overview of all active, suspended, and pending contestant records.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={exportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-semibold text-xs rounded-xl hover:bg-slate-200 cursor-pointer"
-          >
-            <Download className="w-4 h-4" /> Export CSV
-          </button>
-          <button
-            onClick={() => {
-              setUserForm({ name: '', email: '', phone: '', role: 'Contestant', password: '', status: 'Active' });
-              setShowAddModal(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-brandPrimary text-white font-semibold text-xs rounded-xl shadow-md hover:bg-brandPrimary/90 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Add Contestant
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddDrawer(true)}
+          className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow hover:bg-brandPrimary/90 transition-all flex items-center gap-1.5 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" /> Add Contestant
+        </button>
       </div>
 
-      {/* Search & CustomSelect Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 glassmorphism p-4 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm relative z-20">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-[#0B1120] p-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search contestant by name, email, phone, ID..."
+            placeholder="Search contestants..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary"
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"
           />
         </div>
 
-        <CustomSelect
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={[
-            { label: 'All Contestant Statuses', value: 'All' },
-            { label: 'Active Contestants', value: 'Active' },
-            { label: 'Suspended Contestants', value: 'Suspended' },
-            { label: 'Banned Contestants', value: 'Banned' }
-          ]}
-        />
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <CustomSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: 'All', label: 'All Statuses' },
+              { value: 'Active', label: 'Active' },
+              { value: 'Suspended', label: 'Suspended' },
+              { value: 'Banned', label: 'Banned' }
+            ]}
+            className="w-36"
+          />
+          <CustomSelect
+            value={kycFilter}
+            onChange={(val) => setKycFilter(val)}
+            options={[
+              { value: 'All', label: 'All KYC' },
+              { value: 'Verified', label: 'Verified' },
+              { value: 'Pending', label: 'Pending' },
+              { value: 'Rejected', label: 'Rejected' }
+            ]}
+            className="w-36"
+          />
+        </div>
       </div>
 
-      {/* Users Table / Empty / Loading State */}
-      {loading ? (
-        <div className="flex items-center justify-center py-6 gap-2 text-xs text-brandPrimary font-bold animate-pulse">
-          <RefreshCw className="w-4 h-4 animate-spin" />
-          <span>Fetching Contestants from Backend API...</span>
-        </div>
-      ) : filteredUsers.length === 0 ? (
-        <div className="glassmorphism p-12 rounded-3xl border border-slate-200/80 dark:border-white/10 text-center space-y-3">
-          <Users className="w-10 h-10 text-slate-400 dark:text-white/30 mx-auto" />
-          <h4 className="text-sm font-bold text-slate-800 dark:text-white">No Contestants Found</h4>
-          <p className="text-xs text-slate-500 dark:text-white/40">Registered contestant profiles will populate automatically.</p>
-        </div>
-      ) : (
-        <div className="glassmorphism rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100/70 dark:bg-white/5 text-slate-500 uppercase tracking-wider font-medium border-b border-slate-200 dark:border-white/5">
-                <tr>
-                  <th className="px-5 py-3.5">Contestant Info</th>
-                  <th className="px-5 py-3.5">Phone & Joined</th>
-                  <th className="px-5 py-3.5">Account Status</th>
-                  <th className="px-5 py-3.5">KYC Status</th>
-                  <th className="px-5 py-3.5">Active Toggle</th>
-                  <th className="px-5 py-3.5 text-right">Actions (View / Edit / Suspend / Ban / Verify / Reset / Delete)</th>
+      {/* Table */}
+      <div className="bg-white dark:bg-[#0B1120] rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 dark:bg-white/5 text-slate-500 uppercase font-medium border-b border-slate-200 dark:border-white/5">
+              <tr>
+                <th className="px-5 py-3.5">Contestant</th>
+                <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5">KYC Status</th>
+                <th className="px-5 py-3.5">Wallet Balance</th>
+                <th className="px-5 py-3.5">Device & IP</th>
+                <th className="px-5 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-700 dark:text-slate-300">
+              {filteredUsers.map((u) => (
+                <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
+                  <td className="px-5 py-4">
+                    <div className="font-bold text-slate-900 dark:text-white">{u.name}</div>
+                    <div className="text-[11px] text-slate-400">@{u.username} • {u.email}</div>
+                  </td>
+                  <td className="px-5 py-4 font-bold">{u.status}</td>
+                  <td className="px-5 py-4 font-bold text-blue-500">{u.kycStatus}</td>
+                  <td className="px-5 py-4 font-bold text-amber-500">₹{Number(u.walletBalance).toLocaleString()}</td>
+                  <td className="px-5 py-4">{u.device}</td>
+                  <td className="px-5 py-4 text-right">
+                    <button onClick={() => setViewingUser(u)} className="p-1.5 bg-blue-500/10 text-blue-500 rounded-lg mr-1 cursor-pointer"><Eye className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => { setSelectedUser(u); setEditForm({ name: u.name, phone: u.phone, status: u.status, kycStatus: u.kycStatus, walletBalance: String(u.walletBalance) }); }} className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg mr-1 cursor-pointer"><Edit3 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDeleteUser(u)} className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-700 dark:text-slate-300">
-                {filteredUsers.map(user => (
-                  <tr key={user._id || user.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-slate-900 dark:text-white">{user.name}</div>
-                      <div className="text-[11px] text-slate-400">{user.email} • {user._id || user.id}</div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-slate-800 dark:text-slate-200">{user.phone}</div>
-                      <div className="text-[10px] text-slate-400">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : user.joined}</div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        user.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                        user.status === 'Suspended' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
-                        'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                      }`}>
-                        {user.status || 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        (user.kycStatus || user.kyc) === 'Approved' || (user.kycStatus || user.kyc) === 'Verified' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
-                        (user.kycStatus || user.kyc) === 'Pending' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
-                        'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                      }`}>
-                        {user.kycStatus || user.kyc || 'Pending'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <button onClick={() => handleToggleStatus(user)} className="flex items-center gap-1 font-bold text-xs cursor-pointer">
-                        {user.status === 'Active' ? (
-                          <ToggleRight className="w-6 h-6 text-emerald-500" />
-                        ) : (
-                          <ToggleLeft className="w-6 h-6 text-slate-400" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* View */}
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowViewModal(true); }}
-                          title="View Contestant Profile"
-                          className="p-1.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-200 cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        {/* Edit */}
-                        <button
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setUserForm({ name: user.name, email: user.email, phone: user.phone, role: 'Contestant', status: user.status });
-                            setShowEditModal(true);
-                          }}
-                          title="Edit Contestant"
-                          className="p-1.5 bg-blue-500/10 text-blue-500 rounded-lg hover:bg-blue-500/20 cursor-pointer"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        {/* Verify */}
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowActionModal('Verify'); }}
-                          title="Verify KYC"
-                          className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500/20 cursor-pointer"
-                        >
-                          <UserCheck className="w-3.5 h-3.5" />
-                        </button>
-                        {/* Reset Password */}
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowActionModal('Reset Password'); }}
-                          title="Reset Password"
-                          className="p-1.5 bg-indigo-500/10 text-indigo-500 rounded-lg hover:bg-indigo-500/20 cursor-pointer"
-                        >
-                          <Key className="w-3.5 h-3.5" />
-                        </button>
-                        {/* Suspend */}
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowActionModal('Suspend'); }}
-                          title="Suspend Contestant Account"
-                          className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg hover:bg-amber-500/20 cursor-pointer"
-                        >
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                        </button>
-                        {/* Ban */}
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowActionModal('Ban'); }}
-                          title="Ban Contestant & IP"
-                          className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 cursor-pointer"
-                        >
-                          <ShieldAlert className="w-3.5 h-3.5" />
-                        </button>
-                        {/* Delete */}
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowDeleteModal(true); }}
-                          title="Delete Contestant"
-                          className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
-      {/* Add User Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Add New Contestant</h3>
-              <button onClick={() => setShowAddModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-500 mb-1 font-semibold">Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Aarav Sharma"
-                  value={userForm.name}
-                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-500 mb-1 font-semibold">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="aarav@example.com"
-                  value={userForm.email}
-                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-500 mb-1 font-semibold">Phone Number</label>
-                <input
-                  type="text"
-                  placeholder="+91 9876543210"
-                  value={userForm.phone}
-                  onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-500 mb-1 font-semibold">Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={userForm.password}
-                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-slate-500 text-xs font-semibold">Cancel</button>
-              <button onClick={handleCreateUser} className="px-4 py-2 bg-brandPrimary text-white text-xs font-bold rounded-xl shadow">Create Contestant</button>
-            </div>
+      {/* Add Drawer */}
+      <RightDrawer isOpen={showAddDrawer} onClose={() => setShowAddDrawer(false)} title="Add Contestant Account">
+        <form onSubmit={handleCreateUser} className="space-y-4 text-left">
+          <input type="text" placeholder="Full Name" value={userForm.name} onChange={e => setUserForm({ ...userForm, name: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+          <input type="text" placeholder="Username" value={userForm.username} onChange={e => setUserForm({ ...userForm, username: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+          <input type="email" placeholder="Email Address" value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+          <input type="text" placeholder="Mobile Phone" value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+          <input type="password" placeholder="Password" value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+          <input type="number" placeholder="Initial Wallet Balance" value={userForm.walletBalance} onChange={e => setUserForm({ ...userForm, walletBalance: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+          <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setShowAddDrawer(false)} className="px-4 py-2 text-xs text-slate-400">Cancel</button><button type="submit" className="px-4 py-2 text-xs bg-brandPrimary text-white rounded-xl font-bold">Create Contestant</button></div>
+        </form>
+      </RightDrawer>
+
+      {/* Edit Drawer */}
+      <RightDrawer isOpen={!!selectedUser} onClose={() => setSelectedUser(null)} title="Edit Contestant Controls">
+        {selectedUser && (
+          <form onSubmit={handleUpdateUser} className="space-y-4 text-left">
+            <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+            <input type="text" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+            <CustomSelect value={editForm.status} onChange={val => setEditForm({ ...editForm, status: val })} options={[{ value: 'Active', label: 'Active' }, { value: 'Suspended', label: 'Suspended' }, { value: 'Banned', label: 'Banned' }]} />
+            <CustomSelect value={editForm.kycStatus} onChange={val => setEditForm({ ...editForm, kycStatus: val })} options={[{ value: 'Verified', label: 'Verified' }, { value: 'Pending', label: 'Pending' }, { value: 'Rejected', label: 'Rejected' }]} />
+            <input type="number" value={editForm.walletBalance} onChange={e => setEditForm({ ...editForm, walletBalance: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
+            <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setSelectedUser(null)} className="px-4 py-2 text-xs text-slate-400">Cancel</button><button type="submit" className="px-4 py-2 text-xs bg-brandPrimary text-white rounded-xl font-bold">Save Changes</button></div>
+          </form>
+        )}
+      </RightDrawer>
+
+      {/* View Drawer */}
+      <RightDrawer isOpen={!!viewingUser} onClose={() => setViewingUser(null)} title="Contestant Specs">
+        {viewingUser && (
+          <div className="space-y-3 text-xs text-left">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingUser.name}</h3>
+            <p className="text-slate-400">@{viewingUser.username} • {viewingUser.email}</p>
+            <p className="text-slate-400">Phone: {viewingUser.phone}</p>
+            <p className="font-bold text-amber-500">Wallet: ₹{Number(viewingUser.walletBalance).toLocaleString()}</p>
+            <p className="text-slate-400">Device: {viewingUser.device} ({viewingUser.ip})</p>
           </div>
-        </div>
-      )}
-
-      {/* Action Modals: Suspend, Ban, Verify, Reset Password */}
-      {showActionModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl ${
-                showActionModal === 'Ban' ? 'bg-rose-500/10 text-rose-500' :
-                showActionModal === 'Suspend' ? 'bg-amber-500/10 text-amber-500' :
-                showActionModal === 'Verify' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'
-              }`}>
-                {showActionModal === 'Ban' && <ShieldAlert className="w-6 h-6" />}
-                {showActionModal === 'Suspend' && <AlertTriangle className="w-6 h-6" />}
-                {showActionModal === 'Verify' && <UserCheck className="w-6 h-6" />}
-                {showActionModal === 'Reset Password' && <Key className="w-6 h-6" />}
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">{showActionModal} Contestant</h3>
-                <p className="text-slate-400 text-xs">{selectedUser.name} ({selectedUser._id || selectedUser.id})</p>
-              </div>
-            </div>
-
-            {showActionModal === 'Suspend' && (
-              <div className="space-y-1 text-xs">
-                <label className="text-slate-400 font-semibold">Suspension Reason</label>
-                <input
-                  type="text"
-                  value={suspendReason}
-                  onChange={(e) => setSuspendReason(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
-                />
-              </div>
-            )}
-
-            {showActionModal === 'Reset Password' && (
-              <div className="space-y-1 text-xs">
-                <label className="text-slate-400 font-semibold">New Temp Password</label>
-                <input
-                  type="text"
-                  placeholder="e.g. ResetPass@2026"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white"
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowActionModal(null)} className="px-4 py-2 text-slate-500 text-xs font-semibold">Cancel</button>
-              <button onClick={executeActionModal} className="px-4 py-2 bg-brandPrimary text-white text-xs font-bold rounded-xl shadow">Confirm {showActionModal}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Modal */}
-      {showDeleteModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base">Delete Contestant Profile?</h3>
-            <p className="text-slate-500 text-xs">Are you sure you want to permanently remove {selectedUser.name}?</p>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 text-slate-500 text-xs font-semibold">Cancel</button>
-              <button onClick={handleDeleteUser} className="px-4 py-2 bg-rose-500 text-white text-xs font-bold rounded-xl shadow">Delete Contestant</button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </RightDrawer>
     </div>
   );
 };

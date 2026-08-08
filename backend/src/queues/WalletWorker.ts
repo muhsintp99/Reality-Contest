@@ -37,6 +37,8 @@ export const initWalletWorker = () => {
     worker.on('failed', (job, err) => {
       logger.error(`[WORKER] [wallet-queue] Job ${job?.id} failed: ${err.message}`);
     });
+
+    logger.info('Wallet Worker initialized successfully.');
   } catch (err: any) {
     logger.error(`Failed to init Wallet Worker: ${err.message}`);
   }

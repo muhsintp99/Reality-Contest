@@ -17,6 +17,8 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ defa
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ContestManagement = lazy(() => import('./pages/ContestManagement').then(m => ({ default: m.ContestManagement })));
+const DailyContestPage = lazy(() => import('./pages/DailyContestPage').then(m => ({ default: m.DailyContestPage })));
+const DailyContestWizard = lazy(() => import('./pages/DailyContestWizard').then(m => ({ default: m.DailyContestWizard })));
 const QuizBuilder = lazy(() => import('./pages/QuizBuilder').then(m => ({ default: m.QuizBuilder })));
 const StageManagement = lazy(() => import('./pages/StageManagement').then(m => ({ default: m.StageManagement })));
 const UsersDirectory = lazy(() => import('./pages/UsersDirectory').then(m => ({ default: m.UsersDirectory })));
@@ -31,6 +33,9 @@ const KycDirectory = lazy(() => import('./pages/KycDirectory').then(m => ({ defa
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
 const GrandContestManagement = lazy(() => import('./pages/GrandContestManagement').then(m => ({ default: m.GrandContestManagement })));
 const QuestionBankPage = lazy(() => import('./pages/QuestionBankPage').then(m => ({ default: m.QuestionBankPage })));
+const QuestionPoolPage = lazy(() => import('./pages/QuestionPoolPage').then(m => ({ default: m.QuestionPoolPage })));
+const QuestionBulkImportPage = lazy(() => import('./pages/QuestionBulkImportPage').then(m => ({ default: m.QuestionBulkImportPage })));
+const QuestionAnalyticsPage = lazy(() => import('./pages/QuestionAnalyticsPage').then(m => ({ default: m.QuestionAnalyticsPage })));
 const SurveyManagement = lazy(() => import('./pages/SurveyManagement').then(m => ({ default: m.SurveyManagement })));
 const TaskManagementPage = lazy(() => import('./pages/TaskManagementPage').then(m => ({ default: m.TaskManagementPage })));
 const ChallengeManagement = lazy(() => import('./pages/ChallengeManagement').then(m => ({ default: m.ChallengeManagement })));
@@ -170,7 +175,10 @@ const AppContent = () => {
                   <Route path="user-management/device-details" element={<DeviceDetailsPage />} />
                   <Route path="user-management/referral-details" element={<ReferralDetailsPage />} />
                   <Route path="grand-contest" element={<GrandContestManagement />} />
-                  <Route path="question-bank" element={<QuestionBankPage />} />
+                  <Route path="question-bank" element={<Navigate to="question-bank/pool" replace />} />
+                  <Route path="question-bank/pool" element={<QuestionPoolPage />} />
+                  <Route path="question-bank/import" element={<QuestionBulkImportPage />} />
+                  <Route path="question-bank/analytics" element={<QuestionAnalyticsPage />} />
                   <Route path="surveys" element={<SurveyManagement />} />
                   <Route path="tasks" element={<TaskManagementPage />} />
                   <Route path="challenges" element={<ChallengeManagement />} />
@@ -227,6 +235,8 @@ const AppContent = () => {
                   <Route path="judges" element={<UsersDirectory type="Judge" />} />
                   <Route path="sponsors" element={<UsersDirectory type="Sponsor" />} />
                   <Route path="contests" element={<ContestManagement />} />
+                  <Route path="daily-contest" element={<DailyContestPage />} />
+                  <Route path="daily-contest/create" element={<DailyContestWizard />} />
                   <Route path="contests/create" element={<ContestWizard />} />
                   <Route path="contests/edit/:contestId" element={<ContestWizard />} />
                   <Route path="contests/:contestId" element={<ContestDetails />} />

@@ -468,16 +468,33 @@ export class AdminController {
   async adjustWalletBalance(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const { amount } = req.body;
-      if (amount === undefined) throw new BadRequestError('Adjustment amount is required.');
+      const { amount, actionType, reason } = req.body;
 
       const user = await User.findById(id);
       if (!user) throw new NotFoundError('Contestant user not found.');
 
-      user.walletBalance = (user.walletBalance || 0) + Number(amount);
+      const adjAmount = Number(amount || 0);
+
+      if (actionType === 'Freeze') {
+        user.status = 'Suspended';
+      } else if (actionType === 'Unfreeze') {
+        user.status = 'Active';
+      } else if (actionType === 'Credit' || actionType === 'Bonus') {
+        user.walletBalance = (user.walletBalance || 0) + Math.abs(adjAmount);
+      } else if (actionType === 'Debit' || actionType === 'Penalty') {
+        user.walletBalance = Math.max(0, (user.walletBalance || 0) - Math.abs(adjAmount));
+      } else {
+        user.walletBalance = (user.walletBalance || 0) + adjAmount;
+      }
+
       await user.save();
 
-      res.status(200).json({ success: true, message: `Wallet balance adjusted by ₹${amount} for contestant ${user.name}.`, newBalance: user.walletBalance });
+      res.status(200).json({
+        success: true,
+        message: `Wallet ${actionType || 'adjustment'} processed for contestant ${user.name}.`,
+        newBalance: user.walletBalance,
+        status: user.status
+      });
     } catch (err) {
       next(err);
     }

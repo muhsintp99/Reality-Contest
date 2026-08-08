@@ -191,17 +191,79 @@ export class AuthController {
     }
   }
 
-  // 9. MOCK OAUTH
+  // 9. GOOGLE AUTH (LOGIN & REGISTER)
+  async googleAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { idToken, googleId, email, name, avatar, referralCode } = req.body;
+      const ip = (req.headers['x-forwarded-for'] as string) || req.ip || '127.0.0.1';
+      const { browser, device } = parseUserAgent(req.headers['user-agent']);
+
+      const { user, accessToken, refreshToken } = await authService.googleAuth(
+        { idToken, googleId, email, name, avatar, referralCode },
+        ip,
+        device,
+        browser
+      );
+
+      setTokenCookies(res, accessToken, refreshToken);
+
+      res.status(200).json({
+        success: true,
+        message: 'Google authentication successful.',
+        user: {
+          _id: user._id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          walletBalance: user.walletBalance,
+          kycStatus: user.kycStatus,
+          isEmailVerified: user.isEmailVerified
+        },
+        accessToken,
+        refreshToken
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // 10. OAUTH LOGIN FALLBACK
   async oauthLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
-    res.status(200).json({
-      success: true,
-      message: 'OAuth login simulated success.',
-      user: {
-        name: 'OAuth User',
-        email: 'oauth_user@realitycontest.com',
-        role: 'Contestant'
-      }
-    });
+    return this.googleAuth(req, res, next);
+  }
+
+  // 11. GUEST LOGIN
+  async guestLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const ip = (req.headers['x-forwarded-for'] as string) || req.ip || '127.0.0.1';
+      const { browser, device } = parseUserAgent(req.headers['user-agent']);
+
+      const { user, accessToken, refreshToken } = await authService.guestLogin(ip, device, browser);
+      setTokenCookies(res, accessToken, refreshToken);
+
+      res.status(200).json({
+        success: true,
+        message: 'Logged in as Guest user.',
+        user: {
+          _id: user._id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatar: user.avatar,
+          walletBalance: user.walletBalance,
+          kycStatus: user.kycStatus
+        },
+        accessToken,
+        refreshToken
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 
   // 10. GET ME

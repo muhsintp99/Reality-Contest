@@ -190,7 +190,12 @@ export const Navbar = ({ activeView, onOpenMobileMenu, isCollapsed, setIsCollaps
           {showUserMenu && (
             <div className="absolute right-0 mt-2.5 w-52 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-2xl overflow-hidden p-1.5 z-50 animate-scale-in">
               <div className="px-3.5 py-3 border-b border-slate-100 dark:border-white/5 text-left bg-slate-50/30 dark:bg-transparent">
-                <p className="text-xs font-bold text-slate-800 dark:text-white">{user?.name || 'Aarav Sharma'}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-800 dark:text-white">{user?.name || 'Aarav Sharma'}</p>
+                  {user?.role === 'Guest' && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[9px] font-extrabold uppercase">Guest</span>
+                  )}
+                </div>
                 <p className="text-[10px] text-slate-400 dark:text-white/40 mt-0.5 truncate">{user?.email || 'aarav@rcp.in'}</p>
               </div>
               <div className="py-1">

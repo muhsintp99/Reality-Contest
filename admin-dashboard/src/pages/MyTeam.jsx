@@ -172,7 +172,6 @@ export const MyTeam = () => {
       const res = await axios.get('/api/admin/users/Admin', { withCredentials: true });
       if (res.data.success) {
         setMembers(res.data.users || []);
-        markModuleAsRead('System');
       }
     } catch (err) {
       console.error('Failed to fetch team members:', err);

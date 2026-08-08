@@ -28,6 +28,8 @@ export const initEmailWorker = () => {
     worker.on('failed', (job, err) => {
       logger.error(`[WORKER] [email-queue] Job ${job?.id} failed: ${err.message}`);
     });
+
+    logger.info('Email Worker initialized successfully.');
   } catch (err: any) {
     logger.error(`Failed to init Email Worker: ${err.message}`);
   }

@@ -119,4 +119,21 @@ export const authorize = (...allowedRoles: string[]) => {
     return next(new ForbiddenError(`Forbidden: Restricted access. Requires: [${allowedRoles.join(', ')}].`));
   };
 };
+
+export const requireNotGuest = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    return next(new UnauthorizedError('Authentication required.'));
+  }
+
+  if (req.user.role === 'Guest') {
+    res.status(403).json({
+      success: false,
+      message: 'Guest Mode: You are in view-only mode. Please register or sign in to participate in contests.'
+    });
+    return;
+  }
+
+  next();
+};
+
 export default authenticate;

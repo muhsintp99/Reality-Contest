@@ -52,8 +52,18 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     const app = express();
     const server = http.createServer(app);
 
+    // Wait for Redis connection attempt (resolves instantly if online or after timeout if offline)
+    await redisService.waitForConnection();
+
     // Initialize Real-time Socket sync
     socketService.initialize(server);
+
+    // Initialize Queues & Workers
+    queueService.initialize();
+    initEmailWorker();
+    initSMSWorker();
+    initKycWorker();
+    initWalletWorker();
 
     // Serve API documentation via Swagger UI
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -136,16 +146,7 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
     });
 
-    // Asynchronously wait for Redis connection to resolve or timeout before initializing queues & background workers
-    redisService.waitForConnection().then(() => {
-      queueService.initialize();
-      initEmailWorker();
-      initSMSWorker();
-      initKycWorker();
-      initWalletWorker();
-    }).catch((err) => {
-      logger.error(`Redis/Queue initialization error: ${err.message}`);
-    });
+
 
     // Database Connection Pooling & Initialization
     mongoose.set('bufferCommands', true);

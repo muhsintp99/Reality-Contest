@@ -45,3 +45,12 @@ export const resetPasswordSchema = z.object({
   otp: z.string().length(6, 'OTP must be exactly 6 digits'),
   newPassword: z.string().min(6, 'Password must be at least 6 characters')
 });
+
+export const googleAuthSchema = z.object({
+  idToken: z.string().optional(),
+  googleId: z.string().optional(),
+  email: z.string().email('Invalid email address').optional(),
+  name: z.string().optional(),
+  avatar: z.string().optional(),
+  referralCode: z.string().optional()
+});

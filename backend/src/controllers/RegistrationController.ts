@@ -21,14 +21,14 @@ const getSessionIdFromToken = (req: Request): string => {
 };
 
 export class RegistrationController {
-  // 1. START MOBILE VERIFICATION
-  async startMobile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // 1. START EMAIL VERIFICATION
+  async startEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { countryCode, phone, referralCode } = req.body;
-      const result = await registrationService.startMobileVerification(countryCode, phone, referralCode);
+      const { email, referralCode } = req.body;
+      const result = await registrationService.startEmailVerification(email, referralCode);
       res.status(200).json({
         success: true,
-        message: 'OTP generated and sent successfully.',
+        message: 'Email OTP generated and sent successfully.',
         ...result
       });
     } catch (err) {
@@ -36,14 +36,59 @@ export class RegistrationController {
     }
   }
 
-  // 2. VERIFY MOBILE OTP
+  // 2. VERIFY EMAIL OTP
+  async verifyEmailOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { sessionId, otp } = req.body;
+      const result = await registrationService.verifyEmailOtp(sessionId, otp);
+      res.status(200).json({
+        success: true,
+        message: 'Email verified successfully.',
+        ...result
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // 3. RESEND EMAIL OTP
+  async resendEmailOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { sessionId } = req.body;
+      const result = await registrationService.resendEmailOtp(sessionId);
+      res.status(200).json({
+        success: true,
+        message: 'New Email OTP code sent.',
+        ...result
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // 4. START MOBILE VERIFICATION
+  async startMobile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { sessionId, countryCode, phone } = req.body;
+      const result = await registrationService.startMobileVerification(sessionId, countryCode, phone);
+      res.status(200).json({
+        success: true,
+        message: 'Mobile OTP generated and sent successfully.',
+        ...result
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // 5. VERIFY MOBILE OTP
   async verifyOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { sessionId, otp } = req.body;
       const result = await registrationService.verifyMobileOtp(sessionId, otp);
       res.status(200).json({
         success: true,
-        message: 'OTP verified and registration session initialized.',
+        message: 'Mobile OTP verified successfully.',
         ...result
       });
     } catch (err) {
@@ -51,14 +96,14 @@ export class RegistrationController {
     }
   }
 
-  // 3. RESEND OTP
+  // 6. RESEND MOBILE OTP
   async resendOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { sessionId } = req.body;
       const result = await registrationService.resendMobileOtp(sessionId);
       res.status(200).json({
         success: true,
-        message: 'New OTP code sent.',
+        message: 'New Mobile OTP code sent.',
         ...result
       });
     } catch (err) {
@@ -66,94 +111,59 @@ export class RegistrationController {
     }
   }
 
-  // 4. SAVE PROFILE
+  // 7. SAVE PROFILE & COMPLETE CONTESTANT REGISTRATION (NO KYC NEEDED)
   async saveProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const sessionId = getSessionIdFromToken(req);
       const profileData = {
         name: req.body.name,
         username: req.body.username,
-        email: req.body.email,
         password: req.body.password,
         confirmPassword: req.body.confirmPassword,
         dob: req.body.dob,
+        avatar: req.body.avatar,
         gender: req.body.gender,
         state: req.body.state,
         district: req.body.district,
         city: req.body.city,
         preferredLanguage: req.body.preferredLanguage,
-        avatar: req.body.avatar,
         pincode: req.body.pincode,
         referralCode: req.body.referralCode,
         occupation: req.body.occupation,
         education: req.body.education,
         employmentStatus: req.body.employmentStatus,
-        notificationPermission: req.body.notificationPermission,
-        locationPermission: req.body.locationPermission
+        favoriteCategories: req.body.favoriteCategories
       };
-      const result = await registrationService.saveProfile(sessionId, profileData);
-      res.status(200).json({
-        success: true,
-        message: 'Profile information saved successfully.',
-        ...result
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
+      const result = await registrationService.saveProfileAndComplete(sessionId, profileData);
 
-  // 5. SAVE TOPICS
-  async saveTopics(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const sessionId = getSessionIdFromToken(req);
-      const { favoriteCategories } = req.body;
-      const result = await registrationService.saveTopics(sessionId, favoriteCategories);
-      res.status(200).json({
-        success: true,
-        message: 'Preferred topics saved successfully.',
-        ...result
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
+      // Set auth refresh token cookie
+      if (result.refreshToken) {
+        res.cookie('refreshToken', result.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+      }
 
-  // 6. SAVE KYC & COMPLETE REGISTRATION
-  async completeRegistration(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const sessionId = getSessionIdFromToken(req);
-      
-      // Save KYC step data
-      const kycData = {
-        documentType: req.body.documentType,
-        documentNumber: req.body.documentNumber,
-        documentFrontUrl: req.body.documentFrontUrl,
-        documentBackUrl: req.body.documentBackUrl,
-        selfieUrl: req.body.selfieUrl,
-        addressProofUrl: req.body.addressProofUrl,
-        declarationAccepted: req.body.declarationAccepted
-      };
-      
-      await registrationService.saveKyc(sessionId, kycData);
-      
-      // Complete Registration (Create User and KYC documents)
-      const user = await registrationService.completeRegistration(sessionId);
-      
       res.status(201).json({
         success: true,
-        message: 'Registration completed successfully. Contestant account and KYC created.',
-        user: {
-          _id: user._id,
-          name: user.name,
-          username: user.username,
-          email: user.email,
-          phone: user.phone,
-          kycStatus: user.kycStatus
-        }
+        message: 'Contestant registration completed successfully.',
+        ...result
       });
     } catch (err) {
       next(err);
     }
+  }
+
+  // 8. SAVE TOPICS (STUB)
+  async saveTopics(req: Request, res: Response, next: NextFunction): Promise<void> {
+    res.status(200).json({ success: true, message: 'Topics saved successfully.' });
+  }
+
+  // 9. COMPLETE REGISTRATION (STUB)
+  async completeRegistration(req: Request, res: Response, next: NextFunction): Promise<void> {
+    res.status(200).json({ success: true, message: 'Registration completed.' });
   }
 }
 

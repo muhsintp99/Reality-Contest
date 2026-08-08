@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { UserRepository } from '../repositories/UserRepository';
 import { OtpRepository } from '../repositories/OtpRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
@@ -72,6 +73,7 @@ export class AuthService {
       user = await Admin.findOne({
         $or: [
           { email: loginId.trim().toLowerCase() },
+          { username: loginId.trim().toLowerCase() },
           { phone: loginId.trim() }
         ]
       });
@@ -101,7 +103,9 @@ export class AuthService {
     } else {
       if (!password) throw new AppError('Password is required for password sign in.', 400);
 
-      const isMatch = await user.comparePassword(password);
+      const isMatch = typeof user.comparePassword === 'function'
+        ? await user.comparePassword(password)
+        : await bcrypt.compare(password, user.password || '');
       if (!isMatch) {
         // Increment login attempts and lock account if needed
         user.loginAttempts += 1;
@@ -154,7 +158,7 @@ export class AuthService {
     const session = await this.sessionRepo.findByToken(refreshToken);
     if (session) {
       const userId = session.userId.toString();
-      await session.deleteOne();
+      await this.sessionRepo.delete((session as any)._id);
       
       // Invalidate Redis caches
       await redisService.del(`user:profile:${userId}`);
@@ -333,6 +337,176 @@ export class AuthService {
     await this.sessionRepo.deleteAllSessions(userId);
     await redisService.del(`user:profile:${userId}`);
     await redisService.del(`user:sessions:${userId}`);
+  }
+
+  // 9. GOOGLE REGISTER & LOGIN
+  async googleAuth(
+    params: {
+      idToken?: string;
+      googleId?: string;
+      email: string;
+      name?: string;
+      avatar?: string;
+      referralCode?: string;
+    },
+    ip = '127.0.0.1',
+    device = 'Desktop',
+    browser = 'Chrome'
+  ): Promise<any> {
+    let { idToken, googleId, email, name, avatar, referralCode } = params;
+
+    if (!email && !idToken) {
+      throw new AppError('Email address or Google ID Token is required.', 400);
+    }
+
+    // Verify Google ID Token if passed
+    if (idToken) {
+      try {
+        const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`;
+        const response = await fetch(verifyUrl);
+        if (response.ok) {
+          const payload: any = await response.json();
+          if (payload.email) {
+            email = payload.email;
+            name = name || payload.name || payload.given_name || email.split('@')[0];
+            avatar = avatar || payload.picture || '';
+            googleId = googleId || payload.sub;
+          }
+        }
+      } catch (err) {
+        console.warn('Google idToken verification warning:', err);
+      }
+    }
+
+    if (!email) {
+      throw new AppError('Invalid Google credential token or missing email.', 400);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Look up user by googleId or email
+    let user = null;
+    if (googleId) {
+      user = await this.userRepo.findOne({ googleId });
+    }
+    if (!user) {
+      user = await this.userRepo.findByEmail(normalizedEmail);
+    }
+
+    if (user) {
+      if (user.status === 'Banned') throw new ForbiddenError('Account suspended.');
+      if (user.lockUntil && user.lockUntil > Date.now()) {
+        const waitMins = Math.ceil((user.lockUntil - Date.now()) / (60 * 1000));
+        throw new ForbiddenError(`Account locked. Retry in ${waitMins} minute(s).`);
+      }
+
+      if (googleId && !user.googleId) user.googleId = googleId;
+      if (avatar && !user.avatar) user.avatar = avatar;
+      if (!user.isEmailVerified) user.isEmailVerified = true;
+
+      user.loginAttempts = 0;
+      user.status = 'Active';
+      user.lockUntil = undefined;
+      user.loginHistory.push({ ip, device, browser, timestamp: new Date(), status: 'Success' });
+      await user.save();
+    } else {
+      // New user register via Google
+      let baseUsername = (name || normalizedEmail.split('@')[0])
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+      if (baseUsername.length < 3) baseUsername = 'user' + baseUsername;
+
+      let username = baseUsername;
+      let counter = 1;
+      while (await this.userRepo.findByUsername(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+
+      const walletBalance = referralCode ? 100 : 0;
+
+      user = await this.userRepo.create({
+        name: name || normalizedEmail.split('@')[0],
+        username,
+        email: normalizedEmail,
+        googleId: googleId || `google_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        avatar: avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        isEmailVerified: true,
+        isPhoneVerified: false,
+        kycStatus: 'Pending',
+        walletBalance,
+        referralCode: referralCode || '',
+        status: 'Active',
+        role: 'Contestant',
+        country: 'India',
+        loginHistory: [{ ip, device, browser, timestamp: new Date(), status: 'Success' }]
+      });
+    }
+
+    // Generate JWT tokens
+    const accessToken = this.generateAccessToken(user._id.toString(), user.role);
+    const refreshToken = this.generateRefreshToken(user._id.toString());
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    // Store Session in DB
+    await this.sessionRepo.create({
+      userId: user._id,
+      token: refreshToken,
+      device,
+      browser,
+      ip,
+      expiresAt
+    });
+
+    // Cache user profile details in Redis
+    const cacheKey = `user:profile:${user._id}`;
+    await redisService.set(cacheKey, user, 300);
+
+    const sessionCacheKey = `user:sessions:${user._id}`;
+    await redisService.del(sessionCacheKey);
+
+    return { user, accessToken, refreshToken };
+  }
+
+  // 10. GUEST LOGIN
+  async guestLogin(ip = '127.0.0.1', device = 'Desktop', browser = 'Chrome'): Promise<any> {
+    const timestamp = Date.now();
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const guestUsername = `guest_${timestamp.toString().slice(-5)}${randomSuffix}`;
+    const guestEmail = `${guestUsername}@realitycontest.in`;
+
+    const user = await this.userRepo.create({
+      name: `Guest_${randomSuffix}`,
+      username: guestUsername,
+      email: guestEmail,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${guestUsername}`,
+      isEmailVerified: true,
+      isPhoneVerified: false,
+      kycStatus: 'Pending',
+      walletBalance: 50,
+      status: 'Active',
+      role: 'Guest',
+      country: 'India',
+      loginHistory: [{ ip, device, browser, timestamp: new Date(), status: 'Success' }]
+    });
+
+    const accessToken = this.generateAccessToken(user._id.toString(), user.role);
+    const refreshToken = this.generateRefreshToken(user._id.toString());
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.sessionRepo.create({
+      userId: user._id,
+      token: refreshToken,
+      device,
+      browser,
+      ip,
+      expiresAt
+    });
+
+    const cacheKey = `user:profile:${user._id}`;
+    await redisService.set(cacheKey, user, 300);
+
+    return { user, accessToken, refreshToken };
   }
 
   // Helpers

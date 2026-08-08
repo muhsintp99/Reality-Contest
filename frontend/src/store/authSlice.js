@@ -25,6 +25,14 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
+    googleAuthRequest: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    guestLoginRequest: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
     loginSuccess: (state, action) => {
       state.user = action.payload;
       state.isAuthenticated = true;
@@ -245,6 +253,8 @@ const authSlice = createSlice({
 export const {
   updateWalletBalance,
   loginRequest,
+  googleAuthRequest,
+  guestLoginRequest,
   loginSuccess,
   loginFailure,
   registerRequest,

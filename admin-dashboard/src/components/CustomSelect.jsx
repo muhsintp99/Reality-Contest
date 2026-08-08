@@ -30,6 +30,7 @@ export const CustomSelect = ({
   icon: Icon = Filter,
   searchable = false,
   align = 'left',
+  direction = 'down', // 'down' | 'up'
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -84,7 +85,7 @@ export const CustomSelect = ({
       </button>
 
       {isOpen && (
-        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-full w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-brandPrimary/30 rounded-xl shadow-2xl z-[999] overflow-hidden py-1.5 animate-fade-in backdrop-blur-md text-xs space-y-1`}>
+        <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1.5' : 'mt-1.5'} ${align === 'right' ? 'right-0' : 'left-0'} min-w-full w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-brandPrimary/30 rounded-xl shadow-2xl z-[999] overflow-hidden py-1.5 animate-fade-in backdrop-blur-md text-xs space-y-1`}>
           {/* Search Input Bar */}
           {searchable && (
             <div className="relative px-2 pb-1.5 border-b border-slate-100 dark:border-white/10">

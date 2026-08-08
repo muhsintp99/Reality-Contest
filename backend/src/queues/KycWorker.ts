@@ -43,6 +43,8 @@ export const initKycWorker = () => {
     worker.on('failed', (job, err) => {
       logger.error(`[WORKER] [kyc-queue] Job ${job?.id} failed: ${err.message}`);
     });
+
+    logger.info('KYC Worker initialized successfully.');
   } catch (err: any) {
     logger.error(`Failed to init KYC Worker: ${err.message}`);
   }

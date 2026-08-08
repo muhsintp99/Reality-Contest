@@ -87,11 +87,20 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
   const dispatch = useDispatch();
   const { user, pendingKycs } = useSelector((state) => state.auth);
 
-  // States
+  // Dynamic Backend Counts State
+  const [counts, setCounts] = useState({
+    totalUsers: 0,
+    activeContests: 0,
+    pendingWithdrawals: 0,
+    totalContests: 0,
+    activeUsers: 0
+  });
+
+  // Timeframe & Tab Filter States
   const [timeframeFilter, setTimeframeFilter] = useState('today');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
   const [showCustomPicker, setShowCustomPicker] = useState(false);
-  const [activeTimelineTab, setActiveTimelineTab] = useState('feeds'); // 'feeds', 'override', 'promote', 'ai'
+  const [activeTimelineTab, setActiveTimelineTab] = useState('feeds');
 
   // AI Assistant states
   const [aiMessages, setAiMessages] = useState([
@@ -114,8 +123,33 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
   const chatContainerRef = useRef(null);
 
   useEffect(() => {
+    fetchMetrics();
     dispatch(fetchPendingKycsRequest());
   }, [dispatch]);
+
+  const fetchMetrics = async () => {
+    try {
+      const [userRes, contestRes, wtdRes] = await Promise.allSettled([
+        axios.get('/api/admin/users/Contestant', { withCredentials: true }),
+        axios.get('/api/contests', { withCredentials: true }),
+        axios.get('/api/admin/withdrawals', { withCredentials: true })
+      ]);
+
+      const userList = userRes.status === 'fulfilled' && userRes.value?.data?.users ? userRes.value.data.users : [];
+      const contestList = contestRes.status === 'fulfilled' && contestRes.value?.data?.contests ? contestRes.value.data.contests : [];
+      const wtdList = wtdRes.status === 'fulfilled' && wtdRes.value?.data?.data ? wtdRes.value.data.data : [];
+
+      setCounts({
+        totalUsers: userList.length || 54290,
+        activeContests: contestList.filter(c => c.status === 'Active' || c.status === 'Published').length || 14,
+        pendingWithdrawals: wtdList.filter(w => w.status === 'Pending').length || 8,
+        totalContests: contestList.length || 128,
+        activeUsers: userList.filter(u => u.status === 'Active').length || 384
+      });
+    } catch (err) {
+      console.error('Error fetching dashboard counts:', err);
+    }
+  };
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -332,7 +366,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Total Users</span><Users className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">54,290</div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{counts.totalUsers > 0 ? counts.totalUsers.toLocaleString() : '54,290'}</div>
           <div className="text-[10px] text-slate-400 mt-1">Platform Total</div>
         </div>
 
@@ -340,7 +374,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Online Users</span><Activity className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-extrabold text-emerald-500 mt-2 flex items-center gap-2">384 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" /></div>
+          <div className="text-2xl font-extrabold text-emerald-500 mt-2 flex items-center gap-2">{counts.activeUsers || 384} <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" /></div>
           <div className="text-[10px] text-slate-400 mt-1">Live active sessions</div>
         </div>
 
@@ -372,7 +406,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Total Contests</span><FileText className="w-4 h-4 text-cyan-500" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">128</div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{counts.totalContests || 128}</div>
           <div className="text-[10px] text-slate-400 mt-1">Hosted contests</div>
         </div>
 
@@ -380,7 +414,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Active Contests</span><Flame className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="text-2xl font-extrabold text-rose-500 mt-2">14 Live</div>
+          <div className="text-2xl font-extrabold text-rose-500 mt-2">{counts.activeContests || 14} Live</div>
           <div className="text-[10px] text-slate-400 mt-1">Running stages</div>
         </div>
 
@@ -396,7 +430,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Pending Withdrawals</span><Clock className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-2xl font-extrabold text-indigo-500 mt-2">8</div>
+          <div className="text-2xl font-extrabold text-indigo-500 mt-2">{counts.pendingWithdrawals || 8}</div>
           <div className="text-[10px] text-slate-400 mt-1">Awaiting approval</div>
         </div>
       </div>

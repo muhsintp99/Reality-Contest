@@ -7,14 +7,14 @@ import { queueService } from './QueueService';
 import { config } from '../config/appConfig';
 
 export class RegistrationService {
-  // 1. START MOBILE VERIFICATION
-  async startMobileVerification(countryCode: string, phone: string, referralCode?: string): Promise<any> {
-    const formattedPhone = phone.trim();
-    
-    // Check if phone number is already registered in User model
-    const existingUser = await User.findOne({ phone: formattedPhone });
+  // 1. START EMAIL VERIFICATION (Step 1)
+  async startEmailVerification(email: string, referralCode?: string): Promise<any> {
+    const formattedEmail = email.trim().toLowerCase();
+
+    // Check if email address is already registered in User model
+    const existingUser = await User.findOne({ email: formattedEmail });
     if (existingUser) {
-      throw new ConflictError('Mobile number already registered.');
+      throw new ConflictError('Email address is already registered.');
     }
 
     // Generate 6-digit OTP code
@@ -23,32 +23,32 @@ export class RegistrationService {
     const sessionExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     // Create or update registration session
-    let session = await RegistrationSession.findOne({ phone: formattedPhone });
+    let session = await RegistrationSession.findOne({ email: formattedEmail });
     if (session) {
-      session.countryCode = countryCode;
       session.referralCode = referralCode || '';
-      session.otp = otp;
-      session.otpExpiresAt = expiresAt;
+      session.emailOtp = otp;
+      session.emailOtpExpiresAt = expiresAt;
       session.expiresAt = sessionExpiresAt;
-      session.status = 'otp_verification';
+      session.status = 'email_otp_verification';
       await session.save();
     } else {
       session = await RegistrationSession.create({
-        phone: formattedPhone,
-        countryCode,
-        referralCode: referralCode || '',
+        email: formattedEmail,
+        emailVerified: false,
+        emailOtp: otp,
+        emailOtpExpiresAt: expiresAt,
         phoneVerified: false,
-        otp,
-        otpExpiresAt: expiresAt,
-        status: 'otp_verification',
+        referralCode: referralCode || '',
+        status: 'email_otp_verification',
         expiresAt: sessionExpiresAt
       });
     }
 
-    // Queue SMS notification
-    await queueService.addJob('sms-queue', 'send-verify-sms', {
-      phone: formattedPhone,
-      message: `Your contestant registration OTP code is: ${otp}`
+    // Queue Email notification
+    await queueService.addJob('email-queue', 'send-verify-email', {
+      email: formattedEmail,
+      subject: 'Verify your email for Contestant Registration',
+      body: `Your email verification OTP code is: ${otp}`
     });
 
     return {
@@ -57,7 +57,98 @@ export class RegistrationService {
     };
   }
 
-  // 2. VERIFY MOBILE OTP
+  // 2. VERIFY EMAIL OTP (Step 1 Complete)
+  async verifyEmailOtp(sessionId: string, otp: string): Promise<any> {
+    const session = await RegistrationSession.findById(sessionId);
+    if (!session) {
+      throw new NotFoundError('Registration session not found or expired.');
+    }
+
+    if (!session.emailOtp || session.emailOtp !== otp || !session.emailOtpExpiresAt || session.emailOtpExpiresAt < new Date()) {
+      throw new BadRequestError('Invalid or expired Email OTP code.');
+    }
+
+    session.emailVerified = true;
+    session.emailOtp = undefined;
+    session.emailOtpExpiresAt = undefined;
+    session.status = 'mobile_verification';
+    await session.save();
+
+    return {
+      success: true,
+      sessionId: session._id
+    };
+  }
+
+  // 3. RESEND EMAIL OTP
+  async resendEmailOtp(sessionId: string): Promise<any> {
+    const session = await RegistrationSession.findById(sessionId);
+    if (!session || !session.email) {
+      throw new NotFoundError('Registration session not found.');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    session.emailOtp = otp;
+    session.emailOtpExpiresAt = expiresAt;
+    await session.save();
+
+    await queueService.addJob('email-queue', 'send-verify-email', {
+      email: session.email,
+      subject: 'Verify your email for Contestant Registration',
+      body: `Your email verification OTP code is: ${otp}`
+    });
+
+    return {
+      success: true,
+      mockOtp: otp
+    };
+  }
+
+  // 4. START MOBILE VERIFICATION (Step 2)
+  async startMobileVerification(sessionId: string, countryCode: string, phone: string): Promise<any> {
+    const session = await RegistrationSession.findById(sessionId);
+    if (!session) {
+      throw new NotFoundError('Registration session not found.');
+    }
+
+    if (!session.emailVerified) {
+      throw new BadRequestError('Email verification must be completed first.');
+    }
+
+    const formattedPhone = phone.trim();
+
+    // Check if phone number is already registered in User model
+    const existingUser = await User.findOne({ phone: formattedPhone });
+    if (existingUser) {
+      throw new ConflictError('Mobile number is already registered.');
+    }
+
+    // Generate 6-digit OTP code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    session.phone = formattedPhone;
+    session.countryCode = countryCode || '+91';
+    session.otp = otp;
+    session.otpExpiresAt = expiresAt;
+    session.status = 'mobile_otp_verification';
+    await session.save();
+
+    // Queue SMS notification
+    await queueService.addJob('sms-queue', 'send-verify-sms', {
+      phone: formattedPhone,
+      message: `Your contestant registration Mobile OTP code is: ${otp}`
+    });
+
+    return {
+      sessionId: session._id,
+      mockOtp: otp
+    };
+  }
+
+  // 5. VERIFY MOBILE OTP (Step 2 Complete)
   async verifyMobileOtp(sessionId: string, otp: string): Promise<any> {
     const session = await RegistrationSession.findById(sessionId);
     if (!session) {
@@ -65,7 +156,7 @@ export class RegistrationService {
     }
 
     if (!session.otp || session.otp !== otp || !session.otpExpiresAt || session.otpExpiresAt < new Date()) {
-      throw new BadRequestError('Invalid or expired OTP code.');
+      throw new BadRequestError('Invalid or expired Mobile OTP code.');
     }
 
     session.phoneVerified = true;
@@ -76,7 +167,7 @@ export class RegistrationService {
 
     // Sign a temporary registration token
     const registrationToken = jwt.sign(
-      { sessionId: session._id, phone: session.phone },
+      { sessionId: session._id, email: session.email, phone: session.phone },
       config.JWT_ACCESS_SECRET,
       { expiresIn: '1h' }
     );
@@ -88,10 +179,10 @@ export class RegistrationService {
     };
   }
 
-  // 3. RESEND MOBILE OTP
+  // 6. RESEND MOBILE OTP
   async resendMobileOtp(sessionId: string): Promise<any> {
     const session = await RegistrationSession.findById(sessionId);
-    if (!session) {
+    if (!session || !session.phone) {
       throw new NotFoundError('Registration session not found.');
     }
 
@@ -104,7 +195,7 @@ export class RegistrationService {
 
     await queueService.addJob('sms-queue', 'send-verify-sms', {
       phone: session.phone,
-      message: `Your contestant registration OTP code is: ${otp}`
+      message: `Your contestant registration Mobile OTP code is: ${otp}`
     });
 
     return {
@@ -113,14 +204,18 @@ export class RegistrationService {
     };
   }
 
-  // 4. SAVE PROFILE
-  async saveProfile(sessionId: string, profileData: any): Promise<any> {
+  // 7. SAVE PROFILE & COMPLETE REGISTRATION (Step 3) - NO KYC REQUIRED
+  async saveProfileAndComplete(sessionId: string, profileData: any): Promise<any> {
     const session = await RegistrationSession.findById(sessionId);
     if (!session) {
       throw new NotFoundError('Registration session not found.');
     }
 
-    if (!session.phoneVerified) {
+    if (!session.emailVerified) {
+      throw new BadRequestError('Email verification must be completed first.');
+    }
+
+    if (!session.phoneVerified || !session.phone) {
       throw new BadRequestError('Mobile verification must be completed first.');
     }
 
@@ -131,152 +226,103 @@ export class RegistrationService {
     }
 
     // Check email uniqueness
-    const existingEmail = await User.findOne({ email: profileData.email.toLowerCase() });
+    const emailToUse = session.email || profileData.email?.toLowerCase();
+    const existingEmail = await User.findOne({ email: emailToUse });
     if (existingEmail) {
       throw new ConflictError('Email address already registered.');
     }
 
-    session.profileData = profileData;
-    session.status = 'preferred_topics';
-    await session.save();
-
-    return { success: true };
-  }
-
-  // 5. SAVE TOPICS
-  async saveTopics(sessionId: string, favoriteCategories: string[]): Promise<any> {
-    const session = await RegistrationSession.findById(sessionId);
-    if (!session) {
-      throw new NotFoundError('Registration session not found.');
-    }
-
-    session.favoriteCategories = favoriteCategories;
-    session.status = 'kyc_verification';
-    await session.save();
-
-    return { success: true };
-  }
-
-  // 6. SAVE KYC
-  async saveKyc(sessionId: string, kycData: any): Promise<any> {
-    const session = await RegistrationSession.findById(sessionId);
-    if (!session) {
-      throw new NotFoundError('Registration session not found.');
-    }
-
-    session.kycData = kycData;
-    session.status = 'completed';
-    await session.save();
-
-    return { success: true };
-  }
-
-  // 7. COMPLETE REGISTRATION (CREATE ACCOUNT & KYC)
-  async completeRegistration(sessionId: string): Promise<any> {
-    const session = await RegistrationSession.findById(sessionId);
-    if (!session) {
-      throw new NotFoundError('Registration session not found.');
-    }
-
-    if (session.status !== 'completed' || !session.profileData || !session.kycData) {
-      throw new BadRequestError('Registration steps are incomplete.');
-    }
-
-    // Double check email and username uniqueness just before creating account
-    const existingUsername = await User.findOne({ username: session.profileData.username.toLowerCase() });
-    if (existingUsername) {
-      throw new ConflictError('Username is already taken.');
-    }
-
-    const existingEmail = await User.findOne({ email: session.profileData.email.toLowerCase() });
-    if (existingEmail) {
-      throw new ConflictError('Email address already registered.');
-    }
-
+    // Check phone uniqueness
     const existingPhone = await User.findOne({ phone: session.phone });
     if (existingPhone) {
       throw new ConflictError('Mobile number already registered.');
     }
 
-    const refCode = session.profileData.referralCode || session.referralCode || '';
+    const refCode = profileData.referralCode || session.referralCode || '';
     const walletBalance = refCode ? 100 : 0;
 
-    // Create User account (Mongoose pre-save hashes password automatically)
+    // Create User account directly with Pending KYC status (Mongoose pre-save hashes password automatically)
     const user = await User.create({
-      name: session.profileData.name,
-      username: session.profileData.username,
-      email: session.profileData.email,
+      name: profileData.name,
+      username: profileData.username.toLowerCase(),
+      email: emailToUse,
       phone: session.phone,
-      password: session.profileData.password,
+      password: profileData.password,
       role: 'Contestant',
-      avatar: session.profileData.avatar,
-      isEmailVerified: false,
+      avatar: profileData.avatar,
+      isEmailVerified: true,
       isPhoneVerified: true,
-      kycStatus: 'Under Review',
+      kycStatus: 'Pending', // Default status: Pending (KYC done later via Wallet)
       status: 'Active',
-      dob: session.profileData.dob,
-      gender: session.profileData.gender,
-      state: session.profileData.state,
-      district: session.profileData.district,
-      city: session.profileData.city,
-      preferredLanguage: session.profileData.preferredLanguage,
-      pincode: session.profileData.pincode,
+      dob: profileData.dob,
+      gender: profileData.gender || 'Male',
+      state: profileData.state || '',
+      district: profileData.district || '',
+      city: profileData.city || '',
+      preferredLanguage: profileData.preferredLanguage || 'English',
+      pincode: profileData.pincode || '',
       referralCode: refCode,
-      occupation: session.profileData.occupation,
-      education: session.profileData.education,
-      employmentStatus: session.profileData.employmentStatus,
-      notificationPermission: session.profileData.notificationPermission,
-      locationPermission: session.profileData.locationPermission,
-      favoriteCategories: session.favoriteCategories,
+      occupation: profileData.occupation || '',
+      education: profileData.education || '',
+      employmentStatus: profileData.employmentStatus || 'Student',
+      favoriteCategories: profileData.favoriteCategories || [],
       walletBalance
     });
 
-    // Create KYC Record
-    const simulatedLiveness = Math.floor(75 + Math.random() * 23);
-    const aiVerdict = simulatedLiveness >= 80 ? 'PASSED' : 'REVIEW_REQUIRED';
-
-    const kyc = await KYC.create({
-      userId: user._id,
-      documentType: session.kycData.documentType,
-      documentNumber: session.kycData.documentNumber,
-      documentFrontUrl: session.kycData.documentFrontUrl,
-      documentBackUrl: session.kycData.documentBackUrl || '',
-      selfieUrl: session.kycData.selfieUrl,
-      addressProofUrl: session.kycData.addressProofUrl || '',
-      declarationAccepted: session.kycData.declarationAccepted,
-      livenessScore: simulatedLiveness,
-      aiMatchResult: aiVerdict,
-      status: 'Under Review'
-    });
-
-    // Find all administrative/manager staff users and create unread notifications for them
-    try {
-      const { Admin } = require('../models/Admin');
-      const { Notification } = require('../models/Notification');
-      const admins = await Admin.find({ role: { $in: ['Super Admin', 'Admin', 'Contest Manager', 'KYC Officer'] } });
-      const notificationPromises = admins.map((adm: any) => {
-        return Notification.create({
-          userId: adm._id,
-          title: 'New Contestant Registered',
-          message: `Contestant ${user.name} (@${user.username}) has registered. KYC documents are pending review.`,
-          read: false
-        });
-      });
-      await Promise.all(notificationPromises);
-    } catch (notifErr) {
-      console.error('Failed to seed admin notifications for new contestant:', notifErr);
-    }
-
-    // Delete session
+    // Delete registration session
     await session.deleteOne();
 
-    // Trigger async KYC validation job
-    await queueService.addJob('kyc-queue', 'process-kyc-documents', {
-      userId: user._id.toString(),
-      kycId: kyc._id.toString()
-    });
+    // Create access token & refresh token for auto-login
+    const accessToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      config.JWT_ACCESS_SECRET,
+      { expiresIn: config.ACCESS_TOKEN_EXPIRY as any }
+    );
+    const refreshToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      config.JWT_REFRESH_SECRET,
+      { expiresIn: config.REFRESH_TOKEN_EXPIRY as any }
+    );
 
-    return user;
+    return {
+      user: {
+        _id: user._id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        avatar: user.avatar,
+        kycStatus: user.kycStatus,
+        walletBalance: user.walletBalance,
+        isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        dob: user.dob
+      },
+      accessToken,
+      refreshToken
+    };
+  }
+
+  // Backward compatibility stubs for old routes
+  async saveProfile(sessionId: string, profileData: any): Promise<any> {
+    return this.saveProfileAndComplete(sessionId, profileData);
+  }
+
+  async saveTopics(sessionId: string, favoriteCategories: string[]): Promise<any> {
+    return { success: true };
+  }
+
+  async saveKyc(sessionId: string, kycData: any): Promise<any> {
+    return { success: true };
+  }
+
+  async completeRegistration(sessionId: string): Promise<any> {
+    const session = await RegistrationSession.findById(sessionId);
+    if (!session || !session.profileData) {
+      throw new NotFoundError('Registration session not found or profile missing.');
+    }
+    return this.saveProfileAndComplete(sessionId, session.profileData);
   }
 }
 

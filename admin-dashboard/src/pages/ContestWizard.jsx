@@ -9,7 +9,7 @@ import { MultiSelect } from '../components/MultiSelect';
 import { CustomSelect } from '../components/CustomSelect';
 import { FileUploadPicker } from '../components/FileUploadPicker';
 import { RichTextEditor } from '../components/RichTextEditor';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
 const getLocalDateString = (date) => {
   if (!date) return '';
@@ -56,8 +56,12 @@ const combineDateTime = (dateStr, timeStr) => {
 export const ContestWizard = () => {
   const { contestId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showAlert, showSnackbar } = useAlert();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
+
+  const queryParams = new URLSearchParams(location.search);
+  const isDailyType = queryParams.get('type') === 'DailyContest';
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -65,19 +69,19 @@ export const ContestWizard = () => {
 
   const formik = useFormik({
     initialValues: {
-      title: '',
-      description: '',
+      title: isDailyType ? 'Daily Speed Quiz Rush 2026' : '',
+      description: isDailyType ? 'Automated 24-hour daily quiz battle with live reset countdown.' : '',
       rules: '1. Complete all quiz stages within timer countdown.\n2. Negative marking -2 for wrong attempts.\n3. Top scorers qualify for grand prize pool.',
-      prize: '100000',
-      fee: '499',
+      prize: isDailyType ? '10000' : '100000',
+      fee: isDailyType ? '0' : '499',
       maxPart: '500',
-      timerLimit: '30',
+      timerLimit: isDailyType ? '3' : '30',
       difficulty: 'Medium',
       questionsCount: '20',
       imageUrl: '',
       videoUrl: '',
       fileAttachmentUrl: '',
-      selectedCategories: [],
+      selectedCategories: isDailyType ? ['Daily Contest'] : [],
       status: 'Registration Open',
       regStartDate: getCurrentDateString(),
       regStartTime: getCurrentTimeString(),
@@ -127,13 +131,14 @@ export const ContestWizard = () => {
         registrationEnd: combineDateTime(values.regEndDate, values.regEndTime),
         startDate: combineDateTime(values.tStartDate, values.tStartTime),
         endDate: combineDateTime(values.tEndDate, values.tEndTime),
-        categories: values.selectedCategories,
-        status: values.status
+        categories: isDailyType ? ['Daily Contest', ...values.selectedCategories] : values.selectedCategories,
+        status: values.status,
+        type: isDailyType ? 'Daily Contest' : 'Standard'
       };
 
       if (isMockMode) {
-        showSnackbar(contestId ? 'Mock contest updated successfully.' : 'Mock contest created successfully.', 'success');
-        navigate('/admin-dashboard/contests');
+        showSnackbar(contestId ? 'Mock contest updated successfully.' : (isDailyType ? 'Mock Daily Contest created successfully.' : 'Mock contest created successfully.'), 'success');
+        navigate(isDailyType ? '/admin-dashboard/daily-contest' : '/admin-dashboard/contests');
         return;
       }
 
@@ -142,7 +147,22 @@ export const ContestWizard = () => {
           const res = await axios.put(`/api/contests/${contestId}`, data, { withCredentials: true });
           if (res.data.success) {
             showSnackbar('Contest updated successfully.', 'success');
-            navigate('/admin-dashboard/contests');
+            navigate(isDailyType ? '/admin-dashboard/daily-contest' : '/admin-dashboard/contests');
+          }
+        } else if (isDailyType) {
+          const res = await axios.post('/api/admin/daily-contests', {
+            title: data.title,
+            category: data.categories[0] || 'Speed Battle',
+            entryFee: data.entryFee,
+            prizePool: data.prizePool,
+            timerLimit: `${data.timerLimit} mins`,
+            questionsCount: data.questionsCount,
+            description: data.description,
+            status: data.status
+          }, { withCredentials: true });
+          if (res.data.success) {
+            showSnackbar('Daily Contest created successfully!', 'success');
+            navigate('/admin-dashboard/daily-contest');
           }
         } else {
           const res = await axios.post('/api/contests', data, { withCredentials: true });

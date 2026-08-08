@@ -3,8 +3,8 @@ module.exports = {
     {
       name: 'reality-contest-backend',
       script: './dist/server.js',
-      instances: 'max', // Scales automatically to all available cores
-      exec_mode: 'cluster', // Enables clustering mode
+      instances: 'max',
+      exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
         PORT: 10000,

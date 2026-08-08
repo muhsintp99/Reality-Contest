@@ -160,15 +160,6 @@ export const UsersDirectory = ({ type = 'Contestant' }) => {
           .filter(u => u.role !== 'Super Admin');
         setUsers(filteredList);
         setCurrentPage(1);
-
-        // Auto-clear notifications only after successful load
-        if (roleName === 'Contestant') {
-          markModuleAsRead('Contestant');
-        } else if (roleName === 'Judge') {
-          markModuleAsRead('Judge');
-        } else if (roleName === 'Sponsor') {
-          markModuleAsRead('Sponsor');
-        }
       }
     } catch (err) {
       console.error('Failed to fetch users:', err);
@@ -291,18 +282,14 @@ export const UsersDirectory = ({ type = 'Contestant' }) => {
         </div>
         <button
           onClick={() => {
-            if (activeTab === 'Contestant') {
-              navigate('/admin-dashboard/contestants/create');
-            } else {
-              createFormik.resetForm();
-              createFormik.setFieldValue('role', activeTab);
-              setShowCreateModal(true);
-            }
+            createFormik.resetForm();
+            createFormik.setFieldValue('role', activeTab);
+            setShowCreateModal(true);
           }}
-          className="px-4 py-2.5 bg-brandPrimary text-white rounded-xl text-xs font-semibold hover:bg-brandPrimary/90 transition-colors flex items-center gap-2"
+          className="flex items-center gap-2 px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 transition-all shadow-lg cursor-pointer shrink-0"
         >
           <UserPlus className="w-4 h-4" />
-          <span>Create {getPageHeaderLabel()} Account</span>
+          <span>Add New {getPageHeaderLabel()}</span>
         </button>
       </div>
 

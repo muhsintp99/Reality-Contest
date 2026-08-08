@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { updateWalletBalance } from '../store/authSlice';
 import { Trophy, Milestone, Lock, Unlock, HelpCircle, ShieldCheck, Check, UploadCloud, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import { QuizEngine } from './QuizEngine';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '../components/common/Badges';
+import { GuestViewBanner, GuestRestrictionModal } from '../components/common/GuestViewMode';
 
 export const ParticipantContestPortal = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const [contests, setContests] = useState([]);
   const [selectedContest, setSelectedContest] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [stages, setStages] = useState([]);
   const [stageUnlockMap, setStageUnlockMap] = useState({});
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [guestModalAction, setGuestModalAction] = useState('join this contest');
 
   // Active Stage session (to load QuizEngine)
   const [activeAttemptStage, setActiveAttemptStage] = useState(null);
@@ -37,6 +42,11 @@ export const ParticipantContestPortal = () => {
   }, []);
 
   const handleRegister = async (c) => {
+    if (user?.role === 'Guest') {
+      setGuestModalAction('join this tournament contest');
+      setShowGuestModal(true);
+      return;
+    }
     if (user?.kycStatus !== 'Approved') {
       alert('You cannot register for contests before your KYC is approved.');
       return;
@@ -95,6 +105,11 @@ export const ParticipantContestPortal = () => {
   };
 
   const handleEnterStage = (stage) => {
+    if (user?.role === 'Guest') {
+      setGuestModalAction('enter this audition stage');
+      setShowGuestModal(true);
+      return;
+    }
     if (user?.kycStatus !== 'Approved') {
       alert('You cannot enter audition stages before your KYC is approved.');
       return;
@@ -147,6 +162,12 @@ export const ParticipantContestPortal = () => {
 
   return (
     <div className="space-y-6 text-left pb-10">
+      {user?.role === 'Guest' && <GuestViewBanner />}
+      <GuestRestrictionModal
+        isOpen={showGuestModal}
+        onClose={() => setShowGuestModal(false)}
+        actionName={guestModalAction}
+      />
       
       <AnimatePresence mode="wait">
         {!selectedContest ? (
@@ -158,9 +179,21 @@ export const ParticipantContestPortal = () => {
             transition={{ duration: 0.3 }}
             className="space-y-6"
           >
-            <div>
-              <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight leading-tight">Tournaments Portal</h2>
-              <p className="text-xs text-slate-400 dark:text-white/40 mt-1">Register for active contests, review stage rules, and monitor progression.</p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight leading-tight">Tournaments & Contests Portal</h2>
+                <p className="text-xs text-slate-400 dark:text-white/40 mt-1">Register for active contests, review stage rules, and monitor progression.</p>
+              </div>
+
+              {/* Banner link to separate Daily Contests Page */}
+              <button
+                onClick={() => navigate('/daily-contests')}
+                className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 rounded-2xl text-xs font-extrabold shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <Clock className="w-4 h-4" />
+                <span>Open Daily Contests Arena ⚡</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
 
             {user?.kycStatus !== 'Approved' && (

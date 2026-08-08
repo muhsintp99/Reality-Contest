@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Upload, X, FileText, Image as ImageIcon, Video, CheckCircle } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, Video, CheckCircle, Loader2 } from 'lucide-react';
+import axios from 'axios';
 
 export const FileUploadPicker = ({ 
   label, 
   accept = "image/*", 
   value, 
   onChange, 
-  type = "image" // "image", "video", "file"
+  type = "image", // "image", "video", "file"
+  folder = "general" // e.g. "question", "contest", "daily-contest", "category", "avatar"
 }) => {
   const [fileName, setFileName] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -18,13 +21,43 @@ export const FileUploadPicker = ({
     }
   };
 
-  const processFile = (file) => {
+  const processFile = async (file) => {
     setFileName(file.name);
+    setIsUploading(true);
+
+    const oldUrl = value;
+
+    // Instant Base64 preview fallback
     const reader = new FileReader();
     reader.onloadend = () => {
-      onChange(reader.result); // Base64 data URL for instant preview & submission
+      if (!value) onChange(reader.result);
     };
     reader.readAsDataURL(file);
+
+    // Upload to server under target folder public/uploads/<folder>/<filename>
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (oldUrl && typeof oldUrl === 'string' && oldUrl.includes('/uploads/')) {
+        formData.append('oldFileUrl', oldUrl);
+      }
+
+      const targetFolder = (folder || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const isReplacement = Boolean(oldUrl && typeof oldUrl === 'string' && oldUrl.includes('/uploads/'));
+      const endpoint = isReplacement ? `/api/upload/${targetFolder}` : `/api/upload/${targetFolder}`;
+
+      const res = isReplacement 
+        ? await axios.put(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true })
+        : await axios.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true });
+
+      if (res.data && res.data.fileUrl) {
+        onChange(res.data.fileUrl);
+      }
+    } catch (err) {
+      console.warn('Server upload fallback to base64 preview:', err);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDragOver = (e) => {
@@ -44,7 +77,17 @@ export const FileUploadPicker = ({
     }
   };
 
-  const clearFile = () => {
+  const clearFile = async () => {
+    if (value && typeof value === 'string' && value.includes('/uploads/')) {
+      try {
+        await axios.delete('/api/upload', {
+          data: { fileUrl: value },
+          withCredentials: true
+        });
+      } catch (err) {
+        console.warn('Could not delete file from server:', err);
+      }
+    }
     setFileName('');
     onChange('');
   };
@@ -72,9 +115,15 @@ export const FileUploadPicker = ({
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-800 dark:text-white truncate">{fileName || 'Uploaded Document'}</p>
                 <span className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" /> Ready for submission
+                  <CheckCircle className="w-3 h-3" /> Saved in public/uploads/{folder}/
                 </span>
               </div>
+            </div>
+          )}
+
+          {isUploading && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center text-white text-xs gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" /> Uploading to public/uploads/{folder}/...
             </div>
           )}
 
@@ -82,7 +131,7 @@ export const FileUploadPicker = ({
           <button
             type="button"
             onClick={clearFile}
-            className="absolute top-4 right-4 p-1.5 bg-black/60 hover:bg-rose-600 text-white rounded-full transition-all shadow-md"
+            className="absolute top-4 right-4 p-1.5 bg-black/60 hover:bg-rose-600 text-white rounded-full transition-all shadow-md cursor-pointer z-20"
             title="Remove File"
           >
             <X className="w-4 h-4" />
@@ -108,15 +157,21 @@ export const FileUploadPicker = ({
           />
           <div className="flex flex-col items-center gap-1.5 py-2">
             <div className="p-2.5 bg-brandPrimary/10 rounded-xl text-brandPrimary">
-              {type === 'image' && <ImageIcon className="w-5 h-5" />}
-              {type === 'video' && <Video className="w-5 h-5" />}
-              {type === 'file' && <Upload className="w-5 h-5" />}
+              {isUploading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  {type === 'image' && <ImageIcon className="w-5 h-5" />}
+                  {type === 'video' && <Video className="w-5 h-5" />}
+                  {type === 'file' && <Upload className="w-5 h-5" />}
+                </>
+              )}
             </div>
             <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              Drag & drop or <span className="text-brandPrimary underline">Browse File</span>
+              {isUploading ? `Uploading to public/uploads/${folder}/...` : <>Drag & drop or <span className="text-brandPrimary underline">Browse File</span></>}
             </p>
             <p className="text-[10px] text-slate-400">
-              Supports {accept.replaceAll('/*', '')} up to 25MB
+              Saves to <code className="font-mono text-amber-500">public/uploads/{folder}/</code>
             </p>
           </div>
         </div>

@@ -11,6 +11,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ParticipantContestPortal } from './pages/ParticipantContestPortal';
+import { DailyContestPortal } from './pages/DailyContestPortal';
 import { WalletDashboard } from './pages/WalletDashboard';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { RewardsBadgeCenter } from './pages/RewardsBadgeCenter';
@@ -48,32 +49,6 @@ const ProtectedMemberRoute = ({ allowedRoles, children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const adminRoles = [
-    'Super Admin',
-    'Admin',
-    'Contest Manager',
-    'Question Manager',
-    'Finance Manager',
-    'Support Manager',
-    'Support Executive',
-    'Marketing Manager',
-    'Content Moderator',
-    'KYC Officer',
-    'Analytics Manager',
-    'Sponsor'
-  ];
-  // Auto-redirect administrative accounts to the dashboard port
-  if (adminRoles.includes(user?.role)) {
-    return (
-      <div className="min-h-screen bg-[#080b12] text-white flex flex-col justify-center items-center p-6 text-center">
-        <div className="max-w-md w-full glassmorphism p-8 rounded-2xl border border-white/10 space-y-6">
-          <h3 className="text-xl font-bold font-poppins text-white">Redirecting to Admin Dashboard...</h3>
-          <p className="text-xs text-white/50">You are logged in as an administrator. Redirecting you to the Admin Dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
     return <AccessDeniedView />;
   }
@@ -95,28 +70,6 @@ const AppContent = () => {
       dispatch(loadCurrentUserRequest());
     }
   }, [isMockMode, dispatch]);
-
-  // Handle auto-redirection of Admin/Super Admin users
-  useEffect(() => {
-    const adminRoles = [
-      'Super Admin',
-      'Admin',
-      'Contest Manager',
-      'Question Manager',
-      'Finance Manager',
-      'Support Manager',
-      'Support Executive',
-      'Marketing Manager',
-      'Content Moderator',
-      'KYC Officer',
-      'Analytics Manager',
-      'Sponsor'
-    ];
-    if (isAuthenticated && user?.role && adminRoles.includes(user.role)) {
-      const adminPort = String(Number(window.location.port || '10001') + 1);
-      window.location.href = window.location.protocol + '//' + window.location.hostname + ':' + adminPort;
-    }
-  }, [isAuthenticated, user]);
 
   // Sync activeView state with the URL path
   useEffect(() => {
@@ -173,19 +126,25 @@ const AppContent = () => {
             <Routes>
               {/* Contestant Routes */}
               <Route path="/" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant']}>
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
                   <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
                 </ProtectedMemberRoute>
               } />
               
               <Route path="/contests" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant']}>
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
                   <ParticipantContestPortal />
                 </ProtectedMemberRoute>
               } />
 
+              <Route path="/daily-contests" element={
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
+                  <DailyContestPortal />
+                </ProtectedMemberRoute>
+              } />
+
               <Route path="/rewards" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant']}>
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
                   <RewardsBadgeCenter />
                 </ProtectedMemberRoute>
               } />
@@ -206,25 +165,25 @@ const AppContent = () => {
 
               {/* Shared Member Routes */}
               <Route path="/wallet" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor']}>
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                   <WalletDashboard />
                 </ProtectedMemberRoute>
               } />
 
               <Route path="/notifications" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor']}>
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                   <NotificationsPage />
                 </ProtectedMemberRoute>
               } />
 
               <Route path="/settings" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor']}>
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                   <SettingsPage />
                 </ProtectedMemberRoute>
               } />
 
               <Route path="/profile" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor']}>
+                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                   <SettingsPage />
                 </ProtectedMemberRoute>
               } />

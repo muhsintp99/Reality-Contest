@@ -29,6 +29,14 @@ export async function seedDatabase() {
       logger.info(`Cleaned up stale cross-collection data: deleted ${deletedAdminsFromUsers.deletedCount} admins from users, and ${deletedUsersFromAdmins.deletedCount} users from admins.`);
     }
 
+    // Clean up null/empty phone values from DB to prevent index conflicts
+    try {
+      await User.updateMany({ $or: [{ phone: null }, { phone: '' }] }, { $unset: { phone: 1 } });
+      await User.collection.dropIndex('phone_1');
+    } catch (e) {}
+    try { await User.collection.dropIndex('phone_1_status_1'); } catch (e) {}
+    try { await User.syncIndexes(); } catch (e) {}
+
     // Invalidate stale Redis profiles and sessions cache
     await redisService.invalidatePattern('user:*');
     logger.info('Stale Redis session caches invalidated.');

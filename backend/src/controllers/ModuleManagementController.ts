@@ -56,6 +56,13 @@ let fraudLogs = [
   { id: 'FRD-801', user: 'Rohan Mehta (USR-103)', riskScore: '96/100', trigger: 'Multiple Devices (4 IMEIs) & VPN Proxy', location: 'Mumbai, IN', status: 'Active' }
 ];
 
+let dailyContests = [
+  { id: 'DLC-101', _id: 'DLC-101', title: 'Daily Speed Quiz Rush 2026', category: 'Speed Battle', entryFee: 0, prizePool: 10000, participants: 1420, resetTimer: '14h 22m 10s', timerLimit: '3 mins', questionsCount: 20, status: 'Active', autoReset: true },
+  { id: 'DLC-102', _id: 'DLC-102', title: 'Daily Logic & Deduction Matrix', category: 'Logic & Deduction', entryFee: 50, prizePool: 25000, participants: 850, resetTimer: '14h 22m 10s', timerLimit: '5 mins', questionsCount: 15, status: 'Active', autoReset: true },
+  { id: 'DLC-103', _id: 'DLC-103', title: 'Daily Reaction Tapper 24h', category: 'Reaction Reflex', entryFee: 0, prizePool: 15000, participants: 1980, resetTimer: '14h 22m 10s', timerLimit: '2 mins', questionsCount: 10, status: 'Active', autoReset: true },
+  { id: 'DLC-104', _id: 'DLC-104', title: 'Daily Trivia Showdown', category: 'Trivia Rush', entryFee: 20, prizePool: 12000, participants: 640, resetTimer: '14h 22m 10s', timerLimit: '4 mins', questionsCount: 15, status: 'Active', autoReset: true }
+];
+
 export class ModuleManagementController {
   // Generic helper for standard REST endpoints
   private handleList(store: any[], req: Request, res: Response): Response {
@@ -306,6 +313,45 @@ export class ModuleManagementController {
 
   // Fraud Logs CRUD
   listFraudLogs = (req: Request, res: Response): Response => this.handleList(fraudLogs, req, res);
+
+  // Daily Contests CRUD
+  listDailyContests = (req: Request, res: Response): Response => this.handleList(dailyContests, req, res);
+  createDailyContest = (req: Request, res: Response): Response => {
+    const newItem = {
+      id: `DLC-${Date.now()}`,
+      _id: `DLC-${Date.now()}`,
+      ...req.body,
+      participants: 0,
+      resetTimer: '24h 00m 00s',
+      status: req.body.status || 'Active'
+    };
+    dailyContests.unshift(newItem);
+    return res.status(201).json({ success: true, data: newItem });
+  };
+  updateDailyContest = (req: Request, res: Response): Response => {
+    const { id } = req.params;
+    const index = dailyContests.findIndex(i => i.id === id || i._id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Daily contest not found' });
+    }
+    dailyContests[index] = { ...dailyContests[index], ...req.body };
+    return res.json({ success: true, data: dailyContests[index] });
+  };
+  deleteDailyContest = (req: Request, res: Response): Response => {
+    const { id } = req.params;
+    dailyContests = dailyContests.filter(i => i.id !== id && i._id !== id);
+    return res.json({ success: true, message: 'Daily contest deleted successfully' });
+  };
+  resetDailyContest = (req: Request, res: Response): Response => {
+    const { id } = req.params;
+    const item = dailyContests.find(i => i.id === id || i._id === id);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Daily contest not found' });
+    }
+    item.resetTimer = '24h 00m 00s';
+    item.participants = 0;
+    return res.json({ success: true, message: 'Daily contest timer and standings reset successfully', data: item });
+  };
 }
 
 export const moduleManagementController = new ModuleManagementController();

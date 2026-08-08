@@ -1,8 +1,12 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IRegistrationSession extends Document {
-  phone: string;
-  countryCode: string;
+  email?: string;
+  emailVerified: boolean;
+  emailOtp?: string;
+  emailOtpExpiresAt?: Date;
+  phone?: string;
+  countryCode?: string;
   referralCode?: string;
   phoneVerified: boolean;
   otp?: string;
@@ -10,15 +14,19 @@ export interface IRegistrationSession extends Document {
   profileData?: any;
   favoriteCategories?: string[];
   kycData?: any;
-  status: 'mobile_verification' | 'otp_verification' | 'profile_creation' | 'preferred_topics' | 'kyc_verification' | 'completed';
+  status: 'email_verification' | 'email_otp_verification' | 'mobile_verification' | 'mobile_otp_verification' | 'profile_creation' | 'completed';
   createdAt: Date;
   expiresAt: Date;
 }
 
 const registrationSessionSchema = new Schema<IRegistrationSession>(
   {
-    phone: { type: String, required: true, unique: true, index: true },
-    countryCode: { type: String, required: true },
+    email: { type: String, trim: true, lowercase: true, index: true },
+    emailVerified: { type: Boolean, default: false },
+    emailOtp: { type: String },
+    emailOtpExpiresAt: { type: Date },
+    phone: { type: String, trim: true, index: true },
+    countryCode: { type: String, default: '+91' },
     referralCode: { type: String, default: '' },
     phoneVerified: { type: Boolean, default: false },
     otp: { type: String },
@@ -28,8 +36,8 @@ const registrationSessionSchema = new Schema<IRegistrationSession>(
     kycData: { type: Schema.Types.Mixed, default: null },
     status: {
       type: String,
-      enum: ['mobile_verification', 'otp_verification', 'profile_creation', 'preferred_topics', 'kyc_verification', 'completed'],
-      default: 'mobile_verification'
+      enum: ['email_verification', 'email_otp_verification', 'mobile_verification', 'mobile_otp_verification', 'profile_creation', 'completed'],
+      default: 'email_verification'
     },
     expiresAt: { type: Date, required: true }
   },

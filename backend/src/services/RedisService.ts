@@ -16,41 +16,65 @@ class RedisService {
   private connect(): Promise<boolean> {
     return new Promise((resolve) => {
       try {
-        this.client = new Redis(config.REDIS_URL, {
+        let redisHost = '127.0.0.1';
+        let redisPort = 6379;
+        let redisPassword: string | undefined = undefined;
+
+        try {
+          const parsed = new URL(config.REDIS_URL);
+          redisHost = parsed.hostname === 'localhost' ? '127.0.0.1' : (parsed.hostname || '127.0.0.1');
+          redisPort = parsed.port ? parseInt(parsed.port, 10) : 6379;
+          if (parsed.password) redisPassword = decodeURIComponent(parsed.password);
+        } catch {
+          // fallback to defaults
+        }
+
+        this.client = new Redis({
+          host: redisHost,
+          port: redisPort,
+          password: redisPassword,
+          family: 4, // Force IPv4 to prevent Windows IPv6 (::1) lookup delay
           maxRetriesPerRequest: null, // Required by BullMQ
-          connectTimeout: 2000,       // Connection timeout (2s to avoid blocking server startup)
+          connectTimeout: 5000,
           retryStrategy: (times) => {
-            // Retrying connection up to a maximum interval of 30 seconds
-            return Math.min(times * 2000, 30000);
+            return Math.min(times * 500, 3000);
           }
         });
 
+        let resolved = false;
+
         const timeout = setTimeout(() => {
-          if (!this.isConnected && !this.errorLogged) {
-            logger.info('Redis connection timed out. Running in fallback in-memory mode.');
-            this.errorLogged = true;
+          if (!resolved) {
+            resolved = true;
+            if (!this.isConnected && !this.errorLogged) {
+              logger.info('Redis connection timed out. Running in fallback in-memory mode.');
+              this.errorLogged = true;
+            }
+            resolve(false);
           }
-          resolve(false);
-        }, 2500);
+        }, 10000);
 
         this.client.on('connect', () => {
-          clearTimeout(timeout);
           this.isConnected = true;
           this.errorLogged = false;
           logger.info('Redis client connected successfully.');
-          resolve(true);
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            resolve(true);
+          }
+        });
+
+        this.client.on('ready', () => {
+          this.isConnected = true;
         });
 
         this.client.on('error', (err) => {
-          clearTimeout(timeout);
           this.isConnected = false;
-          
           if (!this.errorLogged) {
-            logger.info(`Redis is offline: ${err.message}. Running in fallback in-memory mode.`);
+            logger.info(`Redis connection notice: ${err.message}`);
             this.errorLogged = true;
           }
-          
-          resolve(false);
         });
       } catch (error: any) {
         this.isConnected = false;

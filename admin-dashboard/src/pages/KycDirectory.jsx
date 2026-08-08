@@ -90,7 +90,6 @@ export const KycDirectory = () => {
       const res = await axios.get(`/api/kyc/pending?status=${statusFilter}`, { withCredentials: true });
       if (res.data.success) {
         setPendingKycs(res.data.kycs || []);
-        markModuleAsRead('KYC');
       }
     } catch (err) {
       console.error('Failed to fetch pending KYCs:', err);

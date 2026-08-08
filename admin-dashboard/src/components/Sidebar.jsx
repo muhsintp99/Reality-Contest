@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Trophy, Crown, HelpCircle, ClipboardList,
@@ -6,7 +6,7 @@ import {
   Image, Bell, Share2, BarChart3, FileText, Megaphone,
   Ticket, ShieldAlert, Lock, TrendingUp, Settings, Search, X, UserCheck, Building, Shield,
   History, Smartphone, RefreshCw, ChevronDown, ChevronRight, Calendar, Sparkles, Vote, DollarSign,
-  BookOpen, Newspaper, Info, Video, Gift, Plus, Layers
+  BookOpen, Newspaper, Info, Video, Gift, Plus, Layers, Clock
 } from 'lucide-react';
 import { HakaLogo } from './HakaLogo';
 
@@ -14,9 +14,10 @@ const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'user-management', label: 'User Management', icon: Users, hasSub: true },
   { id: 'contests', label: 'Contest Management', icon: Trophy },
+  { id: 'daily-contest', label: 'Daily Contest Desk', icon: Clock },
   { id: 'categories', label: 'Category Management', icon: Layers },
   { id: 'grand-contest', label: 'Grand Contest', icon: Crown },
-  { id: 'question-bank', label: 'Question Bank', icon: HelpCircle },
+  { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, hasSub: true },
   { id: 'surveys', label: 'Survey Management', icon: ClipboardList },
   { id: 'tasks', label: 'Task Management', icon: CheckSquare },
   { id: 'challenges', label: 'Challenge Management', icon: Gamepad2 },
@@ -46,6 +47,12 @@ const USER_MGMT_SUBITEMS = [
   { id: 'user-management/login-history', label: 'Login History', icon: RefreshCw },
   { id: 'user-management/device-details', label: 'Device Details', icon: Smartphone },
   { id: 'user-management/referral-details', label: 'Referral Details', icon: Share2 }
+];
+
+const QUESTION_BANK_SUBITEMS = [
+  { id: 'question-bank/pool', label: 'Question Pool', icon: Layers },
+  { id: 'question-bank/import', label: 'Bulk Excel Import', icon: FileText },
+  { id: 'question-bank/analytics', label: 'Question Analytics', icon: BarChart3 }
 ];
 
 const BANNER_MGMT_SUBITEMS = [
@@ -109,6 +116,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   const [hoveredItem, setHoveredItem] = useState(null);
   const [tooltipY, setTooltipY] = useState(0);
   const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(true);
+  const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
   const [isBannerMgmtOpen, setIsBannerMgmtOpen] = useState(false);
   const [isCmsOpen, setIsCmsOpen] = useState(false);
   const [isAdsOpen, setIsAdsOpen] = useState(false);
@@ -122,102 +130,81 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     const handleScroll = () => setHoveredItem(null);
     window.addEventListener('scroll', handleScroll, { passive: true });
 
-    const scrollContainers = document.querySelectorAll('.overflow-y-auto, .overflow-y-scroll');
-    scrollContainers.forEach(container => {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-    });
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      scrollContainers.forEach(container => {
-        container.removeEventListener('scroll', handleScroll);
-      });
     };
   }, [hoveredItem]);
 
-  // Dynamic role-based menu items permission filter
-  let allowedIds = MENU_ITEMS.map(i => i.id);
+  // Dynamic role-based menu items permission filter (Memoized to prevent render violations)
+  const filteredMenu = useMemo(() => {
+    let allowedIds = MENU_ITEMS.map(i => i.id);
 
-  if (role === 'Contest Manager') {
-    allowedIds = ['dashboard', 'contests', 'categories', 'grand-contest', 'question-bank', 'tasks', 'challenges', 'leaderboard', 'notifications', 'analytics'];
-  } else if (role === 'Finance Manager') {
-    allowedIds = ['dashboard', 'wallet', 'withdrawals', 'reports', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'notifications', 'settings'];
-  } else if (role === 'Support Manager' || role === 'Support Executive') {
-    allowedIds = ['dashboard', 'user-management', 'user-management/all-users', 'user-management/kyc-status', 'user-management/wallet-balance', 'user-management/contest-history', 'user-management/login-history', 'user-management/device-details', 'user-management/referral-details', 'kyc', 'notifications', 'settings'];
-  } else if (role === 'Marketing Manager') {
-    allowedIds = ['dashboard', 'surveys', 'banners', 'banners/home', 'banners/popup', 'banners/festival', 'banners/sponsored', 'banners/announcement', 'notifications', 'referrals', 'referrals/rules', 'referrals/earnings', 'referrals/abuse', 'advertisements', 'advertisements/create', 'advertisements/sponsored', 'advertisements/banner', 'advertisements/video', 'advertisements/reward', 'advertisements/partner', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'analytics'];
-  } else if (role === 'Content Moderator') {
-    allowedIds = ['dashboard', 'contests', 'categories', 'question-bank', 'tasks', 'cms', 'notifications'];
-  } else if (role === 'KYC Officer') {
-    allowedIds = ['dashboard', 'user-management', 'user-management/kyc-status', 'kyc', 'notifications', 'fraud-detection'];
-  } else if (role === 'Analytics Manager') {
-    allowedIds = ['dashboard', 'reports', 'analytics', 'notifications'];
-  } else if (role === 'Question Manager') {
-    allowedIds = ['dashboard', 'question-bank', 'contests', 'notifications'];
-  }
+    if (role === 'Contest Manager') {
+      allowedIds = ['dashboard', 'contests', 'categories', 'grand-contest', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'tasks', 'challenges', 'leaderboard', 'notifications', 'analytics'];
+    } else if (role === 'Finance Manager') {
+      allowedIds = ['dashboard', 'wallet', 'withdrawals', 'reports', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'notifications', 'settings'];
+    } else if (role === 'Support Manager' || role === 'Support Executive') {
+      allowedIds = ['dashboard', 'user-management', 'user-management/all-users', 'user-management/kyc-status', 'user-management/wallet-balance', 'user-management/contest-history', 'user-management/login-history', 'user-management/device-details', 'user-management/referral-details', 'kyc', 'notifications', 'settings'];
+    } else if (role === 'Marketing Manager') {
+      allowedIds = ['dashboard', 'surveys', 'banners', 'banners/home', 'banners/popup', 'banners/festival', 'banners/sponsored', 'banners/announcement', 'notifications', 'referrals', 'referrals/rules', 'referrals/earnings', 'referrals/abuse', 'advertisements', 'advertisements/create', 'advertisements/sponsored', 'advertisements/banner', 'advertisements/video', 'advertisements/reward', 'advertisements/partner', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'analytics'];
+    } else if (role === 'Content Moderator') {
+      allowedIds = ['dashboard', 'contests', 'categories', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'tasks', 'cms', 'notifications'];
+    } else if (role === 'KYC Officer') {
+      allowedIds = ['dashboard', 'user-management', 'user-management/kyc-status', 'kyc', 'notifications', 'fraud-detection'];
+    } else if (role === 'Analytics Manager') {
+      allowedIds = ['dashboard', 'reports', 'analytics', 'notifications'];
+    } else if (role === 'Question Manager') {
+      allowedIds = ['dashboard', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'contests', 'notifications'];
+    }
 
-  const filteredMenu = MENU_ITEMS.filter(item =>
-    allowedIds.includes(item.id) &&
-    item.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    return MENU_ITEMS.filter(item =>
+      allowedIds.includes(item.id) &&
+      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [role, searchQuery]);
 
   React.useEffect(() => {
     if (activeView && activeView.startsWith('user-management')) {
       setIsUserMgmtOpen(true);
-    } else {
-      setIsUserMgmtOpen(false);
     }
-
+    if (activeView && activeView.startsWith('question-bank')) {
+      setIsQuestionBankOpen(true);
+    }
     if (activeView && activeView.startsWith('banners')) {
       setIsBannerMgmtOpen(true);
-    } else {
-      setIsBannerMgmtOpen(false);
     }
-
     if (activeView && activeView.startsWith('cms')) {
       setIsCmsOpen(true);
-    } else {
-      setIsCmsOpen(false);
     }
-
     if (activeView && activeView.startsWith('advertisements')) {
       setIsAdsOpen(true);
-    } else {
-      setIsAdsOpen(false);
     }
-
     if (activeView && activeView.startsWith('coupons')) {
       setIsCouponsOpen(true);
-    } else {
-      setIsCouponsOpen(false);
     }
-
     if (activeView && activeView.startsWith('referrals')) {
       setIsReferralsOpen(true);
-    } else {
-      setIsReferralsOpen(false);
     }
-
     if (activeView && activeView.startsWith('analytics')) {
       setIsAnalyticsOpen(true);
-    } else {
-      setIsAnalyticsOpen(false);
     }
-  }, [activeView]);
+  }, [location.pathname]);
 
   const handleMenuClick = (id) => {
     if (id === 'user-management') {
       setIsUserMgmtOpen(!isUserMgmtOpen);
-      setIsBannerMgmtOpen(false);
-      setIsCmsOpen(false);
-      setIsAdsOpen(false);
-      setIsCouponsOpen(false);
-      setIsReferralsOpen(false);
-      setIsAnalyticsOpen(false);
-      navigate(`/admin-dashboard/user-management/all-users`);
+      if (!isUserMgmtOpen && !location.pathname.includes('/user-management/')) {
+        navigate(`/admin-dashboard/user-management/all-users`);
+      }
+    } else if (id === 'question-bank') {
+      setIsQuestionBankOpen(!isQuestionBankOpen);
+      if (!isQuestionBankOpen && !location.pathname.includes('/question-bank/')) {
+        navigate(`/admin-dashboard/question-bank/pool`);
+      }
     } else if (id === 'banners') {
       setIsBannerMgmtOpen(!isBannerMgmtOpen);
       setIsUserMgmtOpen(false);
+      setIsQuestionBankOpen(false);
       setIsCmsOpen(false);
       setIsAdsOpen(false);
       setIsCouponsOpen(false);
@@ -227,6 +214,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     } else if (id === 'cms') {
       setIsCmsOpen(!isCmsOpen);
       setIsUserMgmtOpen(false);
+      setIsQuestionBankOpen(false);
       setIsBannerMgmtOpen(false);
       setIsAdsOpen(false);
       setIsCouponsOpen(false);
@@ -236,6 +224,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     } else if (id === 'advertisements') {
       setIsAdsOpen(!isAdsOpen);
       setIsUserMgmtOpen(false);
+      setIsQuestionBankOpen(false);
       setIsBannerMgmtOpen(false);
       setIsCmsOpen(false);
       setIsCouponsOpen(false);
@@ -245,6 +234,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     } else if (id === 'coupons') {
       setIsCouponsOpen(!isCouponsOpen);
       setIsUserMgmtOpen(false);
+      setIsQuestionBankOpen(false);
       setIsBannerMgmtOpen(false);
       setIsCmsOpen(false);
       setIsAdsOpen(false);
@@ -254,6 +244,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     } else if (id === 'referrals') {
       setIsReferralsOpen(!isReferralsOpen);
       setIsUserMgmtOpen(false);
+      setIsQuestionBankOpen(false);
       setIsBannerMgmtOpen(false);
       setIsCmsOpen(false);
       setIsAdsOpen(false);
@@ -263,6 +254,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     } else if (id === 'analytics') {
       setIsAnalyticsOpen(!isAnalyticsOpen);
       setIsUserMgmtOpen(false);
+      setIsQuestionBankOpen(false);
       setIsBannerMgmtOpen(false);
       setIsCmsOpen(false);
       setIsAdsOpen(false);
@@ -271,6 +263,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
       navigate(`/admin-dashboard/analytics/dau-mau`);
     } else {
       setIsUserMgmtOpen(false);
+      setIsQuestionBankOpen(false);
       setIsBannerMgmtOpen(false);
       setIsCmsOpen(false);
       setIsAdsOpen(false);
@@ -379,6 +372,68 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                       {USER_MGMT_SUBITEMS.map(sub => {
                         const SubIcon = sub.icon;
                         const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleSubItemClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                            }`}
+                          >
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
+                            <span className="whitespace-nowrap truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (item.id === 'question-bank') {
+            const isQbActive = activeView.startsWith('question-bank');
+            return (
+              <div key={item.id} className="space-y-1">
+                <button
+                  onClick={() => handleMenuClick(item.id)}
+                  onMouseEnter={(e) => handleMouseEnter(item, e)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
+                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                  } ${isQbActive
+                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {isQbActive && (
+                    <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isQbActive ? 'text-brandPrimary dark:text-brandSecondary' : 'text-slate-400'}`} />
+                    {(!isCollapsed || isOpenMobile) && <span className="whitespace-nowrap truncate pr-1">{item.label}</span>}
+                  </div>
+                  {(!isCollapsed || isOpenMobile) && (
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isQuestionBankOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  )}
+                </button>
+
+                {/* Sub-Items Dropdown */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isQuestionBankOpen && (!isCollapsed || isOpenMobile)
+                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
+                      {QUESTION_BANK_SUBITEMS.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeView === sub.id || (sub.id === 'question-bank/pool' && (activeView === 'question-bank' || activeView === 'question-bank/pool'));
                         return (
                           <button
                             key={sub.id}

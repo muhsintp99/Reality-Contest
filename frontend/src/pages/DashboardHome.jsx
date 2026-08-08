@@ -14,6 +14,7 @@ import { TaskCard } from '../components/TaskCard';
 import { Timeline } from '../components/Timeline';
 import { AssistantCard } from '../components/AssistantCard';
 import { ActivityTable } from '../components/ActivityTable';
+import { GuestViewBanner } from '../components/common/GuestViewMode';
 
 export const DashboardHome = ({ onViewChange }) => {
   const dispatch = useDispatch();
@@ -203,6 +204,7 @@ export const DashboardHome = ({ onViewChange }) => {
 
   return (
     <div className="space-y-6 text-left pb-10">
+      {user?.role === 'Guest' && <GuestViewBanner />}
       
       {/* 1. Hero Section Layout */}
       <HeroSection 

@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { UserRepository } from '../repositories/UserRepository';
 import { SessionRepository } from '../repositories/SessionRepository';
 import { NotFoundError, ConflictError, AppError } from '../core/errors';
@@ -98,7 +99,9 @@ export class UserService {
     }
     if (!user) throw new NotFoundError('User not found.');
 
-    const isMatch = await user.comparePassword(currentPassword);
+    const isMatch = typeof user.comparePassword === 'function'
+      ? await user.comparePassword(currentPassword)
+      : await bcrypt.compare(currentPassword, user.password || '');
     if (!isMatch) throw new AppError('Incorrect current password.', 400);
 
     user.password = newPassword;

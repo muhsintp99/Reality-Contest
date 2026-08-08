@@ -18,9 +18,10 @@ import { cmsController } from './controllers/CmsController';
 import { advertisementController } from './controllers/AdvertisementController';
 import { couponController } from './controllers/CouponController';
 import { referralController } from './controllers/ReferralController';
+import { dailyContestsController } from './controllers/DailyContestsController';
 
 // Import Middlewares
-import { authenticate, authorize } from './middleware/AuthMiddleware';
+import { authenticate, authorize, requireNotGuest } from './middleware/AuthMiddleware';
 import { validateRequest } from './middleware/ValidationMiddleware';
 
 // Import Zod validation schemas
@@ -30,9 +31,12 @@ import {
   sendOtpSchema,
   verifyOtpSchema,
   forgotPasswordSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  googleAuthSchema
 } from './validators/AuthSchemas';
 import {
+  startEmailSchema,
+  verifyEmailOtpSchema,
   startMobileSchema,
   verifyMobileOtpSchema,
   resendOtpSchema,
@@ -48,6 +52,9 @@ export function createApiRouter(authLimiter: any): Router {
   const router = Router();
 
   // Onboarding Contestant multi-step registration routes
+  router.post('/auth/register/email', authLimiter, validateRequest(startEmailSchema), registrationController.startEmail);
+  router.post('/auth/register/email/otp', authLimiter, validateRequest(verifyEmailOtpSchema), registrationController.verifyEmailOtp);
+  router.post('/auth/register/email/resend-otp', authLimiter, validateRequest(resendOtpSchema), registrationController.resendEmailOtp);
   router.post('/auth/register/mobile', authLimiter, validateRequest(startMobileSchema), registrationController.startMobile);
   router.post('/auth/register/otp', authLimiter, validateRequest(verifyMobileOtpSchema), registrationController.verifyOtp);
   router.post('/auth/register/resend-otp', authLimiter, validateRequest(resendOtpSchema), registrationController.resendOtp);
@@ -55,6 +62,19 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/auth/register/topics', validateRequest(saveTopicsSchema), registrationController.saveTopics);
   router.post('/auth/register/kyc', validateRequest(saveKycSchema), registrationController.completeRegistration);
   router.post('/auth/register/upload', upload.single('file'), uploadController.uploadFile);
+  router.post('/upload', upload.single('file'), uploadController.uploadFile);
+  router.post('/upload/:folder', upload.single('file'), uploadController.uploadFile);
+  router.put('/upload', upload.single('file'), uploadController.updateFile);
+  router.put('/upload/:folder', upload.single('file'), uploadController.updateFile);
+  router.delete('/upload', uploadController.deleteFile);
+  router.delete('/upload/:folder', uploadController.deleteFile);
+
+  router.post('/admin/upload', upload.single('file'), uploadController.uploadFile);
+  router.post('/admin/upload/:folder', upload.single('file'), uploadController.uploadFile);
+  router.put('/admin/upload', upload.single('file'), uploadController.updateFile);
+  router.put('/admin/upload/:folder', upload.single('file'), uploadController.updateFile);
+  router.delete('/admin/upload', uploadController.deleteFile);
+  router.delete('/admin/upload/:folder', uploadController.deleteFile);
 
   // 1. Auth routes
   router.post('/auth/register', authLimiter, validateRequest(registerSchema), authController.register);
@@ -65,6 +85,8 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/auth/verify-otp', authLimiter, validateRequest(verifyOtpSchema), authController.verifyOtp);
   router.post('/auth/forgot-password', authLimiter, validateRequest(forgotPasswordSchema), authController.forgotPassword);
   router.post('/auth/reset-password', authLimiter, validateRequest(resetPasswordSchema), authController.resetPassword);
+  router.post('/auth/google', authLimiter, validateRequest(googleAuthSchema), authController.googleAuth);
+  router.post('/auth/guest-login', authLimiter, authController.guestLogin);
   router.post('/auth/oauth', authController.oauthLogin);
   router.get('/auth/me', authenticate, authController.me);
 
@@ -97,7 +119,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.updateContest);
   router.delete('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.deleteContest);
   router.post('/contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.duplicateContest);
-  router.post('/contests/:id/join', authenticate, contestController.joinContest);
+  router.post('/contests/:id/join', authenticate, requireNotGuest, contestController.joinContest);
   router.get('/contests/:contestId/stages', authenticate, stageController.getStagesByContest);
   router.post('/contests/:contestId/stages', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), stageController.createStageForContest);
 
@@ -105,20 +127,30 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/groups/:groupId/stages', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), stageController.createStage);
   router.get('/groups/:groupId/stages', authenticate, stageController.getStagesByGroup);
   router.get('/stages/:id/unlock-status', authenticate, stageController.checkUnlockStatus);
-  router.post('/stages/:id/accept-rules', authenticate, stageController.acceptRules);
-  router.post('/stages/:id/start', authenticate, stageController.startAttempt);
-  router.post('/stages/:id/submit', authenticate, stageController.submitAttempt);
+  router.post('/stages/:id/accept-rules', authenticate, requireNotGuest, stageController.acceptRules);
+  router.post('/stages/:id/start', authenticate, requireNotGuest, stageController.startAttempt);
+  router.post('/stages/:id/submit', authenticate, requireNotGuest, stageController.submitAttempt);
   router.post('/upload', authenticate, upload.single('file'), uploadController.uploadFile);
 
   // Wallet routes
-  router.post('/wallet/deposit', authenticate, walletController.deposit);
+  router.post('/wallet/deposit', authenticate, requireNotGuest, walletController.deposit);
   router.get('/wallet/transactions', authenticate, walletController.getTransactions);
 
   // Question & Quiz Builder routes
+  router.delete('/question-pools/clear-all', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.clearAllQuestions);
   router.post('/question-pools', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.createPool);
   router.get('/question-pools', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.listPools);
+  router.get('/question-pools/all-questions', authenticate, questionController.listQuestions);
+  router.get('/question-pools/questions', authenticate, questionController.listQuestions);
+  router.get('/questions', authenticate, questionController.listQuestions);
+  router.put('/question-pools/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updatePool);
+  router.delete('/question-pools/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deletePool);
   router.post('/question-pools/:poolId/questions', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.addQuestion);
   router.get('/question-pools/:poolId/questions', authenticate, questionController.listQuestions);
+  router.put('/question-pools/:poolId/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updateQuestion);
+  router.delete('/question-pools/:poolId/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deleteQuestion);
+  router.put('/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updateQuestion);
+  router.delete('/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deleteQuestion);
   router.post('/question-pools/:poolId/import', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.importQuestions);
 
   // Category Management routes
@@ -262,6 +294,16 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/admin/cms/social', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.createSocial);
   router.put('/admin/cms/social/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateSocial);
   router.delete('/admin/cms/social/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.deleteSocial);
+
+  // Daily Contests Routes
+  router.get('/daily-contests', authenticate, dailyContestsController.listDailyContests);
+  router.get('/daily-contests/:id', authenticate, dailyContestsController.getDailyContestDetail);
+  router.post('/daily-contests/:id/join', authenticate, dailyContestsController.joinDailyContest);
+  router.get('/admin/daily-contests', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.listDailyContests);
+  router.post('/admin/daily-contests', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.createDailyContest);
+  router.put('/admin/daily-contests/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.updateDailyContest);
+  router.delete('/admin/daily-contests/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.deleteDailyContest);
+  router.post('/admin/daily-contests/:id/reset', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.resetDailyContest);
 
   // Fraud Logs
   router.get('/admin/fraud-logs', authenticate, authorize('Super Admin', 'Admin', 'KYC Officer'), moduleManagementController.listFraudLogs);

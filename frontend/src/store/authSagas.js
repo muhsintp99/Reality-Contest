@@ -1,7 +1,7 @@
 import { call, put, select, takeLatest } from 'redux-saga/effects';
 import axios from 'axios';
 import {
-  loginRequest, loginSuccess, loginFailure,
+  loginRequest, googleAuthRequest, guestLoginRequest, loginSuccess, loginFailure,
   registerRequest, registerSuccess, registerFailure,
   logoutRequest, logoutSuccess, logoutFailure,
   sendOtpRequest, sendOtpSuccess, sendOtpFailure,
@@ -67,6 +67,53 @@ function* handleLogin(action) {
     if (callback) callback(true);
   } catch (err) {
     yield put(loginFailure(err.response?.data?.message || 'Authentication failed. Please verify credentials.'));
+    if (callback) callback(false);
+  }
+}
+
+// 1.5 GOOGLE AUTH SAGA
+function* handleGoogleAuth(action) {
+  const { data, callback } = action.payload;
+
+  try {
+    const response = yield call(api.post, '/auth/google', data);
+    const user = response.data.user;
+
+    const adminRoles = [
+      'Super Admin', 'Admin', 'Contest Manager', 'Question Manager',
+      'Finance Manager', 'Support Manager', 'Support Executive',
+      'Marketing Manager', 'Content Moderator', 'KYC Officer',
+      'Analytics Manager', 'Sponsor'
+    ];
+    if (adminRoles.includes(user.role)) {
+      yield put(loginFailure('This account is only allowed to access the Admin Dashboard.'));
+      if (callback) callback(false);
+      try {
+        yield call(api.post, '/auth/logout');
+      } catch (e) {}
+      return;
+    }
+
+    yield put(loginSuccess(user));
+    if (callback) callback(true);
+  } catch (err) {
+    yield put(loginFailure(err.response?.data?.message || 'Google Authentication failed.'));
+    if (callback) callback(false);
+  }
+}
+
+// 1.8 GUEST LOGIN SAGA
+function* handleGuestLogin(action) {
+  const { callback } = action.payload || {};
+
+  try {
+    const response = yield call(api.post, '/auth/guest-login');
+    const user = response.data.user;
+
+    yield put(loginSuccess(user));
+    if (callback) callback(true);
+  } catch (err) {
+    yield put(loginFailure(err.response?.data?.message || 'Guest Authentication failed.'));
     if (callback) callback(false);
   }
 }
@@ -271,30 +318,6 @@ function* handleLoadCurrentUser() {
   try {
     const res = yield call(api.get, '/auth/me');
     const user = res.data.user;
-    const adminRoles = [
-      'Super Admin',
-      'Admin',
-      'Contest Manager',
-      'Question Manager',
-      'Finance Manager',
-      'Support Manager',
-      'Support Executive',
-      'Marketing Manager',
-      'Content Moderator',
-      'KYC Officer',
-      'Analytics Manager',
-      'Sponsor'
-    ];
-    if (user && adminRoles.includes(user.role)) {
-      yield put(loadCurrentUserFailure());
-      try {
-        yield call(api.post, '/auth/logout');
-      } catch (e) {}
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.href = '/login';
-      return;
-    }
     yield put(loadCurrentUserSuccess(user));
   } catch (err) {
     yield put(loadCurrentUserFailure());
@@ -304,6 +327,8 @@ function* handleLoadCurrentUser() {
 // Watcher Sagas
 export function* authSaga() {
   yield takeLatest(loginRequest.type, handleLogin);
+  yield takeLatest(googleAuthRequest.type, handleGoogleAuth);
+  yield takeLatest(guestLoginRequest.type, handleGuestLogin);
   yield takeLatest(registerRequest.type, handleRegister);
   yield takeLatest(logoutRequest.type, handleLogout);
   yield takeLatest(sendOtpRequest.type, handleSendOtp);

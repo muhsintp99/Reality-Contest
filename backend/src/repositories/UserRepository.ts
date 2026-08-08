@@ -23,6 +23,7 @@ export class UserRepository extends BaseRepository<IUser> {
     return this.findOne({
       $or: [
         { email: queryId.toLowerCase() },
+        { username: queryId.toLowerCase() },
         { phone: queryId }
       ]
     });

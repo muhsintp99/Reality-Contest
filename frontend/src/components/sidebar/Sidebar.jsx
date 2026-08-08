@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, BarChart3, Wallet, 
-  MessageSquare, Settings, LogOut, ChevronLeft, X 
+  MessageSquare, Settings, LogOut, ChevronLeft, X, Trophy, Clock, Award
 } from 'lucide-react';
 import { HakaLogo } from '../HakaLogo';
 
 const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/' },
-  { id: 'contests', label: 'Reports', icon: FileText, route: '/contests' },
-  { id: 'rewards', label: 'Analytics', icon: BarChart3, route: '/rewards' },
+  { id: 'contests', label: 'Contest Tournaments', icon: Trophy, route: '/contests' },
+  { id: 'daily-contests', label: 'Daily Contests ⚡', icon: Clock, route: '/daily-contests' },
+  { id: 'rewards', label: 'Badges & Rewards', icon: Award, route: '/rewards' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, route: '/wallet' },
-  { id: 'notifications', label: 'Messages', icon: MessageSquare, route: '/notifications', badge: 3 },
+  { id: 'notifications', label: 'Notifications', icon: MessageSquare, route: '/notifications', badge: 3 },
   { id: 'settings', label: 'Settings', icon: Settings, route: '/settings' }
 ];
 
@@ -43,7 +44,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     ? ['dashboard', 'wallet', 'notifications', 'settings']
     : role === 'Sponsor'
       ? ['dashboard', 'wallet', 'notifications', 'settings']
-      : ['dashboard', 'contests', 'rewards', 'wallet', 'notifications', 'settings'];
+      : ['dashboard', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings'];
 
   const filteredMenu = MENU_ITEMS.filter(item => allowedIds.includes(item.id)).map(item => {
     // Custom label overwrites for special roles
