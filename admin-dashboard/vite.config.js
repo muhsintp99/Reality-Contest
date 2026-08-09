@@ -20,12 +20,14 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:10000',
+        target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        // target: 'http://127.0.0.1:10000',
         changeOrigin: true,
         secure: false,
       },
       '/api-docs': {
-        target: 'http://127.0.0.1:10000',
+        target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        // target: 'http://127.0.0.1:10000',
         changeOrigin: true,
         secure: false,
       }
