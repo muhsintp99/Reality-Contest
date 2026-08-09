@@ -140,11 +140,11 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
       const wtdList = wtdRes.status === 'fulfilled' && wtdRes.value?.data?.data ? wtdRes.value.data.data : [];
 
       setCounts({
-        totalUsers: userList.length || 54290,
-        activeContests: contestList.filter(c => c.status === 'Active' || c.status === 'Published').length || 14,
-        pendingWithdrawals: wtdList.filter(w => w.status === 'Pending').length || 8,
-        totalContests: contestList.length || 128,
-        activeUsers: userList.filter(u => u.status === 'Active').length || 384
+        totalUsers: userRes.status === 'fulfilled' ? userList.length : 0,
+        activeContests: contestRes.status === 'fulfilled' ? contestList.filter(c => c.status === 'Active' || c.status === 'Published').length : 0,
+        pendingWithdrawals: wtdRes.status === 'fulfilled' ? wtdList.filter(w => w.status === 'Pending').length : 0,
+        totalContests: contestRes.status === 'fulfilled' ? contestList.length : 0,
+        activeUsers: userRes.status === 'fulfilled' ? userList.filter(u => u.status === 'Active').length : 0
       });
     } catch (err) {
       console.error('Error fetching dashboard counts:', err);
@@ -366,7 +366,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Total Users</span><Users className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{counts.totalUsers > 0 ? counts.totalUsers.toLocaleString() : '54,290'}</div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{counts.totalUsers.toLocaleString()}</div>
           <div className="text-[10px] text-slate-400 mt-1">Platform Total</div>
         </div>
 
@@ -374,7 +374,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Online Users</span><Activity className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-extrabold text-emerald-500 mt-2 flex items-center gap-2">{counts.activeUsers || 384} <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" /></div>
+          <div className="text-2xl font-extrabold text-emerald-500 mt-2 flex items-center gap-2">{counts.activeUsers} <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" /></div>
           <div className="text-[10px] text-slate-400 mt-1">Live active sessions</div>
         </div>
 
@@ -406,7 +406,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Total Contests</span><FileText className="w-4 h-4 text-cyan-500" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{counts.totalContests || 128}</div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">{counts.totalContests}</div>
           <div className="text-[10px] text-slate-400 mt-1">Hosted contests</div>
         </div>
 
@@ -414,7 +414,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Active Contests</span><Flame className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="text-2xl font-extrabold text-rose-500 mt-2">{counts.activeContests || 14} Live</div>
+          <div className="text-2xl font-extrabold text-rose-500 mt-2">{counts.activeContests} Live</div>
           <div className="text-[10px] text-slate-400 mt-1">Running stages</div>
         </div>
 
@@ -422,7 +422,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Pending KYC</span><ShieldAlert className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-extrabold text-amber-500 mt-2">{pendingKycs.length || 24}</div>
+          <div className="text-2xl font-extrabold text-amber-500 mt-2">{pendingKycs ? pendingKycs.length : 0}</div>
           <div className="text-[10px] text-slate-400 mt-1">Files in queue</div>
         </div>
 
@@ -430,7 +430,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
           <div className="flex items-center justify-between text-slate-400 text-[11px] font-bold">
             <span>Pending Withdrawals</span><Clock className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-2xl font-extrabold text-indigo-500 mt-2">{counts.pendingWithdrawals || 8}</div>
+          <div className="text-2xl font-extrabold text-indigo-500 mt-2">{counts.pendingWithdrawals}</div>
           <div className="text-[10px] text-slate-400 mt-1">Awaiting approval</div>
         </div>
       </div>
@@ -442,7 +442,7 @@ export const DashboardHome = ({ onViewChange, selectedRole }) => {
         <div className="lg:col-span-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">Needs Attention</h3>
-            <span className="text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded">{pendingKycs.length || 2} Pending</span>
+            <span className="text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded">{pendingKycs ? pendingKycs.length : 0} Pending</span>
           </div>
           <p className="text-xs text-slate-400">Biometric verifications requiring administrative action.</p>
 
