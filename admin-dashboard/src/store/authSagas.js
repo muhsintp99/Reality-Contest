@@ -20,14 +20,7 @@ import {
   reviewKycRequest, reviewKycSuccess, reviewKycFailure
 } from './authSlice';
 
-// Axios Instance
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  }
-});
+import api from '../lib/api';
 
 // Selectors
 const selectUser = (state) => state.auth.user;
