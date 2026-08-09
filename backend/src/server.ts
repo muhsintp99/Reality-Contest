@@ -80,14 +80,30 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
     app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
+    const allowedOrigins = Array.from(
+      new Set([
+        'http://localhost:10000', 'https://localhost:10000',
+        'http://localhost:10001', 'http://127.0.0.1:10001',
+        'http://localhost:10002', 'http://127.0.0.1:10002',
+        'http://82.29.165.57:10000', 'https://82.29.165.57:10000',
+        'http://82.29.165.57:10001', 'https://82.29.165.57:10001',
+        'http://82.29.165.57:10002', 'https://82.29.165.57:10002',
+        'http://82.29.165.57', 'https://82.29.165.57',
+        'http://hakalive.in', 'https://hakalive.in',
+        'http://www.hakalive.in', 'https://www.hakalive.in',
+        'http://dashboard.hakalive.in', 'https://dashboard.hakalive.in',
+        'http://api.hakalive.in', 'https://api.hakalive.in',
+        ...(process.env.CORS_ALLOWED_ORIGINS
+          ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+          : [])
+      ])
+    );
+
     app.use(
       cors({
-        origin: [
-          'http://localhost:10001', 'http://127.0.0.1:10001',
-          'http://localhost:10002', 'http://127.0.0.1:10002'
-        ],
+        origin: allowedOrigins,
         credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization']
       })
     );

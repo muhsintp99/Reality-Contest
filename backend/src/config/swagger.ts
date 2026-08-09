@@ -7,12 +7,20 @@ export const swaggerDocument = {
   },
   servers: [
     {
-      url: 'http://localhost:10002',
-      description: 'Primary Active API Server (Port 10002)',
+      url: 'https://api.hakalive.in',
+      description: 'Production Production API Server (https://api.hakalive.in)',
+    },
+    {
+      url: 'http://api.hakalive.in',
+      description: 'Production HTTP API Server (http://api.hakalive.in)',
     },
     {
       url: 'http://localhost:10000',
-      description: 'Alternative Server (Port 10000)',
+      description: 'Local Backend API Server (Port 10000)',
+    },
+    {
+      url: 'http://localhost:10002',
+      description: 'Local Vite Proxy Server (Port 10002)',
     },
   ],
   tags: [
