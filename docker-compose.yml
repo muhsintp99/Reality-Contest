@@ -1,58 +1,65 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:latest
-    container_name: haka_mongodb
-    restart: always
+
+  # ============================================================
+  # REDIS
+  # ============================================================
+  # Production:
+  # PM2 Backend -> 127.0.0.1:6379 -> Docker Redis
+  #
+  # Local:
+  # Local Backend -> 127.0.0.1:6379 -> Docker Redis
+  #
+  # Redis is bound only to localhost.
+  # It is NOT publicly accessible from the internet.
+  # ============================================================
+
+  redis:
+    image: redis:7-alpine
+    container_name: haka_redis
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
     ports:
-      - "27017:27017"
+      - "127.0.0.1:6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+  # ============================================================
+  # MONGODB
+  # ============================================================
+  # LOCAL DEVELOPMENT ONLY
+  #
+  # Production:
+  # Backend uses MongoDB Atlas through backend/.env
+  #
+  # MONGODB_URI=mongodb+srv://...
+  #
+  # This container is available for local development.
+  # ============================================================
+
+  mongodb:
+    image: mongo:6
+    container_name: haka_mongodb
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:27017:27017"
+
     volumes:
       - mongo_data:/data/db
 
-  # Redis Cache & Pub/Sub
-  redis:
-    image: redis:alpine
-    container_name: haka_redis
-    restart: always
-    ports:
-      - "6379:6379"
-
-  # Backend Node.js Express API
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: haka_backend
-    restart: always
-    ports:
-      - "10000:10000"
-    environment:
-      - PORT=10000
-      - MONGODB_URI=mongodb://mongodb:27017/reality_contest
-      - REDIS_URL=redis://redis:6379
-      - NODE_ENV=production
-      - JWT_ACCESS_SECRET=your_super_secret_access_token_12345_rcp_prod_key
-      - JWT_REFRESH_SECRET=your_super_secret_refresh_token_67890_rcp_prod_key
-    volumes:
-      - uploads_data:/app/public/uploads
-    depends_on:
-      - mongodb
-      - redis
-
-  # Admin Dashboard Web App
-  admin-dashboard:
-    build:
-      context: ./admin-dashboard
-      dockerfile: Dockerfile
-    container_name: haka_admin_dashboard
-    restart: always
-    ports:
-      - "10002:10002"
-    depends_on:
-      - backend
+# ============================================================
+# VOLUMES
+# ============================================================
 
 volumes:
+
+  redis_data:
+    driver: local
+
   mongo_data:
-  uploads_data:
+    driver: local

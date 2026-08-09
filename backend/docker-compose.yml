@@ -1,37 +1,65 @@
-version: "3.8"
+version: '3.8'
 
 services:
-
-  # ============================================================
-  # REDIS
-  # ============================================================
-  # Used by PM2 backend.
-  #
-  # PM2 Backend:
-  #   REDIS_URL=redis://127.0.0.1:6379
-  #
-  # Redis is accessible only from this VPS.
-  # It is NOT exposed to the public internet.
-  # ============================================================
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: haka_backend
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    environment:
+      - PORT=10000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb-replica:27017/reality_contest
+      - REDIS_URL=redis://haka_redis:6379
+      # - REDIS_URL=redis://redis-cache:6379
+      - JWT_ACCESS_SECRET=your_super_secret_access_token_12345_rcp_prod_key
+      - JWT_REFRESH_SECRET=your_super_secret_refresh_token_67890_rcp_prod_key
+    depends_on:
+      - redis
+      # - redis-cache
+      - mongodb-replica
+    networks:
+      - haka_network
+      # - platform-network
 
   redis:
-    image: redis:7-alpine
+    image: redis:alpine
     container_name: haka_redis
     restart: unless-stopped
-
     command: redis-server --appendonly yes
-
     ports:
       - "127.0.0.1:6379:6379"
-
+      # - "6379:6379"
     volumes:
       - redis_data:/data
+      # - redis-data:/data
+    networks:
+      - haka_network
+      # - platform-network
 
-# ============================================================
-# VOLUMES
-# ============================================================
+  mongodb-replica:
+    image: mongo:6
+    container_name: haka_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - haka_network
+      # - platform-network
 
 volumes:
-
   redis_data:
-    driver: local
+  # redis-data:
+  mongo-data:
+
+networks:
+  haka_network:
+    driver: bridge
+  # platform-network:
+  #   driver: bridge
