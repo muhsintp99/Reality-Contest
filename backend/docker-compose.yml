@@ -5,45 +5,61 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: haka_backend
+    restart: unless-stopped
     ports:
       - "10000:10000"
     environment:
       - PORT=10000
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb-replica:27017/reality_contest
-      - REDIS_URL=redis://redis-cache:6379
+      - REDIS_URL=redis://haka_redis:6379
+      # - REDIS_URL=redis://redis-cache:6379
       - JWT_ACCESS_SECRET=your_super_secret_access_token_12345_rcp_prod_key
       - JWT_REFRESH_SECRET=your_super_secret_refresh_token_67890_rcp_prod_key
     depends_on:
+      - redis
+      # - redis-cache
       - mongodb-replica
-      - redis-cache
     networks:
-      - platform-network
+      - haka_network
+      # - platform-network
 
-  redis-cache:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+  redis:
+    image: redis:alpine
+    container_name: haka_redis
+    restart: unless-stopped
     command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:6379:6379"
+      # - "6379:6379"
     volumes:
-      - redis-data:/data
+      - redis_data:/data
+      # - redis-data:/data
     networks:
-      - platform-network
+      - haka_network
+      # - platform-network
 
   mongodb-replica:
     image: mongo:6
+    container_name: haka_mongodb
+    restart: unless-stopped
     ports:
       - "27017:27017"
     command: mongod --replSet rs0 --bind_ip_all
     volumes:
       - mongo-data:/data/db
     networks:
-      - platform-network
+      - haka_network
+      # - platform-network
 
 volumes:
-  redis-data:
+  redis_data:
+  # redis-data:
   mongo-data:
 
 networks:
-  platform-network:
+  haka_network:
     driver: bridge
+  # platform-network:
+  #   driver: bridge
