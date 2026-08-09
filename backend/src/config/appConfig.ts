@@ -8,6 +8,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   MONGODB_URI: z.string().default('mongodb://localhost:27017/reality_contest'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  CORS_ALLOWED_ORIGINS: z.string().optional(),
   JWT_ACCESS_SECRET: z.string().default('your_super_secret_access_token_12345_rcp_prod_key'),
   JWT_REFRESH_SECRET: z.string().default('your_super_secret_refresh_token_67890_rcp_prod_key'),
   ACCESS_TOKEN_EXPIRY: z.string().default('7d'),
