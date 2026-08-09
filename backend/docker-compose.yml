@@ -1,65 +1,79 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  api-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: haka_backend
-    restart: unless-stopped
-    ports:
-      - "10000:10000"
-    environment:
-      - PORT=10000
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongodb-replica:27017/reality_contest
-      - REDIS_URL=redis://haka_redis:6379
-      # - REDIS_URL=redis://redis-cache:6379
-      - JWT_ACCESS_SECRET=your_super_secret_access_token_12345_rcp_prod_key
-      - JWT_REFRESH_SECRET=your_super_secret_refresh_token_67890_rcp_prod_key
-    depends_on:
-      - redis
-      # - redis-cache
-      - mongodb-replica
-    networks:
-      - haka_network
-      # - platform-network
+
+  # ============================================================
+  # REDIS
+  # ============================================================
+  # Production:
+  # PM2 Backend -> 127.0.0.1:6379 -> Docker Redis
+  #
+  # Local:
+  # Local Backend -> 127.0.0.1:6379 -> Docker Redis
+  #
+  # Redis is exposed ONLY on VPS/local host.
+  # It is NOT directly exposed to the internet.
+  # ============================================================
 
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     container_name: haka_redis
     restart: unless-stopped
+
     command: redis-server --appendonly yes
+
     ports:
       - "127.0.0.1:6379:6379"
-      # - "6379:6379"
+
     volumes:
       - redis_data:/data
-      # - redis-data:/data
+
     networks:
       - haka_network
-      # - platform-network
 
-  mongodb-replica:
+  # ============================================================
+  # MONGODB
+  # ============================================================
+  # LOCAL DEVELOPMENT ONLY
+  #
+  # Production backend uses MongoDB Atlas:
+  # MONGODB_URI=mongodb+srv://...
+  #
+  # Therefore MongoDB Docker container is NOT required
+  # on production VPS.
+  # ============================================================
+
+  mongodb:
     image: mongo:6
     container_name: haka_mongodb
     restart: unless-stopped
+
     ports:
-      - "27017:27017"
-    command: mongod --replSet rs0 --bind_ip_all
+      - "127.0.0.1:27017:27017"
+
     volumes:
-      - mongo-data:/data/db
+      - mongo_data:/data/db
+
     networks:
       - haka_network
-      # - platform-network
+
+# ============================================================
+# VOLUMES
+# ============================================================
 
 volumes:
+
   redis_data:
-  # redis-data:
-  mongo-data:
+    driver: local
+
+  mongo_data:
+    driver: local
+
+# ============================================================
+# NETWORK
+# ============================================================
 
 networks:
+
   haka_network:
     driver: bridge
-  # platform-network:
-  #   driver: bridge
