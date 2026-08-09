@@ -5,14 +5,13 @@ services:
   # ============================================================
   # REDIS
   # ============================================================
-  # Production:
-  # PM2 Backend -> 127.0.0.1:6379 -> Docker Redis
+  # Used by PM2 backend.
   #
-  # Local:
-  # Local Backend -> 127.0.0.1:6379 -> Docker Redis
+  # PM2 Backend:
+  #   REDIS_URL=redis://127.0.0.1:6379
   #
-  # Redis is exposed ONLY on VPS/local host.
-  # It is NOT directly exposed to the internet.
+  # Redis is accessible only from this VPS.
+  # It is NOT exposed to the public internet.
   # ============================================================
 
   redis:
@@ -28,35 +27,6 @@ services:
     volumes:
       - redis_data:/data
 
-    networks:
-      - haka_network
-
-  # ============================================================
-  # MONGODB
-  # ============================================================
-  # LOCAL DEVELOPMENT ONLY
-  #
-  # Production backend uses MongoDB Atlas:
-  # MONGODB_URI=mongodb+srv://...
-  #
-  # Therefore MongoDB Docker container is NOT required
-  # on production VPS.
-  # ============================================================
-
-  mongodb:
-    image: mongo:6
-    container_name: haka_mongodb
-    restart: unless-stopped
-
-    ports:
-      - "127.0.0.1:27017:27017"
-
-    volumes:
-      - mongo_data:/data/db
-
-    networks:
-      - haka_network
-
 # ============================================================
 # VOLUMES
 # ============================================================
@@ -65,15 +35,3 @@ volumes:
 
   redis_data:
     driver: local
-
-  mongo_data:
-    driver: local
-
-# ============================================================
-# NETWORK
-# ============================================================
-
-networks:
-
-  haka_network:
-    driver: bridge
