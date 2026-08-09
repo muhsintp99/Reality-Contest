@@ -31,6 +31,7 @@ const setTokenCookies = (res: Response, accessToken: string, refreshToken: strin
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
+    domain: isProd ? '.hakalive.in' : undefined,
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
 
@@ -38,6 +39,7 @@ const setTokenCookies = (res: Response, accessToken: string, refreshToken: strin
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
+    domain: isProd ? '.hakalive.in' : undefined,
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
 };

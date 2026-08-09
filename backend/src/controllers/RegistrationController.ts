@@ -138,10 +138,12 @@ export class RegistrationController {
 
       // Set auth refresh token cookie
       if (result.refreshToken) {
+        const isProd = process.env.NODE_ENV === 'production';
         res.cookie('refreshToken', result.refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
+          secure: isProd,
+          sameSite: isProd ? 'none' : 'lax',
+          domain: isProd ? '.hakalive.in' : undefined,
           maxAge: 7 * 24 * 60 * 60 * 1000
         });
       }
