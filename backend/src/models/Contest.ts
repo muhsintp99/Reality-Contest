@@ -1,6 +1,18 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
-export type ContestStatus = 'Draft' | 'Upcoming' | 'Registration Open' | 'Registration Closed' | 'Live' | 'Completed' | 'Cancelled';
+export type ContestStatus = 
+  | 'Draft' 
+  | 'Registration Open' 
+  | 'Upcoming' 
+  | 'Active' 
+  | 'In Progress' 
+  | 'Registration Closed' 
+  | 'Live' 
+  | 'Completed' 
+  | 'Maintenance' 
+  | 'Cancelled';
+
+export type EntryFeeType = 'Free' | 'Coins' | 'Cash';
 
 export interface IContest extends Document {
   contestId: string;
@@ -16,6 +28,10 @@ export interface IContest extends Document {
   rules?: string;
   prizePool: number;
   entryFee: number;
+  entryFeeType: EntryFeeType;
+  isFree: boolean;
+  entryFeeCoins: number;
+  coinsReward: number;
   timerLimit?: number;
   difficulty?: string;
   questionsCount?: number;
@@ -47,6 +63,10 @@ const contestSchema = new Schema<IContest>(
     rules: { type: String, default: '' },
     prizePool: { type: Number, default: 0 },
     entryFee: { type: Number, default: 0 },
+    entryFeeType: { type: String, enum: ['Free', 'Coins', 'Cash'], default: 'Free' },
+    isFree: { type: Boolean, default: true },
+    entryFeeCoins: { type: Number, default: 0 },
+    coinsReward: { type: Number, default: 0 },
     timerLimit: { type: Number, default: 30 },
     difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard', 'Expert'], default: 'Medium' },
     questionsCount: { type: Number, default: 0 },
@@ -60,7 +80,18 @@ const contestSchema = new Schema<IContest>(
     sponsors: [{ type: String }],
     status: {
       type: String,
-      enum: ['Draft', 'Upcoming', 'Registration Open', 'Registration Closed', 'Live', 'Completed', 'Cancelled'],
+      enum: [
+        'Draft', 
+        'Registration Open', 
+        'Upcoming', 
+        'Active', 
+        'In Progress', 
+        'Registration Closed', 
+        'Live', 
+        'Completed', 
+        'Maintenance', 
+        'Cancelled'
+      ],
       default: 'Draft',
       index: true
     }

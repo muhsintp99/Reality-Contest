@@ -1,6 +1,22 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.hakalive.in/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+// Compute full absolute server URL for console logging
+const getFullServerUrl = (url) => {
+  if (!url) return window.location.origin;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
+const absoluteApiUrl = getFullServerUrl(BASE_URL);
+
+// Log Connected API Full Server URL to Console
+console.log(
+  `%c 🔌 API Connected %c ${absoluteApiUrl}`,
+  'background: #16a34a; color: #ffffff; font-weight: bold; padding: 4px 8px; border-radius: 4px 0 0 4px;',
+  'background: #0f172a; color: #4ade80; font-weight: bold; padding: 4px 8px; border-radius: 0 4px 4px 0;'
+);
 
 // Configure global defaults for raw axios calls across all pages/components
 axios.defaults.baseURL = BASE_URL;
@@ -16,6 +32,25 @@ axios.interceptors.request.use((config) => {
       config.url = '';
     }
   }
+
+  const reqUrl = config.url || '';
+  const currentBase = config.baseURL || BASE_URL;
+  let fullUrl = '';
+
+  if (reqUrl.startsWith('http://') || reqUrl.startsWith('https://')) {
+    fullUrl = reqUrl;
+  } else if (currentBase.startsWith('http://') || currentBase.startsWith('https://')) {
+    const base = currentBase.endsWith('/') ? currentBase.slice(0, -1) : currentBase;
+    const path = reqUrl.startsWith('/') ? reqUrl : '/' + reqUrl;
+    fullUrl = base + (path === '/' ? '' : path);
+  } else {
+    const base = currentBase.endsWith('/') ? currentBase.slice(0, -1) : currentBase;
+    const path = reqUrl.startsWith('/') ? reqUrl : '/' + reqUrl;
+    fullUrl = getFullServerUrl(base + (path === '/' ? '' : path));
+  }
+
+  console.log(`🌐 [Frontend API Request] ${config.method?.toUpperCase()} -> ${fullUrl}`);
+
   return config;
 });
 
@@ -29,3 +64,5 @@ export const api = axios.create({
 });
 
 export default api;
+
+

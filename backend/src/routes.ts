@@ -19,6 +19,9 @@ import { advertisementController } from './controllers/AdvertisementController';
 import { couponController } from './controllers/CouponController';
 import { referralController } from './controllers/ReferralController';
 import { dailyContestsController } from './controllers/DailyContestsController';
+import { coinController } from './controllers/CoinController';
+import { rolePermissionController } from './controllers/RolePermissionController';
+import { mobileContestantController } from './controllers/MobileContestantController';
 
 // Import Middlewares
 import { authenticate, authorize, requireNotGuest } from './middleware/AuthMiddleware';
@@ -56,8 +59,10 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/auth/register/email/otp', authLimiter, validateRequest(verifyEmailOtpSchema), registrationController.verifyEmailOtp);
   router.post('/auth/register/email/resend-otp', authLimiter, validateRequest(resendOtpSchema), registrationController.resendEmailOtp);
   router.post('/auth/register/mobile', authLimiter, validateRequest(startMobileSchema), registrationController.startMobile);
+  router.post('/auth/register/verify-mobile-otp', authLimiter, validateRequest(verifyMobileOtpSchema), registrationController.verifyOtp);
   router.post('/auth/register/otp', authLimiter, validateRequest(verifyMobileOtpSchema), registrationController.verifyOtp);
   router.post('/auth/register/resend-otp', authLimiter, validateRequest(resendOtpSchema), registrationController.resendOtp);
+  router.post('/auth/register/complete-profile', validateRequest(saveProfileSchema), registrationController.saveProfile);
   router.post('/auth/register/profile', validateRequest(saveProfileSchema), registrationController.saveProfile);
   router.post('/auth/register/topics', validateRequest(saveTopicsSchema), registrationController.saveTopics);
   router.post('/auth/register/kyc', validateRequest(saveKycSchema), registrationController.completeRegistration);
@@ -159,7 +164,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/question-pools/:poolId/import', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.importQuestions);
 
   // Category Management routes
-  router.get('/categories', authenticate, categoryController.listCategories);
+  router.get('/categories', categoryController.listCategories);
   router.post('/categories', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager', 'Content Moderator'), validateRequest(createCategorySchema), categoryController.createCategory);
   router.put('/categories/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager', 'Content Moderator'), validateRequest(updateCategorySchema), categoryController.updateCategory);
   router.delete('/categories/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager', 'Content Moderator'), categoryController.deleteCategory);
@@ -238,10 +243,10 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/ads', advertisementController.listAds);
   router.get('/admin/ads', authenticate, advertisementController.listAds);
   router.get('/admin/ads/:id', authenticate, advertisementController.getAdById);
-  router.post('/admin/ads', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.createAd);
-  router.put('/admin/ads/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.updateAd);
-  router.delete('/admin/ads/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.deleteAd);
-  router.patch('/admin/ads/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), advertisementController.toggleAdStatus);
+  router.post('/admin/ads', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Sponsor'), advertisementController.createAd);
+  router.put('/admin/ads/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Sponsor'), advertisementController.updateAd);
+  router.delete('/admin/ads/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Sponsor'), advertisementController.deleteAd);
+  router.patch('/admin/ads/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Sponsor'), advertisementController.toggleAdStatus);
 
   // Coupon Management REST APIs
   router.post('/coupons/validate', couponController.validateCoupon);
@@ -252,10 +257,24 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/admin/coupons/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Finance Manager'), couponController.deleteCoupon);
   // Referral Management REST APIs
   router.get('/admin/referrals/rules', authenticate, referralController.getRules);
-  router.put('/admin/referrals/rules', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), referralController.updateRules);
+  router.put('/admin/referrals/rules', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Finance Manager'), referralController.updateRules);
   router.get('/admin/referrals/earnings', authenticate, referralController.listEarnings);
   router.get('/admin/referrals/abuse', authenticate, referralController.listAbuseLogs);
-  router.patch('/admin/referrals/abuse/:id/action', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Support Manager'), referralController.updateAbuseStatus);
+  router.patch('/admin/referrals/abuse/:id/action', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager', 'Support Manager', 'Finance Manager'), referralController.updateAbuseStatus);
+
+  // Coin Management REST APIs
+  router.get('/admin/coins/settings', authenticate, coinController.getSettings);
+  router.put('/admin/coins/settings', authenticate, authorize('Super Admin', 'Admin', 'Finance Manager'), coinController.updateSettings);
+  router.get('/admin/coins/packages', authenticate, coinController.listPackages);
+  router.post('/admin/coins/packages', authenticate, authorize('Super Admin', 'Admin', 'Finance Manager'), coinController.createPackage);
+  router.put('/admin/coins/packages/:id', authenticate, authorize('Super Admin', 'Admin', 'Finance Manager'), coinController.updatePackage);
+  router.delete('/admin/coins/packages/:id', authenticate, authorize('Super Admin', 'Admin', 'Finance Manager'), coinController.deletePackage);
+  router.get('/admin/coins/transactions', authenticate, coinController.listTransactions);
+
+  // Role Permissions Management REST APIs
+  router.get('/admin/roles-permissions', authenticate, rolePermissionController.getPermissions);
+  router.put('/admin/roles-permissions', authenticate, authorize('Super Admin', 'Admin'), rolePermissionController.savePermissions);
+  router.post('/admin/roles-permissions/role', authenticate, authorize('Super Admin', 'Admin'), rolePermissionController.createCustomRole);
 
   // Public CMS REST APIs (Accessible for Member Platform & Visitors)
   router.get('/cms/doc/:type', cmsController.getDocument);
@@ -312,6 +331,46 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Fraud Logs
   router.get('/admin/fraud-logs', authenticate, authorize('Super Admin', 'Admin', 'KYC Officer'), moduleManagementController.listFraudLogs);
+
+  // ==================================================================
+  // MOBILE APP API ENDPOINTS (VERSION 1 - CONTESTANT MODULE)
+  // ==================================================================
+  // Step 1: Mobile OTP Generation & Verification
+  router.post('/v1/mobile/auth/send-otp', mobileContestantController.sendOtp);
+  router.post('/mobile/auth/send-otp', mobileContestantController.sendOtp);
+
+  router.post('/v1/mobile/auth/verify-otp', mobileContestantController.verifyOtp);
+  router.post('/mobile/auth/verify-otp', mobileContestantController.verifyOtp);
+
+  // Step 2: Contestant Registration
+  router.post('/v1/mobile/auth/register', upload.single('profileImage'), mobileContestantController.register);
+  router.post('/mobile/auth/register', upload.single('profileImage'), mobileContestantController.register);
+
+  // Step 3: Contestant Login
+  router.post('/v1/mobile/auth/login', mobileContestantController.login);
+  router.post('/mobile/auth/login', mobileContestantController.login);
+
+  // Step 4 & 5: Forgot Password & Reset Password
+  router.post('/v1/mobile/auth/forgot-password', mobileContestantController.forgotPassword);
+  router.post('/mobile/auth/forgot-password', mobileContestantController.forgotPassword);
+
+  router.post('/v1/mobile/auth/reset-password', mobileContestantController.resetPassword);
+  router.post('/mobile/auth/reset-password', mobileContestantController.resetPassword);
+
+  // Token Refresh
+  router.post('/v1/mobile/auth/refresh-token', mobileContestantController.refreshToken);
+  router.post('/mobile/auth/refresh-token', mobileContestantController.refreshToken);
+
+  // Step 6: Get & Update Contestant Profile
+  router.get('/v1/mobile/profile', authenticate, mobileContestantController.getProfile);
+  router.get('/mobile/profile', authenticate, mobileContestantController.getProfile);
+
+  router.put('/v1/mobile/profile', authenticate, upload.single('profileImage'), mobileContestantController.updateProfile);
+  router.put('/mobile/profile', authenticate, upload.single('profileImage'), mobileContestantController.updateProfile);
+
+  // Step 7: Change Password
+  router.post('/v1/mobile/profile/change-password', authenticate, mobileContestantController.changePassword);
+  router.post('/mobile/profile/change-password', authenticate, mobileContestantController.changePassword);
 
   return router;
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { loginRequest, googleAuthRequest, guestLoginRequest, sendOtpRequest } from '../store/authSlice';
+import axios from 'axios';
+import { loginRequest, googleAuthRequest, guestLoginRequest, sendOtpRequest, loginSuccess } from '../store/authSlice';
 import { signInWithGoogle } from '../config/firebase';
 import { Eye, EyeOff, Lock, Mail, Phone, KeyRound, Sparkles, Chrome, Facebook, User as UserIcon } from 'lucide-react';
 import { HakaLogo } from '../components/HakaLogo';
@@ -17,8 +18,31 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
   const [otpCode, setOtpCode] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [sessionId, setSessionId] = useState('');
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isOtpLogin && sessionId && otpCode) {
+      try {
+        const res = await axios.post('/api/auth/register/verify-mobile-otp', {
+          sessionId,
+          otp: otpCode
+        });
+        if (res.data.success) {
+          if (res.data.isRegistered && res.data.user) {
+            dispatch(loginSuccess(res.data.user));
+            onLoginSuccess();
+          } else {
+            // Unregistered mobile number: Phone is verified, proceed to register profile!
+            if (onRegisterClick) onRegisterClick();
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn('Mobile OTP verification fallback to standard login:', err);
+      }
+    }
+
     dispatch(loginRequest({
       loginId,
       password,
@@ -31,16 +55,40 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
     }));
   };
 
-  const handleSendOtp = () => {
+  const [mockOtpHint, setMockOtpHint] = useState('');
+
+  const handleSendOtp = async () => {
     if (!loginId) {
       alert('Please enter your username, email, or mobile number first.');
       return;
     }
+
+    const cleanInput = loginId.trim();
+    const isMobile = /^\+?[0-9\s-]{7,15}$/.test(cleanInput);
+
+    if (isMobile) {
+      try {
+        const res = await axios.post('/api/auth/register/mobile', {
+          countryCode: '+91',
+          phone: cleanInput
+        });
+        if (res.data.success) {
+          setSessionId(res.data.sessionId);
+          setOtpSent(true);
+          if (res.data.mockOtp) setMockOtpHint(res.data.mockOtp);
+          return;
+        }
+      } catch (err) {
+        console.warn('Fallback to standard sendOtp:', err);
+      }
+    }
+
     dispatch(sendOtpRequest({
       loginId,
       type: 'login',
-      callback: () => {
+      callback: (mockOtp) => {
         setOtpSent(true);
+        if (mockOtp) setMockOtpHint(mockOtp);
       }
     }));
   };
@@ -253,6 +301,11 @@ export const Login = ({ onRegisterClick, onForgotClick, onLoginSuccess }) => {
                       className="block w-full pl-10 pr-4 py-2.5 bg-white/90 dark:bg-[#080b12]/40 border border-slate-300/80 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary focus:ring-1 focus:ring-brandPrimary/20 text-xs tracking-widest text-center font-extrabold"
                     />
                   </div>
+                  {otpSent && (
+                    <div className="mt-1.5 text-[11px] font-mono bg-emerald-500/10 text-emerald-400 py-1.5 px-3 rounded-xl border border-emerald-500/20 text-center font-bold">
+                      SMS Test OTP Code: <span className="text-white underline font-extrabold">{mockOtpHint || '123456'}</span> (or use test code <span className="text-white underline font-extrabold">123456</span>)
+                    </div>
+                  )}
                 </div>
               )}
 

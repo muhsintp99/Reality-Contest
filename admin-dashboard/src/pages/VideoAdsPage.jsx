@@ -179,6 +179,7 @@ export const VideoAdsPage = () => {
             { label: 'Active Status', value: 'Active' },
             { label: 'Paused Status', value: 'Paused' }
           ]}
+          className="w-full sm:w-48"
         />
       </div>
 

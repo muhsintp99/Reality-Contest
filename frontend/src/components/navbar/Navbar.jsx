@@ -8,6 +8,7 @@ import {
   ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { Breadcrumb } from '../Breadcrumb';
+import { resolveAvatarSrc } from '../../utils/avatar';
 
 export const Navbar = ({ activeView, onOpenMobileMenu, isCollapsed, setIsCollapsed }) => {
   const { theme, setTheme } = useTheme();
@@ -79,6 +80,17 @@ export const Navbar = ({ activeView, onOpenMobileMenu, isCollapsed, setIsCollaps
       {/* Right Section */}
       <div className="flex items-center gap-3">
         
+        {/* Coin Balance Pill */}
+        <div 
+          onClick={() => navigate('/website')}
+          className="cursor-pointer flex items-center gap-1.5 px-3 py-1 bg-[#13005A] border border-[#FFEB00]/60 rounded-xl shadow-md hover:scale-105 transition-transform"
+          title="View Public Website & Coin Rewards"
+        >
+          <span className="text-sm">🪙</span>
+          <span className="text-xs font-black text-[#FFEB00] font-poppins">{(user?.coins ?? 2450).toLocaleString()}</span>
+          <span className="text-[9px] font-bold bg-[#6EC207] text-[#13005A] px-1.5 py-0.2 rounded uppercase">Coins</span>
+        </div>
+
         {/* Sandbox Mode flag */}
         {isMockMode && (
           <div className="hidden md:flex items-center gap-1.5 bg-brandSecondary/10 border border-brandSecondary/20 px-3 py-1 rounded-full text-[10px] text-brandPrimary dark:text-brandSecondary font-bold animate-pulse">
@@ -179,7 +191,7 @@ export const Navbar = ({ activeView, onOpenMobileMenu, isCollapsed, setIsCollaps
             className="flex items-center gap-2 p-1 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/10 rounded-xl transition-all"
           >
             <img 
-              src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Raj'} 
+              src={resolveAvatarSrc(user, user?.name || 'User')} 
               className="w-7 h-7 rounded-lg object-cover border border-slate-200/50 dark:border-white/10" 
               alt="" 
             />

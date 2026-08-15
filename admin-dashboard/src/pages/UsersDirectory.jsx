@@ -13,6 +13,48 @@ import {
   Trash2, Search, Eye, EyeOff, X, Mail, Phone, Lock, Sparkles, ChevronLeft, ChevronRight, Filter, Settings
 } from 'lucide-react';
 
+const getBackendOrigin = () => {
+  if (typeof window === 'undefined') return '';
+  const { protocol, hostname } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:10000`;
+  }
+  return '';
+};
+
+const resolveAvatarSrc = (u) => {
+  if (!u) return null;
+
+  const rawUrl = typeof u === 'string' 
+    ? u 
+    : (u.profileImage || u.photo || u.image || u.profilePicture || u.avatar);
+  
+  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+    return null;
+  }
+
+  const cleanUrl = rawUrl.trim();
+
+  if (cleanUrl.startsWith('blob:') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    return cleanUrl;
+  }
+
+  const backendOrigin = getBackendOrigin();
+
+  if (cleanUrl.includes('/uploads/') || cleanUrl.includes('/public/uploads/')) {
+    const pathPart = cleanUrl.includes('/uploads/') 
+      ? cleanUrl.split('/uploads/')[1] 
+      : cleanUrl.split('/public/uploads/')[1];
+    return `${backendOrigin}/uploads/${pathPart}`;
+  }
+
+  if (cleanUrl.startsWith('/')) {
+    return `${backendOrigin}${cleanUrl}`;
+  }
+
+  return `${backendOrigin}/uploads/${cleanUrl}`;
+};
+
 export const UsersDirectory = ({ type = 'Contestant' }) => {
   const { showAlert, showSnackbar, showConfirm } = useAlert();
   const navigate = useNavigate();
@@ -357,8 +399,12 @@ export const UsersDirectory = ({ type = 'Contestant' }) => {
                     >
                       <td className="px-6 py-4 font-bold text-white flex items-center gap-3">
                         <img 
-                          src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username}`} 
-                          className="w-6 h-6 rounded-full border border-white/10" 
+                          src={resolveAvatarSrc(u)} 
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.username || u.name)}`;
+                          }}
+                          className="w-6 h-6 rounded-full object-cover border border-white/10" 
                           alt="" 
                         />
                         <span>{u.name}</span>
@@ -655,8 +701,12 @@ export const UsersDirectory = ({ type = 'Contestant' }) => {
           <div className="space-y-6 text-left">
             <div className="flex items-center gap-3 mb-6">
               <img 
-                src={selectedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedUser.username}`} 
-                className="w-10 h-10 rounded-full border border-white/10" 
+                src={resolveAvatarSrc(selectedUser)} 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selectedUser.username || selectedUser.name)}`;
+                }}
+                className="w-10 h-10 rounded-full object-cover border border-white/10" 
                 alt="" 
               />
               <div>
@@ -808,8 +858,12 @@ export const UsersDirectory = ({ type = 'Contestant' }) => {
           <div className="space-y-6 text-left">
             <div className="flex items-center gap-4 border-b border-white/10 pb-5">
               <img 
-                src={viewingUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewingUser.username}`} 
-                className="w-16 h-16 rounded-full border border-white/10" 
+                src={resolveAvatarSrc(viewingUser)} 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(viewingUser.username || viewingUser.name)}`;
+                }}
+                className="w-16 h-16 rounded-full object-cover border border-white/10" 
                 alt="" 
               />
               <div>

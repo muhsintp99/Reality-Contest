@@ -62,8 +62,6 @@ export const ContestManagement = () => {
   const { showAlert, showSnackbar, showConfirm } = useAlert();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
   const { markModuleAsRead } = useNotification();
-  // Sub-Tab State: 'all' | 'daily' | 'grand' | 'special'
-  const [activeTab, setActiveTab] = useState('all');
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -153,15 +151,15 @@ export const ContestManagement = () => {
           const res = await axios.put(`/api/contests/${editingId}`, data, { withCredentials: true });
           if (res.data.success) {
             showSnackbar('Contest updated successfully.', 'success');
-            resetForm();
             fetchContests();
+            resetForm();
           }
         } else {
           const res = await axios.post('/api/contests', data, { withCredentials: true });
           if (res.data.success) {
             showSnackbar('Contest created successfully.', 'success');
-            resetForm();
             fetchContests();
+            resetForm();
           }
         }
       } catch (err) {
@@ -169,59 +167,6 @@ export const ContestManagement = () => {
       }
     }
   });
-
-  const fetchContests = async () => {
-    if (isMockMode) {
-      setContests([
-        { 
-          _id: 'ct-1', 
-          title: 'India Creator Showdown 2026', 
-          description: 'Vlogging, photography, and cinematography creative expression.', 
-          rules: 'Submit short film before deadline.',
-          entryFee: 499, 
-          prizePool: 1000000, 
-          status: 'Registration Open', 
-          timerLimit: 45,
-          difficulty: 'Medium',
-          questionsCount: 25,
-          imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500',
-          startDate: '2026-07-01T12:00:00', 
-          endDate: '2026-07-15T18:00:00', 
-          maxParticipants: 1000, 
-          categories: ['cat-2'] 
-        },
-        { 
-          _id: 'ct-2', 
-          title: 'National Tech & AI Quiz Arena', 
-          description: 'Coding algorithms, spatial logic, and AI machine building quizzes.', 
-          rules: 'Negative marking -2 for wrong attempts.',
-          entryFee: 199, 
-          prizePool: 250000, 
-          status: 'Registration Open', 
-          timerLimit: 30,
-          difficulty: 'Hard',
-          questionsCount: 30,
-          imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500',
-          startDate: '2026-07-05T10:00:00', 
-          endDate: '2026-07-20T20:00:00', 
-          maxParticipants: 500, 
-          categories: ['cat-1', 'cat-3'] 
-        }
-      ]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await axios.get('/api/contests', { withCredentials: true });
-      let data = res.data.contests || [];
-      data.sort((a, b) => new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime());
-      setContests(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCategories = async () => {
     if (isMockMode) {
@@ -240,9 +185,67 @@ export const ContestManagement = () => {
     }
   };
 
+  const fetchContests = async () => {
+    setLoading(true);
+    try {
+      if (isMockMode) {
+        setContests([
+          {
+            _id: '1',
+            contestId: 'CNT-2026-1001',
+            title: 'India Creator Showdown 2026',
+            description: 'Vlogging, photography, and cinematography creative expression.',
+            rules: 'Submit short film before deadline.',
+            prizePool: 1000000,
+            entryFee: 499,
+            status: 'Registration Open',
+            timerLimit: 45,
+            difficulty: 'Medium',
+            questionsCount: 25,
+            imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500',
+            startDate: '2026-07-01T12:00:00',
+            endDate: '2026-07-15T18:00:00',
+            registrationStart: '2026-06-01T09:00:00',
+            registrationEnd: '2026-06-30T23:59:00',
+            maxParticipants: 1000,
+            categories: ['cat-2']
+          },
+          {
+            _id: '2',
+            contestId: 'CNT-2026-1002',
+            title: 'Speed Coding Challenge',
+            description: 'Algorithms and rapid problem solving showdown.',
+            rules: 'Instant submission auto-eval.',
+            prizePool: 50000,
+            entryFee: 99,
+            status: 'Live',
+            timerLimit: 15,
+            difficulty: 'Hard',
+            questionsCount: 30,
+            imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500',
+            startDate: '2026-06-10T10:00:00',
+            endDate: '2026-06-10T12:00:00',
+            registrationStart: '2026-06-01T00:00:00',
+            registrationEnd: '2026-06-09T23:59:00',
+            maxParticipants: 500,
+            categories: ['cat-1']
+          }
+        ]);
+        return;
+      }
+      const res = await axios.get('/api/contests', { withCredentials: true });
+      setContests(res.data.contests || res.data.data || []);
+    } catch (err) {
+      showAlert(err.response?.data?.message || 'Failed to fetch contests', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchContests();
     fetchCategories();
+    fetchContests();
+    markModuleAsRead('contests');
   }, [isMockMode]);
 
   const handleEditClick = (c) => {
@@ -346,18 +349,9 @@ export const ContestManagement = () => {
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
       const matchesCategory = categoryFilter === 'All' || (c.categories && c.categories.includes(categoryFilter));
 
-      let matchesTab = true;
-      if (activeTab === 'daily') {
-        matchesTab = (c.type === 'Daily Contest') || (c.title && c.title.toLowerCase().includes('daily')) || (c.categories && c.categories.includes('Daily Contest'));
-      } else if (activeTab === 'grand') {
-        matchesTab = (c.type === 'Grand Audition') || (c.title && c.title.toLowerCase().includes('grand'));
-      } else if (activeTab === 'special') {
-        matchesTab = (c.type === 'Special Event') || (c.title && c.title.toLowerCase().includes('special'));
-      }
-
-      return matchesSearch && matchesStatus && matchesCategory && matchesTab;
+      return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [contests, search, statusFilter, categoryFilter, activeTab]);
+  }, [contests, search, statusFilter, categoryFilter]);
 
   return (
     <div className="space-y-6 text-left animate-fade-in relative p-2">
@@ -380,76 +374,7 @@ export const ContestManagement = () => {
         </button>
       </div>
 
-      {/* Sub-Tabs Navigation Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-white/10 no-scrollbar">
-        {[
-          { id: 'all', label: 'All Contests', icon: Trophy },
-          { id: 'daily', label: 'Daily Contest ⚡', icon: Clock },
-          { id: 'grand', label: 'Grand Auditions 🏆', icon: Award },
-          { id: 'special', label: 'Special Events 🎉', icon: Sparkles }
-        ].map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-brandPrimary text-white shadow-md shadow-brandPrimary/20'
-                  : 'bg-white dark:bg-[#0B1120] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/5'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
 
-      {/* Daily Contest Featured Banner (Shown when activeTab === 'daily') */}
-      {activeTab === 'daily' && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-brandPrimary/10 to-purple-500/10 border border-amber-500/20 rounded-2xl p-5 shadow-sm space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950 uppercase tracking-wider">Daily Arena Live</span>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <Clock className="w-5 h-5 text-amber-500" /> Daily Contests & 24h Reset Arena
-                </h3>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Automated 24-hour daily quiz battles, speed tappers, and instant daily prize challenges with auto-reset leaderboards.
-              </p>
-            </div>
-            <button
-              onClick={() => navigate('/admin-dashboard/contests/create')}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold shadow flex items-center gap-1.5 shrink-0 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Create Daily Contest
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Daily Battles Active</div>
-              <div className="text-lg font-extrabold text-amber-500">4 Live Battles</div>
-            </div>
-            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Daily Reset Countdown</div>
-              <div className="text-lg font-extrabold text-emerald-500 font-mono">14h 22m 10s</div>
-            </div>
-            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Daily Prize Money Pool</div>
-              <div className="text-lg font-extrabold text-slate-900 dark:text-white">₹50,000</div>
-            </div>
-            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-xl border border-amber-500/10">
-              <div className="text-[10px] text-slate-400 font-bold uppercase">Today's Daily Joins</div>
-              <div className="text-lg font-extrabold text-brandPrimary">2,840 Participants</div>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-[#0B1120] p-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
@@ -468,11 +393,18 @@ export const ContestManagement = () => {
             onChange={setStatusFilter}
             options={[
               { value: 'All', label: 'All Statuses' },
+              { value: 'Draft', label: 'Draft' },
               { value: 'Registration Open', label: 'Registration Open' },
+              { value: 'Upcoming', label: 'Upcoming' },
+              { value: 'Active', label: 'Active ⚡' },
               { value: 'In Progress', label: 'In Progress' },
-              { value: 'Completed', label: 'Completed' }
+              { value: 'Registration Closed', label: 'Registration Closed' },
+              { value: 'Live', label: 'Live' },
+              { value: 'Completed', label: 'Completed' },
+              { value: 'Maintenance', label: 'Maintenance 🛠️' },
+              { value: 'Cancelled', label: 'Cancelled' }
             ]}
-            className="w-44"
+            className="w-48"
           />
         </div>
       </div>
@@ -520,8 +452,24 @@ export const ContestManagement = () => {
                 
                 {/* Financial & Logistics Info */}
                 <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl text-center text-xs">
-                  <div><span className="text-[10px] text-slate-400 block">Prize Pool</span><strong className="text-emerald-500 font-bold">₹{c.prizePool?.toLocaleString()}</strong></div>
-                  <div><span className="text-[10px] text-slate-400 block">Entry Fee</span><strong className="text-brandPrimary font-bold">₹{c.entryFee}</strong></div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Prize Pool</span>
+                    <strong className="text-amber-500 font-bold">
+                      {c.prizePool?.toLocaleString()} Coins 🪙
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">Entry Fee</span>
+                    <strong className="font-bold">
+                      {c.entryFee === 0 || c.isFree === true || c.entryFeeType === 'Free' ? (
+                        <span className="text-emerald-500 font-extrabold uppercase">FREE</span>
+                      ) : c.entryFeeType === 'Coins' || (c.entryFeeCoins && c.entryFeeCoins > 0) ? (
+                        <span className="text-amber-500 font-bold">{c.entryFeeCoins || c.entryFee} 🪙</span>
+                      ) : (
+                        <span className="text-brandPrimary font-bold">₹{c.entryFee}</span>
+                      )}
+                    </strong>
+                  </div>
                   <div><span className="text-[10px] text-slate-400 block">Timer</span><strong className="text-slate-800 dark:text-white font-bold">{c.timerLimit || 30} mins</strong></div>
                 </div>
               </div>

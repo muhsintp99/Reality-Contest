@@ -69,7 +69,11 @@ export const DailyContestWizard = () => {
       description: '',
       rules: '',
       prize: '',
-      fee: '',
+      fee: '0',
+      entryFeeType: 'Free',
+      isFree: true,
+      entryFeeCoins: '0',
+      coinsReward: '10000',
       maxPart: '500',
       timerLimit: '',
       questionsCount: '20',
@@ -95,18 +99,23 @@ export const DailyContestWizard = () => {
         .required('Prize pool in coins is required'),
       fee: Yup.number()
         .min(0, 'Entry fee must be positive')
-        .required('Entry fee in coins is required'),
+        .required('Entry fee is required'),
       timerLimit: Yup.number()
         .min(1, 'Timer must be at least 1 minute')
         .required('Timer is required')
     }),
     onSubmit: async (values) => {
       setSubmitting(true);
+      const feeVal = values.isFree ? 0 : (Number(values.fee) || 0);
       const payload = {
         title: values.title,
         category: values.selectedCategories[0] || values.category || 'General',
         categories: values.selectedCategories,
-        entryFee: Number(values.fee) || 0,
+        entryFee: feeVal,
+        entryFeeType: values.isFree ? 'Free' : (values.entryFeeType || 'Coins'),
+        isFree: values.isFree || feeVal === 0,
+        entryFeeCoins: values.entryFeeType === 'Coins' ? feeVal : 0,
+        coinsReward: Number(values.coinsReward) || Number(values.prize) || 0,
         prizePool: Number(values.prize) || 0,
         timerLimit: `${values.timerLimit} mins`,
         questionsCount: Number(values.questionsCount) || 20,
@@ -284,14 +293,75 @@ export const DailyContestWizard = () => {
 
           {/* Section 2: Financials & Logistics (Coins 🪙) */}
           <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-5">
-            <div className="flex items-center gap-2 text-brandPrimary border-b border-slate-100 dark:border-white/5 pb-3">
-              <Coins className="w-5 h-5 text-amber-500" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                2. PRIZE POOL COINS 🪙, TIMER & SEATS
-              </h3>
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
+              <div className="flex items-center gap-2 text-brandPrimary">
+                <Coins className="w-5 h-5 text-amber-500" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                  2. PRIZE POOL COINS 🪙, TIMER & SEATS
+                </h3>
+              </div>
+              {formik.values.isFree && (
+                <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase tracking-wider">
+                  🎉 Free Entry Active
+                </span>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Entry Fee Mode Selector */}
+            <div>
+              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-2">ENTRY FEE TYPE</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    formik.setFieldValue('entryFeeType', 'Free');
+                    formik.setFieldValue('isFree', true);
+                    formik.setFieldValue('fee', '0');
+                  }}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    formik.values.isFree || formik.values.entryFeeType === 'Free'
+                      ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500 shadow-sm'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>🎁 Free Entry</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    formik.setFieldValue('entryFeeType', 'Coins');
+                    formik.setFieldValue('isFree', false);
+                    if (formik.values.fee === '0') formik.setFieldValue('fee', '50');
+                  }}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    !formik.values.isFree && formik.values.entryFeeType === 'Coins'
+                      ? 'bg-amber-500/10 border-amber-500 text-amber-500 shadow-sm'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>🪙 Coins Entry</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    formik.setFieldValue('entryFeeType', 'Cash');
+                    formik.setFieldValue('isFree', false);
+                    if (formik.values.fee === '0') formik.setFieldValue('fee', '100');
+                  }}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    !formik.values.isFree && formik.values.entryFeeType === 'Cash'
+                      ? 'bg-blue-500/10 border-blue-500 text-blue-500 shadow-sm'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>💰 Cash Wallet (₹)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">PRIZE POOL (COINS 🪙)</label>
                 <input
@@ -303,25 +373,34 @@ export const DailyContestWizard = () => {
                   placeholder="e.g. 10000 Coins"
                   className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary transition-all"
                 />
-                {formik.touched.prize && formik.errors.prize && (
-                  <span className="text-[10px] text-red-500 mt-1 block">{formik.errors.prize}</span>
-                )}
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">ENTRY FEE (COINS 🪙)</label>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">
+                  {formik.values.isFree ? 'ENTRY FEE (FREE)' : formik.values.entryFeeType === 'Coins' ? 'ENTRY FEE (COINS 🪙)' : 'ENTRY FEE (INR ₹)'}
+                </label>
                 <input
                   type="number"
                   name="fee"
-                  value={formik.values.fee}
+                  disabled={formik.values.isFree}
+                  value={formik.values.isFree ? '0' : formik.values.fee}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  placeholder="e.g. 0 Coins (Free Entry)"
+                  placeholder={formik.values.isFree ? '0 (Free Entry)' : 'e.g. 50'}
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">BONUS COINS REWARD 🪙</label>
+                <input
+                  type="number"
+                  name="coinsReward"
+                  value={formik.values.coinsReward || '0'}
+                  onChange={formik.handleChange}
+                  placeholder="e.g. 1000 Coins"
                   className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary transition-all"
                 />
-                {formik.touched.fee && formik.errors.fee && (
-                  <span className="text-[10px] text-red-500 mt-1 block">{formik.errors.fee}</span>
-                )}
               </div>
             </div>
 
@@ -353,7 +432,7 @@ export const DailyContestWizard = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">TOTAL QUESTIONS COUNT</label>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">QUESTIONS COUNT</label>
                 <input
                   type="number"
                   name="questionsCount"

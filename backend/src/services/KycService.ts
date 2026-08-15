@@ -11,7 +11,22 @@ export class KycService {
 
   // 1. SUBMIT KYC (Queues heavy facial analysis using BullMQ)
   async submitKyc(userId: string, data: any): Promise<any> {
-    const { documentType, documentNumber, documentFrontUrl, documentBackUrl, selfieUrl } = data;
+    const {
+      address,
+      state,
+      district,
+      city,
+      pincode,
+      education,
+      occupation,
+      documentType,
+      documentNumber,
+      documentFrontUrl,
+      documentBackUrl,
+      selfieUrl,
+      addressProofUrl,
+      otherDocUrl
+    } = data;
 
     let kycRecord = await this.kycRepo.findByUserId(userId);
     if (kycRecord && kycRecord.status === 'Approved') {
@@ -23,11 +38,20 @@ export class KycService {
     const aiVerdict = simulatedLiveness >= 80 ? 'PASSED' : 'REVIEW_REQUIRED';
 
     if (kycRecord) {
+      kycRecord.address = address || '';
+      kycRecord.state = state || '';
+      kycRecord.district = district || '';
+      kycRecord.city = city || '';
+      kycRecord.pincode = pincode || '';
+      kycRecord.education = education || '';
+      kycRecord.occupation = occupation || '';
       kycRecord.documentType = documentType;
       kycRecord.documentNumber = documentNumber;
       kycRecord.documentFrontUrl = documentFrontUrl;
-      kycRecord.documentBackUrl = documentBackUrl;
+      kycRecord.documentBackUrl = documentBackUrl || '';
       kycRecord.selfieUrl = selfieUrl;
+      kycRecord.addressProofUrl = addressProofUrl || '';
+      kycRecord.otherDocUrl = otherDocUrl || '';
       kycRecord.status = 'Under Review';
       kycRecord.livenessScore = simulatedLiveness;
       kycRecord.aiMatchResult = aiVerdict;
@@ -35,20 +59,38 @@ export class KycService {
       await kycRecord.save();
     } else {
       kycRecord = await this.kycRepo.create({
-        userId,
+        userId: userId as any,
+        address: address || '',
+        state: state || '',
+        district: district || '',
+        city: city || '',
+        pincode: pincode || '',
+        education: education || '',
+        occupation: occupation || '',
         documentType,
         documentNumber,
         documentFrontUrl,
-        documentBackUrl,
+        documentBackUrl: documentBackUrl || '',
         selfieUrl,
+        addressProofUrl: addressProofUrl || '',
+        otherDocUrl: otherDocUrl || '',
         livenessScore: simulatedLiveness,
         aiMatchResult: aiVerdict,
         status: 'Under Review'
       });
     }
 
-    // Update User model status
-    await this.userRepo.update(userId, { kycStatus: 'Under Review' });
+    // Update User model status and sync location/education info
+    await this.userRepo.update(userId, {
+      kycStatus: 'Under Review',
+      ...(address && { address }),
+      ...(state && { state }),
+      ...(district && { district }),
+      ...(city && { city }),
+      ...(pincode && { pincode }),
+      ...(education && { education }),
+      ...(occupation && { occupation })
+    });
 
     // Cache Invalidation
     await redisService.del(`user:profile:${userId}`);
@@ -84,8 +126,19 @@ export class KycService {
     kyc.reviewedAt = new Date();
     await kyc.save();
 
-    // Update User Model status
-    await this.userRepo.update(kyc.userId.toString(), { kycStatus: status });
+    // Update User Model status and sync details on approval
+    const userUpdates: any = { kycStatus: status };
+    if (status === 'Approved') {
+      if (kyc.address) userUpdates.address = kyc.address;
+      if (kyc.state) userUpdates.state = kyc.state;
+      if (kyc.district) userUpdates.district = kyc.district;
+      if (kyc.city) userUpdates.city = kyc.city;
+      if (kyc.pincode) userUpdates.pincode = kyc.pincode;
+      if (kyc.education) userUpdates.education = kyc.education;
+      if (kyc.occupation) userUpdates.occupation = kyc.occupation;
+    }
+
+    await this.userRepo.update(kyc.userId.toString(), userUpdates);
 
     // Invalidate Redis profile Cache
     const userIdStr = kyc.userId.toString();

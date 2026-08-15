@@ -2,6 +2,8 @@ import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export type DailyContestStatus = 'Draft' | 'Registration Open' | 'Upcoming' | 'Active' | 'In Progress' | 'Completed' | 'Maintenance';
 
+export type EntryFeeType = 'Free' | 'Coins' | 'Cash';
+
 export interface IDailyContest extends Document {
   dailyContestId: string;
   title: string;
@@ -18,6 +20,10 @@ export interface IDailyContest extends Document {
   rules?: string;
   prizePool: number; // In Coins 🪙
   entryFee: number;  // In Coins 🪙
+  entryFeeType: EntryFeeType;
+  isFree: boolean;
+  entryFeeCoins: number;
+  coinsReward: number;
   timerLimit?: string | number;
   resetIntervalHours: number;
   lastResetAt: Date;
@@ -53,6 +59,10 @@ const dailyContestSchema = new Schema<IDailyContest>(
     rules: { type: String, default: '' },
     prizePool: { type: Number, default: 10000 },
     entryFee: { type: Number, default: 0 },
+    entryFeeType: { type: String, enum: ['Free', 'Coins', 'Cash'], default: 'Free' },
+    isFree: { type: Boolean, default: true },
+    entryFeeCoins: { type: Number, default: 0 },
+    coinsReward: { type: Number, default: 0 },
     timerLimit: { type: Schema.Types.Mixed, default: '3 mins' },
     resetIntervalHours: { type: Number, default: 24 },
     lastResetAt: { type: Date, default: Date.now },

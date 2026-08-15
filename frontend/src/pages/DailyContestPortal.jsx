@@ -157,8 +157,8 @@ export const DailyContestPortal = () => {
                 <span className="px-3 py-1 rounded-full text-[10px] font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider">
                   {b.category}
                 </span>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold ${b.entryFee === 0 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'}`}>
-                  {b.badge || (b.entryFee === 0 ? 'Free Entry' : `Entry: ${b.entryFee} Coins 🪙`)}
+                <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold ${b.entryFee === 0 || b.isFree === true || b.entryFeeType === 'Free' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                  {b.entryFee === 0 || b.isFree === true || b.entryFeeType === 'Free' ? '🎁 Free Entry' : `🪙 ${b.entryFeeCoins || b.entryFee} Coins`}
                 </span>
               </div>
 

@@ -5,7 +5,7 @@ import fs from 'fs';
 import { logger } from '../core/logger';
 import { AppError } from '../core/errors';
 
-const baseUploadDir = path.join(__dirname, '../../public/uploads');
+const baseUploadDir = path.resolve(process.cwd(), 'public/uploads');
 if (!fs.existsSync(baseUploadDir)) {
   fs.mkdirSync(baseUploadDir, { recursive: true });
 }
@@ -96,10 +96,11 @@ export class UploadController {
       }
       
       const folder = getTargetFolder(req);
-      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${folder}/${req.file.filename}`;
+      const relativeUrl = `/uploads/${folder}/${req.file.filename}`;
+      const fullUrl = `${req.protocol}://${req.get('host')}/uploads/${folder}/${req.file.filename}`;
       const relativePath = `public/uploads/${folder}/${req.file.filename}`;
 
-      logger.info(`File uploaded locally: ${relativePath} -> ${fileUrl}`);
+      logger.info(`File uploaded locally: ${relativePath} -> ${relativeUrl}`);
 
       res.status(200).json({
         success: true,
@@ -107,7 +108,8 @@ export class UploadController {
         folder,
         filename: req.file.filename,
         relativePath,
-        fileUrl
+        fileUrl: relativeUrl,
+        fullUrl
       });
     } catch (err) {
       next(err);
@@ -127,7 +129,8 @@ export class UploadController {
       }
 
       const folder = getTargetFolder(req);
-      const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${folder}/${req.file.filename}`;
+      const relativeUrl = `/uploads/${folder}/${req.file.filename}`;
+      const fullUrl = `${req.protocol}://${req.get('host')}/uploads/${folder}/${req.file.filename}`;
       const relativePath = `public/uploads/${folder}/${req.file.filename}`;
 
       res.status(200).json({
@@ -136,7 +139,8 @@ export class UploadController {
         folder,
         filename: req.file.filename,
         relativePath,
-        fileUrl
+        fileUrl: relativeUrl,
+        fullUrl
       });
     } catch (err) {
       next(err);

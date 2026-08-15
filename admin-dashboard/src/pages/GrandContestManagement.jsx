@@ -47,7 +47,7 @@ export const GrandContestManagement = () => {
   // Season Form State
   const [seasonForm, setSeasonForm] = useState({
     name: '',
-    prizePool: '₹5,00,000',
+    prizePool: '5,00,000 Coins 🪙',
     totalStages: 4,
     eliminationRate: '20%',
     passMarks: 70,
@@ -90,7 +90,7 @@ export const GrandContestManagement = () => {
           passMarks: 75,
           timerSec: c.timerLimit ? c.timerLimit * 60 : 60,
           status: c.status === 'Registration Open' || c.status === 'Live' ? 'Published' : c.status,
-          prizePool: `₹${c.prizePool?.toLocaleString() || 0}`,
+          prizePool: `${c.prizePool?.toLocaleString() || 0} Coins 🪙`,
           startDate: c.startDate ? c.startDate.split('T')[0] : '',
           endDate: c.endDate ? c.endDate.split('T')[0] : '',
           rules: c.rules || ''

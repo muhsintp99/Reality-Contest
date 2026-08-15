@@ -63,10 +63,10 @@ export class AdminController {
         const query = role === 'Admin'
           ? { role: { $in: adminRoles } }
           : { role };
-        users = await Admin.find(query).select('-password');
+        users = await Admin.find(query).select('-password').sort({ createdAt: -1, _id: -1 });
       } else {
         const query = { role };
-        users = await User.find(query).select('-password');
+        users = await User.find(query).select('-password').sort({ createdAt: -1, _id: -1 });
       }
 
       console.log(`[AdminController] listUsersByRole called with role: "${role}". Found ${users.length} users.`);
@@ -112,13 +112,13 @@ export class AdminController {
 
   async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, username, email, phone, password, role } = req.body;
+      const { name, username, email, phone, password, role, avatar } = req.body;
       const callerRole = (req as any).user.role;
       const callerId = (req as any).user.id;
 
       const adminRoles = [
-        'Admin',
         'Super Admin',
+        'Admin',
         'Contest Manager',
         'Question Manager',
         'Finance Manager',
@@ -130,9 +130,19 @@ export class AdminController {
         'Analytics Manager'
       ];
 
-      // Super Admin is the ONLY role that can create Admin/Super Admin / Manager accounts
-      if (adminRoles.includes(role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can create administrative or manager accounts.');
+      // Rule 1: Super Admin role can ONLY be created by a Super Admin
+      if (role === 'Super Admin' && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only a Super Admin can create a Super Admin account.');
+      }
+
+      // Rule 2: Admin role can ONLY be created by a Super Admin
+      if (role === 'Admin' && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only a Super Admin can create an Admin account.');
+      }
+
+      // Rule 3: Other Manager/Staff roles can be created by Super Admin or Admin
+      if (adminRoles.includes(role) && !['Super Admin', 'Admin'].includes(callerRole)) {
+        throw new ForbiddenError('Access Denied: Only Super Admin or Admin can create team manager accounts.');
       }
 
       const { Admin } = require('../models/Admin');
@@ -147,15 +157,18 @@ export class AdminController {
       const phoneExists = (await User.findOne({ phone })) || (await Admin.findOne({ phone }));
       if (phoneExists) throw new BadRequestError('Mobile number already registered.');
 
+      const userAvatar = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`;
+
       let newUser: any;
       if (adminRoles.includes(role)) {
         newUser = new Admin({
           name,
-          username,
-          email,
+          username: username.toLowerCase(),
+          email: email.toLowerCase(),
           phone,
           password,
           role,
+          avatar: userAvatar,
           status: 'Active'
         });
       } else {
@@ -234,14 +247,19 @@ export class AdminController {
         'Analytics Manager'
       ];
 
-      // Admin CANNOT edit Admin/Super Admin/Manager staff
-      if (adminRoles.includes(userToEdit.role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can edit administrative or manager accounts.');
+      // Rule 1: Super Admin role can ONLY be assigned by a Super Admin
+      if (role === 'Super Admin' && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only a Super Admin can assign Super Admin role.');
       }
 
-      // Admin CANNOT promote anyone to Admin/Super Admin/Manager roles
-      if (adminRoles.includes(role) && callerRole !== 'Super Admin') {
-        throw new ForbiddenError('Access Denied: Only Super Admin can assign administrative or manager roles.');
+      // Rule 2: Admin role can ONLY be assigned by a Super Admin
+      if (role === 'Admin' && callerRole !== 'Super Admin') {
+        throw new ForbiddenError('Access Denied: Only a Super Admin can assign Admin role.');
+      }
+
+      // Rule 3: Only Super Admin or Admin can edit team accounts
+      if (adminRoles.includes(userToEdit.role) && !['Super Admin', 'Admin'].includes(callerRole)) {
+        throw new ForbiddenError('Access Denied: Only Super Admin or Admin can edit administrative accounts.');
       }
 
       const oldRole = userToEdit.role;

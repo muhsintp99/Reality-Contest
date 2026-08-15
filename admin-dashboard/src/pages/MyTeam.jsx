@@ -32,6 +32,8 @@ export const MyTeam = () => {
   const { user: currentUser } = useSelector((state) => state.auth);
   const { markModuleAsRead } = useNotification();
   const isSuperAdmin = currentUser?.role === 'Super Admin';
+  const isAdmin = currentUser?.role === 'Admin';
+  const canCreateTeam = isSuperAdmin || isAdmin;
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
@@ -52,6 +54,7 @@ export const MyTeam = () => {
   const [updateSubmitting, setUpdateSubmitting] = useState(false);
 
   const availableRoles = [
+    { value: 'Super Admin', label: 'Super Admin' },
     { value: 'Admin', label: 'Admin' },
     { value: 'Contest Manager', label: 'Contest Manager' },
     { value: 'Question Manager', label: 'Question Manager' },
@@ -64,6 +67,17 @@ export const MyTeam = () => {
     { value: 'Analytics Manager', label: 'Analytics Manager' },
     { value: 'Sponsor', label: 'Sponsor' }
   ];
+
+  // Creatable roles based on caller hierarchy:
+  // - Super Admin can create Super Admin, Admin, and all Manager roles.
+  // - Admin can create ONLY Manager & Sub-admin roles (cannot create Super Admin or Admin).
+  const creatableRoles = React.useMemo(() => {
+    if (isSuperAdmin) return availableRoles;
+    if (isAdmin) {
+      return availableRoles.filter(r => r.value !== 'Super Admin' && r.value !== 'Admin');
+    }
+    return [];
+  }, [isSuperAdmin, isAdmin]);
 
   // Formik: Create Team Member
   const createFormik = useFormik({
@@ -213,9 +227,20 @@ export const MyTeam = () => {
     });
   };
 
+  const canManageMember = (member) => {
+    if (!member) return false;
+    if (member._id === currentUser?._id || member.email === currentUser?.email) return false;
+    if (isSuperAdmin) return true;
+    if (isAdmin) {
+      return member.role !== 'Super Admin' && member.role !== 'Admin';
+    }
+    return false;
+  };
+
   const openCreateDrawer = () => {
     createFormik.resetForm();
-    createFormik.setFieldValue('role', 'Admin');
+    const initialRole = isSuperAdmin ? 'Admin' : (creatableRoles[0]?.value || 'Contest Manager');
+    createFormik.setFieldValue('role', initialRole);
     setFormError('');
     setShowCreateDrawer(true);
   };
@@ -269,7 +294,7 @@ export const MyTeam = () => {
           </h2>
           <p className="text-xs text-slate-600 dark:text-white/50">Manage administrative staff credentials, roles, and console clearances.</p>
         </div>
-        {isSuperAdmin && (
+        {canCreateTeam && (
           <button
             onClick={openCreateDrawer}
             className="px-4 py-2.5 bg-brandPrimary text-white rounded-xl text-xs font-semibold hover:bg-brandPrimary/90 transition-colors flex items-center gap-2 shadow-lg shadow-brandPrimary/10"
@@ -301,7 +326,6 @@ export const MyTeam = () => {
             }}
             options={[
               { value: 'All', label: 'All Roles' },
-              { value: 'Super Admin', label: 'Super Admin' },
               ...availableRoles
             ]}
           />
@@ -405,7 +429,7 @@ export const MyTeam = () => {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {isSuperAdmin && member._id !== currentUser?._id && member.email !== currentUser?.email && (
+                            {canManageMember(member) && (
                               <>
                                 <button
                                   onClick={() => handleToggleStatus(member)}
@@ -488,7 +512,7 @@ export const MyTeam = () => {
       )}
 
       {/* CREATE TEAM DRAWER */}
-      {isSuperAdmin && (
+      {canCreateTeam && (
         <RightDrawer
           isOpen={showCreateDrawer}
           onClose={() => setShowCreateDrawer(false)}
@@ -605,19 +629,20 @@ export const MyTeam = () => {
               )}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 w-full">
               <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Assigned Role</label>
               <CustomSelect
                 value={createFormik.values.role}
                 onChange={(val) => createFormik.setFieldValue('role', val)}
-                options={availableRoles}
+                options={creatableRoles}
                 position="top"
+                className="w-full"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full mt-4 py-3.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex justify-center items-center gap-2 shadow-lg shadow-brandPrimary/15"
+              className="w-full mt-4 py-3.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex justify-center items-center gap-2 shadow-lg shadow-brandPrimary/15 cursor-pointer"
             >
               <span>Add Member</span>
               <Sparkles className="w-4 h-4" />
@@ -627,7 +652,7 @@ export const MyTeam = () => {
       )}
 
       {/* EDIT TEAM MEMBER DRAWER */}
-      {isSuperAdmin && selectedMember && (
+      {canCreateTeam && selectedMember && (
         <RightDrawer
           isOpen={showEditDrawer}
           onClose={() => setShowEditDrawer(false)}
@@ -692,13 +717,14 @@ export const MyTeam = () => {
               )}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 w-full">
               <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Override Clearance Role</label>
               <CustomSelect
                 value={editFormik.values.role}
                 onChange={(val) => editFormik.setFieldValue('role', val)}
-                options={availableRoles}
+                options={creatableRoles}
                 position="top"
+                className="w-full"
               />
             </div>
 

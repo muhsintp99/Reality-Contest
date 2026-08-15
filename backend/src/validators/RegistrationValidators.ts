@@ -11,7 +11,7 @@ export const verifyEmailOtpSchema = z.object({
 });
 
 export const startMobileSchema = z.object({
-  sessionId: z.string().min(1, 'Session ID is required'),
+  sessionId: z.string().optional().nullable(),
   countryCode: z.string().min(1, 'Country code is required'),
   phone: z.string().min(10, 'Mobile number must be at least 10 digits')
 });
@@ -22,32 +22,12 @@ export const verifyMobileOtpSchema = z.object({
 });
 
 export const resendOtpSchema = z.object({
-  sessionId: z.string().min(1, 'Session ID is required')
+  sessionId: z.string().optional().nullable()
 });
 
 export const saveProfileSchema = z.object({
-  sessionId: z.string().min(1, 'Session ID is required'),
-  name: z.string().min(2, 'Full Name must be at least 2 characters long'),
-  username: z.string().min(3, 'Username must be at least 3 characters long').toLowerCase(),
-  password: z.string().min(6, 'Password must be at least 6 characters long'),
-  confirmPassword: z.string().min(6, 'Confirm Password must be at least 6 characters long'),
-  dob: z.string().min(1, 'Date of birth is required').transform((val) => new Date(val)),
-  avatar: z.string().min(1, 'Profile image or Avatar is required'),
-  gender: z.enum(['Male', 'Female', 'Other']).optional().default('Male'),
-  state: z.string().optional().nullable(),
-  district: z.string().optional().nullable(),
-  city: z.string().optional().nullable(),
-  preferredLanguage: z.string().optional().nullable(),
-  pincode: z.string().optional().nullable(),
-  referralCode: z.string().optional().nullable(),
-  occupation: z.string().optional().nullable(),
-  education: z.string().optional().nullable(),
-  employmentStatus: z.enum(['Student', 'Employed / Salaried', 'Self Employed', 'Unemployed']).optional().nullable(),
-  favoriteCategories: z.array(z.string()).optional().default([])
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword']
-});
+  sessionId: z.string().min(1, 'Session ID is required')
+}).passthrough();
 
 export const saveTopicsSchema = z.object({
   sessionId: z.string().min(1, 'Session ID is required'),

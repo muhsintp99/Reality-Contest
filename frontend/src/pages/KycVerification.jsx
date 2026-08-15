@@ -1,39 +1,59 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { uploadKycRequest, fetchKycStatusRequest } from '../store/authSlice';
-import { Shield, UploadCloud, Camera, CheckCircle2, AlertTriangle, RefreshCw, UserCheck } from 'lucide-react';
+import { Shield, UploadCloud, Camera, CheckCircle2, AlertTriangle, RefreshCw, UserCheck, MapPin, GraduationCap, Briefcase, FileText } from 'lucide-react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Badge } from '../components/common/Badges';
 
 export const KycVerification = () => {
   const dispatch = useDispatch();
   const { user, currentKyc, loading } = useSelector((state) => state.auth);
+
+  // Address & Location State
+  const [address, setAddress] = useState('');
+  const [stateName, setStateName] = useState('');
+  const [district, setDistrict] = useState('');
+  const [city, setCity] = useState('');
+  const [pincode, setPincode] = useState('');
+
+  // Education & Occupation State
+  const [education, setEducation] = useState('Higher Secondary');
+  const [occupation, setOccupation] = useState('');
+
+  // Document State
   const [docType, setDocType] = useState('Aadhaar');
   const [docNum, setDocNum] = useState('');
-  const [docFileSelected, setDocFileSelected] = useState(false);
-  const [selfieCaptured, setSelfieCaptured] = useState(false);
-  const [docFileName, setDocFileName] = useState('');
-  const [selfieUrl, setSelfieUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [docFrontUrl, setDocFrontUrl] = useState('');
+  const [docFrontName, setDocFrontName] = useState('');
+  const [docBackUrl, setDocBackUrl] = useState('');
+  const [docBackName, setDocBackName] = useState('');
 
-  const fileInputRef = useRef(null);
-  const [realDocUrl, setRealDocUrl] = useState('');
-  const [uploadingFile, setUploadingFile] = useState(false);
+  // Proofs State
+  const [selfieCaptured, setSelfieCaptured] = useState(false);
+  const [selfieUrl, setSelfieUrl] = useState('');
+  const [addressProofUrl, setAddressProofUrl] = useState('');
+  const [addressProofName, setAddressProofName] = useState('');
+  const [otherDocUrl, setOtherDocUrl] = useState('');
+  const [otherDocName, setOtherDocName] = useState('');
+
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadingField, setUploadingField] = useState('');
+
+  const frontInputRef = useRef(null);
+  const backInputRef = useRef(null);
+  const addressProofInputRef = useRef(null);
+  const otherDocInputRef = useRef(null);
 
   useEffect(() => {
     dispatch(fetchKycStatusRequest());
   }, [dispatch]);
 
-  const handleSelectDocClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e) => {
+  // Handle Generic File Upload
+  const handleFileUpload = async (e, urlSetter, nameSetter, fieldKey) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingFile(true);
+    setUploadingField(fieldKey);
     const formData = new FormData();
     formData.append('file', file);
 
@@ -43,43 +63,56 @@ export const KycVerification = () => {
         withCredentials: true
       });
       if (res.data.success) {
-        setRealDocUrl(res.data.fileUrl);
-        setDocFileName(file.name);
-        setDocFileSelected(true);
+        urlSetter(res.data.fileUrl);
+        nameSetter(file.name);
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to upload file to local server.');
+      alert('Failed to upload document file.');
     } finally {
-      setUploadingFile(false);
+      setUploadingField('');
     }
   };
 
   const handleCaptureSelfie = () => {
     setSelfieCaptured(true);
-    const rand = Math.floor(Math.random() * 100);
+    const rand = Math.floor(Math.random() * 10000);
     setSelfieUrl(`https://api.dicebear.com/7.x/avataaars/svg?seed=Selfie-${rand}`);
   };
 
   const handleSubmitKyc = (e) => {
     e.preventDefault();
-    if (!docFileSelected || !selfieCaptured) {
-      alert('Please upload your document file and capture a liveness selfie.');
+    if (!docFrontUrl) {
+      alert('Please upload front side image of your identity document.');
       return;
     }
-    
+    if (!selfieCaptured && !selfieUrl) {
+      alert('Please capture or upload a liveness selfie.');
+      return;
+    }
+
     setSubmitting(true);
     dispatch(uploadKycRequest({
       data: {
+        address,
+        state: stateName,
+        district,
+        city,
+        pincode,
+        education,
+        occupation,
         documentType: docType,
         documentNumber: docNum,
-        documentFrontUrl: realDocUrl,
-        selfieUrl: selfieUrl
+        documentFrontUrl: docFrontUrl,
+        documentBackUrl: docBackUrl,
+        selfieUrl: selfieUrl,
+        addressProofUrl: addressProofUrl,
+        otherDocUrl: otherDocUrl
       },
       callback: (success) => {
         setSubmitting(false);
         if (success) {
-          alert('KYC submitted! AI systems have run a baseline face match check.');
+          alert('KYC application submitted successfully! Under review.');
         }
       }
     }));
@@ -97,10 +130,10 @@ export const KycVerification = () => {
             <Shield className="w-6 h-6 text-brandPrimary" />
             <span>KYC Verification Dashboard</span>
           </h2>
-          <p className="text-xs text-slate-450 dark:text-white/40 mt-1">View your identity verification status and AI matching analytics.</p>
+          <p className="text-xs text-slate-450 dark:text-white/40 mt-1">View your identity verification status and recorded details.</p>
         </div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="glassmorphism p-6 md:p-8 rounded-[24px] border border-slate-200/50 dark:border-white/5 bg-white/70 dark:bg-slate-900/40 shadow-premium"
@@ -110,7 +143,7 @@ export const KycVerification = () => {
               <span className="text-[10px] font-bold text-slate-400 dark:text-white/35 uppercase block tracking-wider mb-1">Verification Status</span>
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider border ${
-                  isApproved ? 'bg-emerald-500/10 text-emerald-605 border-emerald-500/20' :
+                  isApproved ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                   isRejected ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
                   'bg-amber-500/10 text-amber-600 border-amber-500/20'
                 }`}>
@@ -122,66 +155,41 @@ export const KycVerification = () => {
               </div>
             </div>
             {isApproved && (
-              <span className="text-xs text-emerald-650 bg-emerald-500/10 px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 border border-emerald-500/20 shadow-sm">
-                <UserCheck className="w-4 h-4" /> Full Platform Access Granted
+              <span className="text-xs text-emerald-600 bg-emerald-500/10 px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 border border-emerald-500/20 shadow-sm">
+                <UserCheck className="w-4 h-4" /> Verified Contestant Account
               </span>
             )}
           </div>
 
+          {/* AI Ledger & Upload Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-brandPrimary dark:text-brandSecondary">AI Verification Ledger</h3>
-              
-              <div className="p-4 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-2xl space-y-3.5 shadow-sm">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-550 dark:text-white/60 font-semibold">Biometric Liveness Index:</span>
-                  <span className={`font-extrabold ${currentKyc.livenessScore >= 80 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                    {currentKyc.livenessScore}% Matching
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-slate-200/20 dark:border-white/5">
-                  <div 
-                    className="h-full bg-gradient-to-r from-brandPrimary to-brandSecondary rounded-full" 
-                    style={{ width: `${currentKyc.livenessScore}%` }}
-                  ></div>
-                </div>
-
-                <div className="flex justify-between items-center text-xs border-t border-slate-200/60 dark:border-white/5 pt-3.5">
-                  <span className="text-slate-550 dark:text-white/60 font-semibold">AI Facial Match Verdict:</span>
-                  <span className={`font-semibold px-2.5 py-0.5 rounded-lg text-[10px] font-bold ${
-                    currentKyc.aiMatchResult === 'PASSED' 
-                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
-                      : 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                  }`}>
-                    {currentKyc.aiMatchResult}
-                  </span>
-                </div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-brandPrimary dark:text-brandSecondary">Submitted Details</h3>
+              <div className="p-4 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-2xl space-y-2 text-xs">
+                <p><span className="text-slate-400">Document Type:</span> <strong className="text-slate-800 dark:text-white">{currentKyc.documentType}</strong></p>
+                <p><span className="text-slate-400">Doc Number:</span> <strong className="text-slate-800 dark:text-white">••••{currentKyc.documentNumber?.slice(-4)}</strong></p>
+                {currentKyc.address && <p><span className="text-slate-400">Address:</span> <span className="text-slate-700 dark:text-slate-300">{currentKyc.address}, {currentKyc.city}, {currentKyc.state} - {currentKyc.pincode}</span></p>}
+                {currentKyc.education && <p><span className="text-slate-400">Education:</span> <span className="text-slate-700 dark:text-slate-300">{currentKyc.education}</span></p>}
+                {currentKyc.occupation && <p><span className="text-slate-400">Occupation:</span> <span className="text-slate-700 dark:text-slate-300">{currentKyc.occupation}</span></p>}
               </div>
-
-              {isRejected && currentKyc.rejectionReason && (
-                <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-450 rounded-xl text-xs">
-                  <span className="font-bold block mb-1">Rejection Reason:</span>
-                  {currentKyc.rejectionReason}
-                </div>
-              )}
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-brandSecondary">Uploaded Credentials</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-brandSecondary">Uploaded Proofs</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-2xl text-center space-y-2.5 shadow-sm">
-                  <span className="text-[10px] text-slate-450 dark:text-white/40 block font-bold uppercase tracking-wider">{currentKyc.documentType} Card</span>
-                  <div className="w-full h-24 bg-slate-100 dark:bg-black/20 rounded-xl flex items-center justify-center border border-slate-200/50 dark:border-white/5 text-[10px] text-slate-400 font-semibold uppercase">
-                    Scan Uploaded
+                <div className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-xl text-center">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">Front Document Scan</span>
+                  <div className="w-full h-20 bg-slate-100 dark:bg-black/20 rounded-lg flex items-center justify-center text-[10px] text-emerald-500 font-bold mt-2">
+                    ✓ Scan Uploaded
                   </div>
-                  <span className="text-[10px] font-bold text-slate-650 dark:text-white/55 block truncate bg-slate-100 dark:bg-white/5 py-1 px-2 rounded-lg">
-                    Number: ••••{currentKyc.documentNumber.slice(-4)}
-                  </span>
                 </div>
-                <div className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-2xl text-center space-y-2.5 shadow-sm">
-                  <span className="text-[10px] text-slate-450 dark:text-white/40 block font-bold uppercase tracking-wider">Liveness Snapshot</span>
-                  <img src={currentKyc.selfieUrl} className="w-full h-24 object-cover rounded-xl border border-slate-200/50 dark:border-white/5" alt="" />
-                  <span className="text-[10px] text-slate-500 dark:text-white/40 block font-bold uppercase tracking-wider bg-slate-100 dark:bg-white/5 py-1 px-2 rounded-lg">Verified Selfie</span>
+                <div className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-xl text-center">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">Selfie Snapshot</span>
+                  {currentKyc.selfieUrl ? (
+                    <img src={currentKyc.selfieUrl} className="w-full h-20 object-cover rounded-lg mt-2 border border-slate-200 dark:border-white/10" alt="Selfie" />
+                  ) : (
+                    <div className="w-full h-20 bg-slate-100 dark:bg-black/20 rounded-lg flex items-center justify-center text-[10px] text-slate-400 mt-2">No Photo</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -198,123 +206,381 @@ export const KycVerification = () => {
           <Shield className="w-6 h-6 text-brandPrimary" />
           <span>Identity KYC Center</span>
         </h2>
-        <p className="text-xs text-slate-450 dark:text-white/40 mt-1">Submit government IDs and liveness selfies. Required for contestant smart-contract payouts.</p>
+        <p className="text-xs text-slate-400 dark:text-white/40 mt-1">
+          Complete address, professional profile, and submit government ID proofs to unlock contestant features.
+        </p>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="glassmorphism p-6 md:p-8 rounded-[24px] border border-slate-200/50 dark:border-white/10 bg-white/70 dark:bg-slate-900/40 shadow-premium"
       >
-        <form onSubmit={handleSubmitKyc} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            <div className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
-                  Document Type Selection
+        <form onSubmit={handleSubmitKyc} className="space-y-8">
+          
+          {/* SECTION 1: ADDRESS DETAILS */}
+          <div className="space-y-4 border-b border-slate-200/60 dark:border-white/5 pb-6">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-brandPrimary flex items-center gap-2">
+              <MapPin className="w-4 h-4" /> 1. Address & Location Details
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Street Address Line *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="House / Flat No, Street Name, Area"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  State *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={stateName}
+                  onChange={(e) => setStateName(e.target.value)}
+                  placeholder="Kerala / Tamil Nadu / Maharashtra"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  District *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  placeholder="District name"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  City / Town *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="City name"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Pincode *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="682001"
+                  maxLength={6}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2: EDUCATION & OCCUPATION */}
+          <div className="space-y-4 border-b border-slate-200/60 dark:border-white/5 pb-6">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-brandPrimary flex items-center gap-2">
+              <GraduationCap className="w-4 h-4" /> 2. Qualification & Occupation
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Education Level
+                </label>
+                <select
+                  value={education}
+                  onChange={(e) => setEducation(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+                >
+                  <option value="High School">High School (10th)</option>
+                  <option value="Higher Secondary">Higher Secondary (12th)</option>
+                  <option value="Diploma">Diploma</option>
+                  <option value="Bachelor Degree">Bachelor's Degree</option>
+                  <option value="Master Degree">Master's Degree</option>
+                  <option value="Doctorate">Doctorate / Ph.D.</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Occupation / Job Title
+                </label>
+                <input
+                  type="text"
+                  value={occupation}
+                  onChange={(e) => setOccupation(e.target.value)}
+                  placeholder="Software Engineer / Student / Freelancer"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: DOCUMENT DETAILS & SCANS */}
+          <div className="space-y-4 border-b border-slate-200/60 dark:border-white/5 pb-6">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-brandPrimary flex items-center gap-2">
+              <FileText className="w-4 h-4" /> 3. Government Identity Document
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Select Document Type *
                 </label>
                 <select
                   value={docType}
                   onChange={(e) => setDocType(e.target.value)}
-                  className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white text-xs focus:outline-none focus:border-brandPrimary/50 cursor-pointer font-semibold"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
                 >
-                  <option value="Aadhaar" className="bg-white text-slate-850 dark:bg-darkCard dark:text-white">Aadhaar Card (India)</option>
-                  <option value="PAN" className="bg-white text-slate-850 dark:bg-darkCard dark:text-white">PAN Card (India)</option>
-                  <option value="Passport" className="bg-white text-slate-850 dark:bg-darkCard dark:text-white">Passport</option>
-                  <option value="Driving License" className="bg-white text-slate-850 dark:bg-darkCard dark:text-white">Driving License</option>
+                  <option value="Aadhaar">Aadhaar Card (India)</option>
+                  <option value="PAN">PAN Card (India)</option>
+                  <option value="Passport">Passport</option>
+                  <option value="Driving License">Driving License</option>
+                  <option value="Voter ID">Voter ID Card</option>
+                  <option value="Other">Other Government ID</option>
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
-                  Document Registration Number
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Document Registration Number *
                 </label>
                 <input
                   type="text"
                   required
                   value={docNum}
                   onChange={(e) => setDocNum(e.target.value)}
-                  placeholder={`Enter your ${docType} number`}
-                  className="block w-full px-4 py-2.5 bg-slate-55 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-805 dark:text-white text-xs focus:outline-none focus:border-brandPrimary/50"
+                  placeholder={`Enter ${docType} number`}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
                 />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
-                  Upload Document Scan (Front Page)
+            {/* Document Scans Front & Back */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {/* Front Image */}
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Document Front Image *
                 </label>
                 <input
                   type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
+                  ref={frontInputRef}
+                  onChange={(e) => handleFileUpload(e, setDocFrontUrl, setDocFrontName, 'front')}
                   className="hidden"
                   accept="image/*,application/pdf"
                 />
-                <div 
-                  onClick={handleSelectDocClick}
-                  className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-brandPrimary/40 dark:hover:border-brandPrimary/30 bg-slate-50/50 dark:bg-[#080b12]/30 rounded-2xl p-6 text-center cursor-pointer transition-all space-y-2.5 shadow-sm"
-                >
-                  <UploadCloud className="w-8 h-8 text-slate-405 dark:text-white/20 mx-auto" />
-                  <div>
-                    <span className="text-xs text-brandPrimary hover:text-brandPrimary/80 font-bold block">
-                      {uploadingFile ? 'Uploading file...' : 'Click to import credentials file'}
-                    </span>
-                    <p className="text-[10px] text-slate-400 dark:text-white/35 mt-1 font-medium">JPEG, PNG or PDF up to 5MB</p>
-                  </div>
-                  {docFileSelected && (
-                    <div className="text-[11px] bg-brandPrimary/10 border border-brandPrimary/20 text-brandPrimary p-2 rounded-xl font-bold truncate">
-                      ✓ {docFileName}
+                {docFrontUrl ? (
+                  <div className="relative group border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden bg-slate-100 dark:bg-black/40">
+                    <img src={docFrontUrl} alt="Document Front Preview" className="w-full h-32 object-cover" />
+                    <div className="p-2 bg-slate-900/90 text-white flex items-center justify-between text-xs">
+                      <span className="truncate font-medium">{docFrontName || 'Front Document Scan'}</span>
+                      <button
+                        type="button"
+                        onClick={() => frontInputRef.current?.click()}
+                        className="text-brandPrimary hover:underline text-[11px] font-bold"
+                      >
+                        Change
+                      </button>
                     </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => frontInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-brandPrimary rounded-xl p-4 text-center cursor-pointer bg-slate-50/50 dark:bg-[#080b12]/30"
+                  >
+                    <UploadCloud className="w-6 h-6 text-brandPrimary mx-auto mb-1" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                      {uploadingField === 'front' ? 'Uploading...' : 'Upload Front Image Scan'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Back Image */}
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                  Document Back Image (Optional)
+                </label>
+                <input
+                  type="file"
+                  ref={backInputRef}
+                  onChange={(e) => handleFileUpload(e, setDocBackUrl, setDocBackName, 'back')}
+                  className="hidden"
+                  accept="image/*,application/pdf"
+                />
+                {docBackUrl ? (
+                  <div className="relative group border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden bg-slate-100 dark:bg-black/40">
+                    <img src={docBackUrl} alt="Document Back Preview" className="w-full h-32 object-cover" />
+                    <div className="p-2 bg-slate-900/90 text-white flex items-center justify-between text-xs">
+                      <span className="truncate font-medium">{docBackName || 'Back Document Scan'}</span>
+                      <button
+                        type="button"
+                        onClick={() => backInputRef.current?.click()}
+                        className="text-brandPrimary hover:underline text-[11px] font-bold"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => backInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-200 dark:border-white/10 hover:border-brandPrimary rounded-xl p-4 text-center cursor-pointer bg-slate-50/50 dark:bg-[#080b12]/30"
+                  >
+                    <UploadCloud className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                      {uploadingField === 'back' ? 'Uploading...' : 'Upload Back Image Scan'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 4: SELFIE & OTHER PROOFS */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider text-brandPrimary flex items-center gap-2">
+              <Camera className="w-4 h-4" /> 4. Liveness Selfie & Additional Proofs
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Liveness Selfie */}
+              <div className="bg-slate-50 dark:bg-black/20 border border-slate-200/50 dark:border-white/5 rounded-2xl p-5 text-center flex flex-col items-center justify-center space-y-3">
+                {selfieCaptured ? (
+                  <div className="space-y-2">
+                    <img src={selfieUrl} className="w-24 h-24 rounded-2xl object-cover border-2 border-brandSecondary mx-auto shadow-md" alt="Selfie" />
+                    <span className="text-[10px] text-brandSecondary bg-brandSecondary/10 px-2.5 py-1 rounded-full font-bold uppercase block">
+                      ✓ Live Selfie Recorded
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Camera className="w-8 h-8 text-slate-400 mx-auto" />
+                    <p className="text-[11px] text-slate-400 font-medium">Liveness photo verification</p>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCaptureSelfie}
+                  className="px-4 py-2 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-bold rounded-xl text-slate-700 dark:text-white hover:bg-slate-100 transition shadow-sm"
+                >
+                  {selfieCaptured ? 'Retake Snapshot' : 'Capture Live Photo'}
+                </button>
+              </div>
+
+              {/* Address Proof & Other Docs */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                    Address Proof (Electricity Bill / Passbook)
+                  </label>
+                  <input
+                    type="file"
+                    ref={addressProofInputRef}
+                    onChange={(e) => handleFileUpload(e, setAddressProofUrl, setAddressProofName, 'addressProof')}
+                    className="hidden"
+                    accept="image/*,application/pdf"
+                  />
+                  {addressProofUrl ? (
+                    <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-[#080b12]/40 border border-emerald-500/30 rounded-xl">
+                      <img src={addressProofUrl} alt="Address Proof" className="w-12 h-12 rounded-lg object-cover border border-slate-200 dark:border-white/10" />
+                      <div className="flex-1 truncate">
+                        <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">{addressProofName || 'Address Proof Uploaded'}</span>
+                        <span className="text-[10px] text-emerald-500 font-bold">✓ Ready for submission</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addressProofInputRef.current?.click()}
+                        className="text-xs font-bold text-brandPrimary hover:underline px-2"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => addressProofInputRef.current?.click()}
+                      className="w-full py-2.5 px-3 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 text-left flex items-center justify-between"
+                    >
+                      <span className="truncate">{uploadingField === 'addressProof' ? 'Uploading...' : 'Upload Address Proof Document'}</span>
+                      <UploadCloud className="w-4 h-4 text-slate-400 shrink-0" />
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-500 dark:text-white/40 mb-1">
+                    Other Supporting Document (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    ref={otherDocInputRef}
+                    onChange={(e) => handleFileUpload(e, setOtherDocUrl, setOtherDocName, 'otherDoc')}
+                    className="hidden"
+                    accept="image/*,application/pdf"
+                  />
+                  {otherDocUrl ? (
+                    <div className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-[#080b12]/40 border border-emerald-500/30 rounded-xl">
+                      <img src={otherDocUrl} alt="Other Document" className="w-12 h-12 rounded-lg object-cover border border-slate-200 dark:border-white/10" />
+                      <div className="flex-1 truncate">
+                        <span className="text-xs font-bold text-slate-800 dark:text-white block truncate">{otherDocName || 'Additional Document Uploaded'}</span>
+                        <span className="text-[10px] text-emerald-500 font-bold">✓ Ready for submission</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => otherDocInputRef.current?.click()}
+                        className="text-xs font-bold text-brandPrimary hover:underline px-2"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => otherDocInputRef.current?.click()}
+                      className="w-full py-2.5 px-3 bg-slate-50 dark:bg-[#080b12]/40 border border-slate-200/60 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 text-left flex items-center justify-between"
+                    >
+                      <span className="truncate">{uploadingField === 'otherDoc' ? 'Uploading...' : 'Upload Additional Document'}</span>
+                      <UploadCloud className="w-4 h-4 text-slate-400 shrink-0" />
+                    </button>
                   )}
                 </div>
               </div>
             </div>
-
-            <div className="space-y-4">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-450 dark:text-white/35">
-                Biometric Selfie Capture (Liveness Check)
-              </label>
-              
-              <div className="bg-slate-50 dark:bg-black/20 border border-slate-200/50 dark:border-white/5 rounded-2xl p-6 text-center space-y-4 flex flex-col justify-center items-center min-h-[250px] shadow-sm">
-                {selfieCaptured ? (
-                  <div className="space-y-3.5">
-                    <img src={selfieUrl} className="w-24 h-24 rounded-full object-cover border-2 border-brandSecondary bg-slate-200 dark:bg-slate-800 mx-auto animate-fade-in shadow-md" alt="" />
-                    <span className="text-[10px] text-brandSecondary bg-brandSecondary/10 px-3 py-1 rounded-full border border-brandSecondary/25 font-bold uppercase tracking-wider">
-                      ✓ Snapshot Recorded
-                    </span>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="w-16 h-16 rounded-full bg-white dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-white/20 border border-slate-200 dark:border-white/10 mx-auto shadow-sm">
-                      <Camera className="w-6 h-6" />
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-white/50 max-w-xs mx-auto leading-relaxed font-semibold">
-                      AI facial scanners will match your selfie against the document photograph. Please ensure adequate lighting.
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleCaptureSelfie}
-                  className="px-4 py-2 bg-white hover:bg-slate-50 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-bold rounded-xl text-slate-700 dark:text-white transition-all shadow-sm active:scale-[0.98] flex items-center gap-1.5"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>{selfieCaptured ? 'Retake Snapshot' : 'Capture Live Snap'}</span>
-                </button>
-              </div>
-            </div>
-
           </div>
 
-          <div className="pt-6 border-t border-slate-100 dark:border-white/5 text-right">
+          {/* Submit */}
+          <div className="pt-4 border-t border-slate-200/60 dark:border-white/5 text-right">
             <button
               type="submit"
               disabled={loading || submitting}
-              className="px-6 py-2.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98]"
+              className="px-6 py-3 bg-gradient-to-r from-brandPrimary to-brandSecondary hover:brightness-110 text-white rounded-xl text-xs font-extrabold transition shadow-lg active:scale-[0.98] disabled:opacity-50"
             >
-              {submitting ? 'Running AI Facial Match...' : 'Submit Verification Application'}
+              {submitting ? 'Submitting Application...' : 'Submit Full KYC Application'}
             </button>
           </div>
         </form>

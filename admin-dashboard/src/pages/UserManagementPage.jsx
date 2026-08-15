@@ -11,11 +11,53 @@ import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
 
 const MOCK_DEFAULT_CONTESTANTS = [
-  { id: 'USR-101', _id: 'USR-101', name: 'Aarav Sharma', username: 'aarav', email: 'aarav@example.com', phone: '+91 9876543210', status: 'Active', kycStatus: 'Verified', walletBalance: 1450, device: 'iPhone 14 Pro (iOS 17.2)', ip: '103.22.45.12', referrals: 14, joins: 28, createdAt: '2026-07-15' },
-  { id: 'USR-102', _id: 'USR-102', name: 'Priya Nair', username: 'priya', email: 'priya@example.com', phone: '+91 9812345678', status: 'Suspended', kycStatus: 'Pending', walletBalance: 320, device: 'Samsung S23 (Android 14)', ip: '49.36.12.89', referrals: 3, joins: 12, createdAt: '2026-07-20' },
-  { id: 'USR-103', _id: 'USR-103', name: 'Rohan Mehta', username: 'rohan', email: 'rohan@example.com', phone: '+91 9765432109', status: 'Banned', kycStatus: 'Rejected', walletBalance: 0, device: 'OnePlus 11 (Android 13)', ip: '157.33.19.4', referrals: 0, joins: 4, createdAt: '2026-07-22' },
   { id: 'USR-104', _id: 'USR-104', name: 'Ananya Verma', username: 'ananya', email: 'ananya@example.com', phone: '+91 9988776655', status: 'Active', kycStatus: 'Verified', walletBalance: 2890, device: 'Google Pixel 8 (Android 14)', ip: '103.88.92.11', referrals: 29, joins: 54, createdAt: '2026-07-25' },
+  { id: 'USR-103', _id: 'USR-103', name: 'Rohan Mehta', username: 'rohan', email: 'rohan@example.com', phone: '+91 9765432109', status: 'Banned', kycStatus: 'Rejected', walletBalance: 0, device: 'OnePlus 11 (Android 13)', ip: '157.33.19.4', referrals: 0, joins: 4, createdAt: '2026-07-22' },
+  { id: 'USR-102', _id: 'USR-102', name: 'Priya Nair', username: 'priya', email: 'priya@example.com', phone: '+91 9812345678', status: 'Suspended', kycStatus: 'Pending', walletBalance: 320, device: 'Samsung S23 (Android 14)', ip: '49.36.12.89', referrals: 3, joins: 12, createdAt: '2026-07-20' },
+  { id: 'USR-101', _id: 'USR-101', name: 'Aarav Sharma', username: 'aarav', email: 'aarav@example.com', phone: '+91 9876543210', status: 'Active', kycStatus: 'Verified', walletBalance: 1450, device: 'iPhone 14 Pro (iOS 17.2)', ip: '103.22.45.12', referrals: 14, joins: 28, createdAt: '2026-07-15' },
 ];
+
+const getBackendOrigin = () => {
+  if (typeof window === 'undefined') return '';
+  const { protocol, hostname } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:10000`;
+  }
+  return '';
+};
+
+const resolveAvatarSrc = (u) => {
+  if (!u) return null;
+
+  const rawUrl = typeof u === 'string' 
+    ? u 
+    : (u.profileImage || u.photo || u.image || u.profilePicture || u.avatar);
+  
+  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+    return null;
+  }
+
+  const cleanUrl = rawUrl.trim();
+
+  if (cleanUrl.startsWith('blob:') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    return cleanUrl;
+  }
+
+  const backendOrigin = getBackendOrigin();
+
+  if (cleanUrl.includes('/uploads/') || cleanUrl.includes('/public/uploads/')) {
+    const pathPart = cleanUrl.includes('/uploads/') 
+      ? cleanUrl.split('/uploads/')[1] 
+      : cleanUrl.split('/public/uploads/')[1];
+    return `${backendOrigin}/uploads/${pathPart}`;
+  }
+
+  if (cleanUrl.startsWith('/')) {
+    return `${backendOrigin}${cleanUrl}`;
+  }
+
+  return `${backendOrigin}/uploads/${cleanUrl}`;
+};
 
 export const UserManagementPage = () => {
   const { showSnackbar, showAlert, showConfirm } = useAlert();
@@ -124,6 +166,13 @@ export const UserManagementPage = () => {
     if (activeTab === 'kyc') return matchesSearch && matchesStatus && u.kycStatus === 'Pending';
     if (activeTab === 'balance') return matchesSearch && matchesStatus && u.walletBalance > 0;
     return matchesSearch && matchesStatus && matchesKyc;
+  }).sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (timeA && timeB && !isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+      return timeB - timeA;
+    }
+    return String(b._id || b.id || '').localeCompare(String(a._id || a.id || ''));
   });
 
   // KPI Calculations
@@ -470,17 +519,36 @@ export const UserManagementPage = () => {
                   <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username || u.name}`}
-                          alt=""
-                          className="w-9 h-9 rounded-full border border-slate-200 dark:border-white/10"
-                        />
-                        <div>
-                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <div className="relative shrink-0">
+                          <img
+                            src={resolveAvatarSrc(u)}
+                            alt={u.name}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.username || u.name)}`;
+                            }}
+                            className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 object-cover border border-slate-200 dark:border-white/10 shadow-sm"
+                          />
+                          {u.status === 'Active' && (
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-[#0B1120] rounded-full" />
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5 text-xs">
                             <span>{u.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">(@{u.username})</span>
+                            <span className="text-[11px] font-normal text-slate-400 font-mono">(@{u.username})</span>
                           </div>
-                          <div className="text-[11px] text-slate-400">{u.email} • {u.phone}</div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3 h-3 text-slate-400" />
+                              {u.email}
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              {u.phone || 'N/A'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </td>

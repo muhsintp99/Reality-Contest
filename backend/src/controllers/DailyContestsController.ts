@@ -52,17 +52,25 @@ export class DailyContestsController {
       const {
         title, category, categories, entryFee, prizePool, timerLimit,
         questionsCount, difficulty, description, rules, imageUrl, videoUrl,
-        fileAttachmentUrl, status, isActive, dailyStartTime, dailyEndTime, resetIntervalHours
+        fileAttachmentUrl, status, isActive, dailyStartTime, dailyEndTime, resetIntervalHours,
+        entryFeeType, isFree, entryFeeCoins, coinsReward
       } = req.body;
       
       const dailyContestId = `DLC-${Date.now()}`;
+      const feeNum = Number(entryFee) || 0;
+      const computedIsFree = feeNum === 0 || entryFeeType === 'Free' || isFree === true;
+      const computedFeeType = computedIsFree ? 'Free' : (entryFeeType || 'Coins');
 
       const newContest = new DailyContest({
         dailyContestId,
         title: title || 'Daily Battle 2026',
         category: category || (categories && categories[0]) || 'Speed Battle',
         categories: categories || (category ? [category] : ['Speed Battle']),
-        entryFee: Number(entryFee) || 0,
+        entryFee: feeNum,
+        entryFeeType: computedFeeType,
+        isFree: computedIsFree,
+        entryFeeCoins: computedIsFree ? 0 : (Number(entryFeeCoins) || feeNum),
+        coinsReward: Number(coinsReward) || Number(prizePool) || 10000,
         prizePool: Number(prizePool) || 10000,
         timerLimit: timerLimit || '3 mins',
         questionsCount: Number(questionsCount) || 20,

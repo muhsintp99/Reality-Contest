@@ -18,32 +18,34 @@ export interface IUser extends Document {
   googleId?: string;
   role: 'Contestant' | 'Judge' | 'Sponsor' | 'Guest';
   avatar: string;
+  gender: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
+  isOnline: boolean;
+  lastActiveAt?: Date;
+  lastLoginAt?: Date;
   kycStatus: 'Pending' | 'Under Review' | 'Approved' | 'Rejected';
   referralCode: string;
   walletBalance: number;
+  coins: number;
   status: 'Active' | 'Banned' | 'Locked' | 'Suspended';
+  twoFactorEnabled: boolean;
   loginAttempts: number;
   lockUntil?: number;
-  twoFactorEnabled: boolean;
-  twoFactorSecret: string;
   dob?: Date;
-  gender: 'Male' | 'Female' | 'Other';
-  state: string;
-  district: string;
+  address?: string;
+  state?: string;
+  district?: string;
   city?: string;
   preferredLanguage?: string;
   pincode?: string;
   occupation?: string;
   education?: string;
   employmentStatus?: 'Student' | 'Employed / Salaried' | 'Self Employed' | 'Unemployed';
+  favoriteCategories?: string[];
   notificationPermission?: boolean;
   locationPermission?: boolean;
   country: string;
-  favoriteCategories: string[];
-  skills: string[];
-  interests: string[];
   loginHistory: ILoginHistory[];
   createdAt: Date;
   updatedAt: Date;
@@ -51,9 +53,9 @@ export interface IUser extends Document {
 }
 
 const loginHistorySchema = new Schema<ILoginHistory>({
-  ip: String,
-  device: String,
-  browser: String,
+  ip: { type: String, default: '127.0.0.1' },
+  device: { type: String, default: 'Desktop' },
+  browser: { type: String, default: 'Chrome' },
   timestamp: { type: Date, default: Date.now },
   status: { type: String, enum: ['Success', 'Failed'], default: 'Success' }
 });
@@ -72,8 +74,16 @@ const userSchema = new Schema<IUser>(
       default: 'Contestant'
     },
     avatar: { type: String, default: '' },
+    gender: {
+      type: String,
+      enum: ['Male', 'Female', 'Other', 'Prefer not to say'],
+      default: 'Male'
+    },
     isEmailVerified: { type: Boolean, default: false },
     isPhoneVerified: { type: Boolean, default: false },
+    isOnline: { type: Boolean, default: false, index: true },
+    lastActiveAt: { type: Date, default: Date.now },
+    lastLoginAt: { type: Date },
     kycStatus: {
       type: String,
       enum: ['Pending', 'Under Review', 'Approved', 'Rejected'],
@@ -82,18 +92,18 @@ const userSchema = new Schema<IUser>(
     },
     referralCode: { type: String, default: '' },
     walletBalance: { type: Number, default: 0 },
+    coins: { type: Number, default: 100 },
     status: {
       type: String,
       enum: ['Active', 'Banned', 'Locked', 'Suspended'],
       default: 'Active',
       index: true
     },
+    twoFactorEnabled: { type: Boolean, default: false },
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Number },
-    twoFactorEnabled: { type: Boolean, default: false },
-    twoFactorSecret: { type: String, default: '' },
     dob: { type: Date },
-    gender: { type: String, enum: ['Male', 'Female', 'Other'], default: 'Male' },
+    address: { type: String, default: '' },
     state: { type: String, default: '' },
     district: { type: String, default: '' },
     city: { type: String, default: '' },
@@ -106,12 +116,10 @@ const userSchema = new Schema<IUser>(
       enum: ['Student', 'Employed / Salaried', 'Self Employed', 'Unemployed'],
       default: 'Unemployed'
     },
+    favoriteCategories: [{ type: String }],
     notificationPermission: { type: Boolean, default: false },
     locationPermission: { type: Boolean, default: false },
     country: { type: String, default: 'India' },
-    favoriteCategories: [{ type: String }],
-    skills: [{ type: String }],
-    interests: [{ type: String }],
     loginHistory: [loginHistorySchema]
   },
   {

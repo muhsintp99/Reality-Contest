@@ -3,13 +3,15 @@ import { useDispatch } from 'react-redux';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { forgotPasswordRequest, resetPasswordRequest } from '../store/authSlice';
-import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { HakaLogo } from '../components/HakaLogo';
 
 export const ForgotPassword = ({ onBackToLogin }) => {
   const dispatch = useDispatch();
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -206,19 +208,27 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
-                    type="password"
+                    type={showNewPassword ? 'text' : 'password'}
                     name="newPassword"
                     value={resetFormik.values.newPassword}
                     onChange={resetFormik.handleChange}
                     onBlur={resetFormik.handleBlur}
                     autoComplete="new-password"
                     placeholder="••••••••"
-                    className={`block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border rounded-xl text-white text-sm focus:outline-none transition-all ${
+                    className={`block w-full pl-10 pr-10 py-3 bg-[#080b12]/50 border rounded-xl text-white text-sm focus:outline-none transition-all ${
                       resetFormik.touched.newPassword && resetFormik.errors.newPassword
                         ? 'border-red-500/60'
                         : 'border-white/10'
                     }`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/40 hover:text-white cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
                 {resetFormik.touched.newPassword && resetFormik.errors.newPassword && (
                   <span className="text-[10px] text-red-400 block mt-1 animate-fade-in">{resetFormik.errors.newPassword}</span>
@@ -234,19 +244,27 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     name="confirmPassword"
                     value={resetFormik.values.confirmPassword}
                     onChange={resetFormik.handleChange}
                     onBlur={resetFormik.handleBlur}
                     autoComplete="new-password"
                     placeholder="••••••••"
-                    className={`block w-full pl-10 pr-4 py-3 bg-[#080b12]/50 border rounded-xl text-white text-sm focus:outline-none transition-all ${
+                    className={`block w-full pl-10 pr-10 py-3 bg-[#080b12]/50 border rounded-xl text-white text-sm focus:outline-none transition-all ${
                       resetFormik.touched.confirmPassword && resetFormik.errors.confirmPassword
                         ? 'border-red-500/60'
                         : 'border-white/10'
                     }`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/40 hover:text-white cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
                 {resetFormik.touched.confirmPassword && resetFormik.errors.confirmPassword && (
                   <span className="text-[10px] text-red-400 block mt-1 animate-fade-in">{resetFormik.errors.confirmPassword}</span>

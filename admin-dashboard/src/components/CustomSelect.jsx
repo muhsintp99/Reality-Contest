@@ -31,12 +31,15 @@ export const CustomSelect = ({
   searchable = false,
   align = 'left',
   direction = 'down', // 'down' | 'up'
+  position, // 'top' | 'bottom'
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
+
+  const isUp = direction === 'up' || position === 'top';
 
   const selectedOption = options.find(opt => opt.value === value) || { label: value || placeholder, value };
 
@@ -66,8 +69,11 @@ export const CustomSelect = ({
     opt.label.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const hasCustomWidth = className && /(?:^|\s)(?:w-|max-w-|min-w-)/.test(className);
+  const widthClass = hasCustomWidth ? '' : 'w-full sm:w-48';
+
   return (
-    <div className={`relative inline-block text-left ${isOpen ? 'z-[999]' : 'z-10'} ${className}`} ref={dropdownRef}>
+    <div className={`relative block ${widthClass} text-left ${isOpen ? 'z-[999]' : 'z-10'} ${className}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -85,7 +91,7 @@ export const CustomSelect = ({
       </button>
 
       {isOpen && (
-        <div className={`absolute ${direction === 'up' ? 'bottom-full mb-1.5' : 'mt-1.5'} ${align === 'right' ? 'right-0' : 'left-0'} min-w-full w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-brandPrimary/30 rounded-xl shadow-2xl z-[999] overflow-hidden py-1.5 animate-fade-in backdrop-blur-md text-xs space-y-1`}>
+        <div className={`absolute ${isUp ? 'bottom-full mb-1.5' : 'mt-1.5'} ${align === 'right' ? 'right-0' : 'left-0'} min-w-full w-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-brandPrimary/30 rounded-xl shadow-2xl z-[999] overflow-hidden py-1.5 animate-fade-in backdrop-blur-md text-xs space-y-1`}>
           {/* Search Input Bar */}
           {searchable && (
             <div className="relative px-2 pb-1.5 border-b border-slate-100 dark:border-white/10">

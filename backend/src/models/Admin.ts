@@ -17,24 +17,22 @@ export interface IAdmin extends Document {
   password?: string;
   role: 'Admin' | 'Super Admin' | 'Contest Manager' | 'Question Manager' | 'Finance Manager' | 'Support Manager' | 'Support Executive' | 'Marketing Manager' | 'Content Moderator' | 'KYC Officer' | 'Analytics Manager';
   avatar: string;
+  gender: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
+  isOnline: boolean;
+  lastActiveAt?: Date;
+  lastLoginAt?: Date;
   kycStatus: 'Pending' | 'Under Review' | 'Approved' | 'Rejected';
   referralCode: string;
   walletBalance: number;
   status: 'Active' | 'Banned' | 'Locked' | 'Suspended';
+  twoFactorEnabled: boolean;
   loginAttempts: number;
   lockUntil?: number;
-  twoFactorEnabled: boolean;
-  twoFactorSecret: string;
-  dob?: Date;
-  gender: 'Male' | 'Female' | 'Other';
-  state: string;
-  district: string;
-  country: string;
-  favoriteCategories: string[];
-  skills: string[];
-  interests: string[];
+  state?: string;
+  district?: string;
+  country?: string;
   loginHistory: ILoginHistory[];
   createdAt: Date;
   updatedAt: Date;
@@ -42,9 +40,9 @@ export interface IAdmin extends Document {
 }
 
 const loginHistorySchema = new Schema<ILoginHistory>({
-  ip: String,
-  device: String,
-  browser: String,
+  ip: { type: String, default: '127.0.0.1' },
+  device: { type: String, default: 'Desktop' },
+  browser: { type: String, default: 'Chrome' },
   timestamp: { type: Date, default: Date.now },
   status: { type: String, enum: ['Success', 'Failed'], default: 'Success' }
 });
@@ -62,8 +60,16 @@ const adminSchema = new Schema<IAdmin>(
       default: 'Admin'
     },
     avatar: { type: String, default: '' },
+    gender: {
+      type: String,
+      enum: ['Male', 'Female', 'Other', 'Prefer not to say'],
+      default: 'Male'
+    },
     isEmailVerified: { type: Boolean, default: false },
     isPhoneVerified: { type: Boolean, default: false },
+    isOnline: { type: Boolean, default: false, index: true },
+    lastActiveAt: { type: Date, default: Date.now },
+    lastLoginAt: { type: Date },
     kycStatus: {
       type: String,
       enum: ['Pending', 'Under Review', 'Approved', 'Rejected'],
@@ -78,18 +84,12 @@ const adminSchema = new Schema<IAdmin>(
       default: 'Active',
       index: true
     },
+    twoFactorEnabled: { type: Boolean, default: false },
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Number },
-    twoFactorEnabled: { type: Boolean, default: false },
-    twoFactorSecret: { type: String, default: '' },
-    dob: { type: Date },
-    gender: { type: String, enum: ['Male', 'Female', 'Other'], default: 'Male' },
     state: { type: String, default: '' },
     district: { type: String, default: '' },
     country: { type: String, default: 'India' },
-    favoriteCategories: [{ type: String }],
-    skills: [{ type: String }],
-    interests: [{ type: String }],
     loginHistory: [loginHistorySchema]
   },
   {

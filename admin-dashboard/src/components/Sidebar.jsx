@@ -6,7 +6,7 @@ import {
   Image, Bell, Share2, BarChart3, FileText, Megaphone,
   Ticket, ShieldAlert, Lock, TrendingUp, Settings, Search, X, UserCheck, Building, Shield,
   History, Smartphone, RefreshCw, ChevronDown, ChevronRight, Calendar, Sparkles, Vote, DollarSign,
-  BookOpen, Newspaper, Info, Video, Gift, Plus, Layers, Clock
+  BookOpen, Newspaper, Info, Video, Gift, Plus, Layers, Clock, Coins
 } from 'lucide-react';
 import { HakaLogo } from './HakaLogo';
 
@@ -23,6 +23,7 @@ const MENU_ITEMS = [
   { id: 'challenges', label: 'Challenge Management', icon: Gamepad2 },
   { id: 'leaderboard', label: 'Leaderboard', icon: Award },
   { id: 'wallet', label: 'Wallet Management', icon: Wallet },
+  { id: 'coin-management', label: 'Coin Management', icon: Coins },
   { id: 'withdrawals', label: 'Withdrawal Management', icon: Landmark },
   { id: 'kyc', label: 'KYC Management', icon: ShieldCheck },
   { id: 'banners', label: 'Banner Management', icon: Image, hasSub: true },
@@ -139,22 +140,28 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   const filteredMenu = useMemo(() => {
     let allowedIds = MENU_ITEMS.map(i => i.id);
 
-    if (role === 'Contest Manager') {
-      allowedIds = ['dashboard', 'contests', 'categories', 'grand-contest', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'tasks', 'challenges', 'leaderboard', 'notifications', 'analytics'];
+    if (role === 'Super Admin') {
+      allowedIds = MENU_ITEMS.map(i => i.id);
+    } else if (role === 'Admin') {
+      allowedIds = MENU_ITEMS.map(i => i.id).filter(id => id !== 'roles-permissions');
+    } else if (role === 'Contest Manager') {
+      allowedIds = ['dashboard', 'contests', 'daily-contest', 'categories', 'grand-contest', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'surveys', 'tasks', 'challenges', 'leaderboard', 'notifications', 'analytics'];
+    } else if (role === 'Question Manager') {
+      allowedIds = ['dashboard', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'categories', 'contests', 'notifications'];
     } else if (role === 'Finance Manager') {
-      allowedIds = ['dashboard', 'wallet', 'withdrawals', 'reports', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'notifications', 'settings'];
+      allowedIds = ['dashboard', 'wallet', 'coin-management', 'withdrawals', 'referrals', 'referrals/rules', 'referrals/earnings', 'referrals/abuse', 'reports', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'notifications', 'settings'];
     } else if (role === 'Support Manager' || role === 'Support Executive') {
-      allowedIds = ['dashboard', 'user-management', 'user-management/all-users', 'user-management/kyc-status', 'user-management/wallet-balance', 'user-management/contest-history', 'user-management/login-history', 'user-management/device-details', 'user-management/referral-details', 'kyc', 'notifications', 'settings'];
+      allowedIds = ['dashboard', 'user-management', 'user-management/all-users', 'user-management/kyc-status', 'user-management/wallet-balance', 'user-management/contest-history', 'user-management/login-history', 'user-management/device-details', 'user-management/referral-details', 'kyc', 'cms', 'cms/privacy', 'cms/terms', 'cms/faq', 'cms/help', 'cms/about', 'cms/blogs', 'cms/news', 'cms/social', 'notifications', 'settings'];
     } else if (role === 'Marketing Manager') {
       allowedIds = ['dashboard', 'surveys', 'banners', 'banners/home', 'banners/popup', 'banners/festival', 'banners/sponsored', 'banners/announcement', 'notifications', 'referrals', 'referrals/rules', 'referrals/earnings', 'referrals/abuse', 'advertisements', 'advertisements/create', 'advertisements/sponsored', 'advertisements/banner', 'advertisements/video', 'advertisements/reward', 'advertisements/partner', 'coupons', 'coupons/promo', 'coupons/discount', 'coupons/free', 'coupons/reward', 'analytics'];
     } else if (role === 'Content Moderator') {
-      allowedIds = ['dashboard', 'contests', 'categories', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'tasks', 'cms', 'notifications'];
+      allowedIds = ['dashboard', 'contests', 'categories', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'tasks', 'cms', 'cms/privacy', 'cms/terms', 'cms/faq', 'cms/help', 'cms/about', 'cms/blogs', 'cms/news', 'cms/social', 'notifications'];
     } else if (role === 'KYC Officer') {
-      allowedIds = ['dashboard', 'user-management', 'user-management/kyc-status', 'kyc', 'notifications', 'fraud-detection'];
+      allowedIds = ['dashboard', 'user-management', 'user-management/all-users', 'user-management/kyc-status', 'kyc', 'fraud-detection', 'notifications'];
     } else if (role === 'Analytics Manager') {
-      allowedIds = ['dashboard', 'reports', 'analytics', 'notifications'];
-    } else if (role === 'Question Manager') {
-      allowedIds = ['dashboard', 'question-bank', 'question-bank/pool', 'question-bank/import', 'question-bank/analytics', 'contests', 'notifications'];
+      allowedIds = ['dashboard', 'reports', 'analytics', 'analytics/dau-mau', 'analytics/participation-rate', 'analytics/avg-session-time', 'analytics/completion-rate', 'analytics/question-accuracy', 'analytics/category-popularity', 'analytics/revenue-by-contest', 'analytics/top-earners', 'analytics/top-referrers', 'analytics/retention-rate', 'analytics/conversion-rate', 'analytics/withdrawal-trends', 'notifications'];
+    } else if (role === 'Sponsor') {
+      allowedIds = ['dashboard', 'advertisements', 'advertisements/create', 'advertisements/sponsored', 'advertisements/banner', 'advertisements/video', 'advertisements/reward', 'advertisements/partner', 'banners', 'banners/home', 'banners/popup', 'banners/festival', 'banners/sponsored', 'banners/announcement', 'reports', 'notifications'];
     }
 
     return MENU_ITEMS.filter(item =>

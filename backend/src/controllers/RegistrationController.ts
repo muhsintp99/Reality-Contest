@@ -86,9 +86,28 @@ export class RegistrationController {
     try {
       const { sessionId, otp } = req.body;
       const result = await registrationService.verifyMobileOtp(sessionId, otp);
+
+      if (result.refreshToken && result.accessToken) {
+        const isProd = process.env.NODE_ENV === 'production';
+        res.cookie('accessToken', result.accessToken, {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? 'none' : 'lax',
+          domain: isProd ? '.hakalive.in' : undefined,
+          maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+        res.cookie('refreshToken', result.refreshToken, {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: isProd ? 'none' : 'lax',
+          domain: isProd ? '.hakalive.in' : undefined,
+          maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+      }
+
       res.status(200).json({
         success: true,
-        message: 'Mobile OTP verified successfully.',
+        message: result.message || 'Mobile OTP verified successfully.',
         ...result
       });
     } catch (err) {
@@ -114,26 +133,41 @@ export class RegistrationController {
   // 7. SAVE PROFILE & COMPLETE CONTESTANT REGISTRATION (NO KYC NEEDED)
   async saveProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const sessionId = getSessionIdFromToken(req);
+      let sessionId = req.body.sessionId;
+      if (!sessionId && req.body.profileData?.sessionId) {
+        sessionId = req.body.profileData.sessionId;
+      }
+      if (!sessionId) {
+        try {
+          sessionId = getSessionIdFromToken(req);
+        } catch (e) {
+          // Fallback if token not passed
+        }
+      }
+
+      const bodyData = req.body.profileData || req.body;
       const profileData = {
-        name: req.body.name,
-        username: req.body.username,
-        password: req.body.password,
-        confirmPassword: req.body.confirmPassword,
-        dob: req.body.dob,
-        avatar: req.body.avatar,
-        gender: req.body.gender,
-        state: req.body.state,
-        district: req.body.district,
-        city: req.body.city,
-        preferredLanguage: req.body.preferredLanguage,
-        pincode: req.body.pincode,
-        referralCode: req.body.referralCode,
-        occupation: req.body.occupation,
-        education: req.body.education,
-        employmentStatus: req.body.employmentStatus,
-        favoriteCategories: req.body.favoriteCategories
+        name: bodyData.name,
+        username: bodyData.username,
+        email: bodyData.email,
+        password: bodyData.password,
+        confirmPassword: bodyData.confirmPassword,
+        dob: bodyData.dob,
+        avatar: bodyData.avatar,
+        gender: bodyData.gender,
+        state: bodyData.state,
+        district: bodyData.district,
+        city: bodyData.city,
+        preferredLanguage: bodyData.preferredLanguage,
+        pincode: bodyData.pincode,
+        referralCode: bodyData.referralCode,
+        occupation: bodyData.occupation,
+        education: bodyData.education,
+        employmentStatus: bodyData.employmentStatus,
+        categories: bodyData.categories || bodyData.favoriteCategories || [],
+        favoriteCategories: bodyData.favoriteCategories || bodyData.categories || []
       };
+
       const result = await registrationService.saveProfileAndComplete(sessionId, profileData);
 
       // Set auth refresh token cookie

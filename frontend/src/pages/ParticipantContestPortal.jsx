@@ -222,8 +222,14 @@ export const ParticipantContestPortal = () => {
                         <span className="text-[10px] text-brandPrimary dark:text-brandSecondary font-bold uppercase tracking-wider bg-brandPrimary/10 border border-brandPrimary/15 px-2.5 py-0.5 rounded-full">
                           LOBBY OPEN
                         </span>
-                        <span className="text-[10px] font-extrabold text-slate-500 bg-slate-100 dark:bg-white/5 px-2.5 py-0.5 rounded-lg">
-                          ₹{c.entryFee} Entry Fee
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-lg">
+                          {c.entryFee === 0 || c.isFree === true || c.entryFeeType === 'Free' ? (
+                            <span className="text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase">🎁 Free Entry</span>
+                          ) : c.entryFeeType === 'Coins' || (c.entryFeeCoins && c.entryFeeCoins > 0) ? (
+                            <span className="text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">🪙 {c.entryFeeCoins || c.entryFee} Coins</span>
+                          ) : (
+                            <span className="text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full">₹{c.entryFee} Entry Fee</span>
+                          )}
                         </span>
                       </div>
                       
@@ -231,7 +237,7 @@ export const ParticipantContestPortal = () => {
                         {c.title}
                       </h4>
                       <p className="text-[10px] text-slate-500 dark:text-white/35 font-medium flex items-center gap-1">
-                        Prize Pool: <span className="text-brandSecondary font-extrabold">₹{c.prizePool}</span>
+                        Prize Pool: <span className="text-amber-500 font-extrabold">{c.prizePool?.toLocaleString()} Coins 🪙</span>
                       </p>
                     </div>
 

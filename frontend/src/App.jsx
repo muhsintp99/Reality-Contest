@@ -15,6 +15,7 @@ import { DailyContestPortal } from './pages/DailyContestPortal';
 import { WalletDashboard } from './pages/WalletDashboard';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { RewardsBadgeCenter } from './pages/RewardsBadgeCenter';
+import { WebsiteHome } from './pages/WebsiteHome';
 import { ShieldAlert } from 'lucide-react';
 
 const AccessDeniedView = () => {
@@ -36,7 +37,7 @@ const AccessDeniedView = () => {
         onClick={() => navigate('/')}
         className="px-4 py-2 bg-brandPrimary text-white text-xs font-bold rounded-xl shadow-lg transition-colors hover:bg-brandPrimary/90"
       >
-        Return to Dashboard
+        Return to Home
       </button>
     </div>
   );
@@ -61,7 +62,7 @@ const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, isMockMode, initialized } = useSelector((state) => state.auth);
-  const [activeView, setActiveView] = useState('dashboard');
+  const [activeView, setActiveView] = useState('website');
   const [isOpenMobileMenu, setIsOpenMobileMenu] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -73,182 +74,203 @@ const AppContent = () => {
 
   // Sync activeView state with the URL path
   useEffect(() => {
-    const path = location.pathname.split('/').pop() || 'dashboard';
-    const validViews = ['dashboard', 'contests', 'wallet', 'rewards', 'notifications', 'settings', 'profile', 'judge', 'sponsor'];
+    const path = location.pathname.split('/').pop() || 'website';
+    const validViews = ['website', 'dashboard', 'contests', 'wallet', 'rewards', 'notifications', 'settings', 'profile', 'judge', 'sponsor'];
     if (validViews.includes(path)) {
       setActiveView(path);
     }
   }, [location]);
 
   const handleLogout = () => {
-    dispatch(logoutRequest({ callback: () => navigate('/login') }));
+    dispatch(logoutRequest({ callback: () => navigate('/') }));
   };
 
   const userRole = user?.role || 'Contestant';
 
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-[#EDF6E5] dark:bg-[#080b12] text-slate-800 dark:text-white flex items-center justify-center p-6 text-center transition-colors duration-300">
-        <div className="max-w-md w-full glassmorphism p-8 rounded-3xl border border-[#C4E2A8]/70 dark:border-white/10 space-y-4 shadow-xl">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-brandPrimary/20 border-t-brandPrimary mx-auto"></div>
-          <h3 className="text-xl font-bold font-poppins text-slate-900 dark:text-white">Loading...</h3>
-          <p className="text-xs text-slate-500 dark:text-white/40 font-semibold">Initializing platform session...</p>
+      <div className="min-h-screen bg-[#13005A] text-white flex items-center justify-center p-6 text-center transition-colors duration-300">
+        <div className="max-w-md w-full glassmorphism p-8 rounded-3xl border border-[#FFEB00]/20 space-y-4 shadow-xl">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#FFEB00]/20 border-t-[#FFEB00] mx-auto"></div>
+          <h3 className="text-xl font-bold font-poppins text-white">Loading...</h3>
+          <p className="text-xs text-white/60 font-semibold">Initializing platform session...</p>
         </div>
       </div>
     );
   }
 
-  if (isAuthenticated) {
+  // 1. Logged-in users landing on '/' are redirected directly to their Dashboard
+  if (isAuthenticated && location.pathname === '/') {
+    const defaultRoute = user?.role === 'Judge' ? '/judge' : user?.role === 'Sponsor' ? '/sponsor' : '/dashboard';
+    return <Navigate to={defaultRoute} replace />;
+  }
+
+  // 2. Standalone Public Website Routes (For unauthenticated visitors on '/' or explicit '/website')
+  const isWebsitePage = location.pathname === '/' || location.pathname === '/website';
+  if (isWebsitePage) {
     return (
-      <div className="flex h-screen overflow-hidden bg-[#EDF6E5] dark:bg-[#0B1120] text-slate-800 dark:text-white transition-colors duration-305">
-        
-        {/* Sidebar Frame Navigation */}
-        <Sidebar
+      <WebsiteHome 
+        onNavigateToLogin={() => navigate('/login')} 
+        onNavigateToRegister={() => navigate('/register')} 
+      />
+    );
+  }
+
+  // 2. Standalone Auth Pages (Login, Register, Forgot Password)
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+  if (isAuthPage) {
+    return (
+      <div className="min-h-screen bg-[#13005A] text-white transition-colors duration-300">
+        <Routes>
+          <Route path="/login" element={
+            <Login
+              onRegisterClick={() => navigate('/register')}
+              onForgotClick={() => navigate('/forgot-password')}
+              onLoginSuccess={() => {
+                const adminRoles = [
+                  'Super Admin',
+                  'Admin',
+                  'Contest Manager',
+                  'Question Manager',
+                  'Finance Manager',
+                  'Support Manager',
+                  'Support Executive',
+                  'Marketing Manager',
+                  'Content Moderator',
+                  'KYC Officer',
+                  'Analytics Manager',
+                  'Sponsor'
+                ];
+                if (adminRoles.includes(user?.role)) {
+                  const adminPort = String(Number(window.location.port || '10001') + 1);
+                  window.location.href = window.location.protocol + '//' + window.location.hostname + ':' + adminPort;
+                } else if (user?.role === 'Judge') {
+                  navigate('/judge');
+                } else if (user?.role === 'Sponsor') {
+                  navigate('/sponsor');
+                } else {
+                  navigate('/dashboard');
+                }
+              }}
+            />
+          } />
+          
+          <Route path="/register" element={
+            <Register
+              onLoginClick={() => navigate('/login')}
+              onRegisterSuccess={() => navigate('/login')}
+            />
+          } />
+
+          <Route path="/forgot-password" element={
+            <ForgotPassword
+              onBackToLogin={() => navigate('/login')}
+            />
+          } />
+        </Routes>
+      </div>
+    );
+  }
+
+  // 3. Internal Portal Layout (Requires Auth)
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-[#EDF6E5] dark:bg-[#0B1120] text-slate-800 dark:text-white transition-colors duration-305">
+      
+      {/* Sidebar Frame Navigation */}
+      <Sidebar
+        activeView={activeView}
+        onLogout={handleLogout}
+        isOpenMobile={isOpenMobileMenu}
+        setIsOpenMobile={setIsOpenMobileMenu}
+        role={userRole}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
+
+      {/* Main Content frame */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Navbar
           activeView={activeView}
-          onLogout={handleLogout}
-          isOpenMobile={isOpenMobileMenu}
-          setIsOpenMobile={setIsOpenMobileMenu}
-          role={userRole}
+          onOpenMobileMenu={() => setIsOpenMobileMenu(true)}
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
         />
 
-        {/* Main Content frame */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <Navbar
-            activeView={activeView}
-            onOpenMobileMenu={() => setIsOpenMobileMenu(true)}
-            isCollapsed={isCollapsed}
-            setIsCollapsed={setIsCollapsed}
-          />
+        <main className="flex-1 p-6 overflow-y-auto aurora-bg">
+          <Routes>
+            {/* Internal Dashboard Route */}
+            <Route path="/dashboard" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest', 'Judge', 'Sponsor']}>
+                <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
+              </ProtectedMemberRoute>
+            } />
+            
+            <Route path="/contests" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
+                <ParticipantContestPortal />
+              </ProtectedMemberRoute>
+            } />
 
-          <main className="flex-1 p-6 overflow-y-auto aurora-bg">
-            <Routes>
-              {/* Contestant Routes */}
-              <Route path="/" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
-                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
-                </ProtectedMemberRoute>
-              } />
-              
-              <Route path="/contests" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
-                  <ParticipantContestPortal />
-                </ProtectedMemberRoute>
-              } />
+            <Route path="/daily-contests" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
+                <DailyContestPortal />
+              </ProtectedMemberRoute>
+            } />
 
-              <Route path="/daily-contests" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
-                  <DailyContestPortal />
-                </ProtectedMemberRoute>
-              } />
+            <Route path="/rewards" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
+                <RewardsBadgeCenter />
+              </ProtectedMemberRoute>
+            } />
 
-              <Route path="/rewards" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Guest']}>
-                  <RewardsBadgeCenter />
-                </ProtectedMemberRoute>
-              } />
+            {/* Judge Routes */}
+            <Route path="/judge" element={
+              <ProtectedMemberRoute allowedRoles={['Judge']}>
+                <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
+              </ProtectedMemberRoute>
+            } />
 
-              {/* Judge Routes */}
-              <Route path="/judge" element={
-                <ProtectedMemberRoute allowedRoles={['Judge']}>
-                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
-                </ProtectedMemberRoute>
-              } />
+            {/* Sponsor Routes */}
+            <Route path="/sponsor" element={
+              <ProtectedMemberRoute allowedRoles={['Sponsor']}>
+                <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
+              </ProtectedMemberRoute>
+            } />
 
-              {/* Sponsor Routes */}
-              <Route path="/sponsor" element={
-                <ProtectedMemberRoute allowedRoles={['Sponsor']}>
-                  <DashboardHome onViewChange={(v) => navigate(`/${v}`)} />
-                </ProtectedMemberRoute>
-              } />
+            {/* Shared Member Routes */}
+            <Route path="/wallet" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WalletDashboard />
+              </ProtectedMemberRoute>
+            } />
 
-              {/* Shared Member Routes */}
-              <Route path="/wallet" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
-                  <WalletDashboard />
-                </ProtectedMemberRoute>
-              } />
+            <Route path="/notifications" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <NotificationsPage />
+              </ProtectedMemberRoute>
+            } />
 
-              <Route path="/notifications" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
-                  <NotificationsPage />
-                </ProtectedMemberRoute>
-              } />
+            <Route path="/settings" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <SettingsPage />
+              </ProtectedMemberRoute>
+            } />
 
-              <Route path="/settings" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
-                  <SettingsPage />
-                </ProtectedMemberRoute>
-              } />
+            <Route path="/profile" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <SettingsPage />
+              </ProtectedMemberRoute>
+            } />
 
-              <Route path="/profile" element={
-                <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
-                  <SettingsPage />
-                </ProtectedMemberRoute>
-              } />
-
-              {/* Fallback inside portal */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-        </div>
+            {/* Fallback inside portal */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </main>
       </div>
-    );
-  }
-
-  // Not Authenticated Auth views
-  return (
-    <div className="min-h-screen bg-[#F7F8FA] dark:bg-[#080b12] text-slate-800 dark:text-white transition-colors duration-300">
-      <Routes>
-        <Route path="/login" element={
-          <Login
-            onRegisterClick={() => navigate('/register')}
-            onForgotClick={() => navigate('/forgot-password')}
-            onLoginSuccess={() => {
-              const adminRoles = [
-                'Super Admin',
-                'Admin',
-                'Contest Manager',
-                'Question Manager',
-                'Finance Manager',
-                'Support Manager',
-                'Support Executive',
-                'Marketing Manager',
-                'Content Moderator',
-                'KYC Officer',
-                'Analytics Manager',
-                'Sponsor'
-              ];
-              if (adminRoles.includes(user?.role)) {
-                const adminPort = String(Number(window.location.port || '10001') + 1);
-                window.location.href = window.location.protocol + '//' + window.location.hostname + ':' + adminPort;
-              } else if (user?.role === 'Judge') {
-                navigate('/judge');
-              } else if (user?.role === 'Sponsor') {
-                navigate('/sponsor');
-              } else {
-                navigate('/');
-              }
-            }}
-          />
-        } />
-        
-        <Route path="/register" element={
-          <Register
-            onLoginClick={() => navigate('/login')}
-            onRegisterSuccess={() => navigate('/login')}
-          />
-        } />
-
-        <Route path="/forgot-password" element={
-          <ForgotPassword
-            onBackToLogin={() => navigate('/login')}
-          />
-        } />
-
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
     </div>
   );
 };

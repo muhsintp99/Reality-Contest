@@ -2,7 +2,7 @@ import { ContestRepository } from '../repositories/ContestRepository';
 import { GroupRepository } from '../repositories/GroupRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { TransactionRepository } from '../repositories/TransactionRepository';
-import { IContest } from '../models/Contest';
+import { IContest, ContestStatus } from '../models/Contest';
 import { BadRequestError, NotFoundError } from '../core/errors';
 import mongoose from 'mongoose';
 
@@ -95,8 +95,9 @@ export class ContestService {
       throw new BadRequestError('You cannot join contests before KYC approval.');
     }
 
-    if (contest.status !== 'Registration Open') {
-      throw new BadRequestError('Registration for this contest is not open.');
+    const allowedStatuses: ContestStatus[] = ['Registration Open', 'Active', 'Live', 'In Progress'];
+    if (!allowedStatuses.includes(contest.status)) {
+      throw new BadRequestError('Registration for this contest is currently not open.');
     }
 
     // Check if user already joined any group in this contest
@@ -117,25 +118,53 @@ export class ContestService {
       }
     }
 
-    // Check entry fee and balance
-    if (contest.entryFee > 0) {
-      if (user.walletBalance < contest.entryFee) {
-        throw new BadRequestError('Insufficient wallet balance to pay the entry fee.');
+    // Free Entry vs Coins Fee vs Cash Fee deduction
+    const isFreeEntry = contest.entryFee === 0 || contest.entryFeeType === 'Free' || contest.isFree === true;
+
+    if (!isFreeEntry) {
+      const isCoinFee = contest.entryFeeType === 'Coins' || (contest.entryFeeCoins && contest.entryFeeCoins > 0);
+      
+      if (isCoinFee) {
+        const coinFee = contest.entryFeeCoins || contest.entryFee;
+        const currentCoins = user.coins || 0;
+
+        if (currentCoins < coinFee && user.walletBalance < coinFee) {
+          throw new BadRequestError(`Insufficient balance. This contest requires ${coinFee} Coins 🪙 for entry.`);
+        }
+
+        if (currentCoins >= coinFee) {
+          user.coins = currentCoins - coinFee;
+        } else {
+          user.walletBalance -= coinFee;
+        }
+        await user.save();
+
+        await this.transRepo.create({
+          userId: user._id,
+          amount: -coinFee,
+          type: 'Entry Fee',
+          status: 'Completed',
+          description: `Coin entry fee for contest ${contest.contestId || ''}: ${contest.title} (${coinFee} Coins 🪙)`,
+          reference: `COIN-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+        });
+      } else {
+        // Cash wallet entry fee
+        if (user.walletBalance < contest.entryFee) {
+          throw new BadRequestError('Insufficient wallet balance to pay the entry fee.');
+        }
+
+        user.walletBalance -= contest.entryFee;
+        await user.save();
+
+        await this.transRepo.create({
+          userId: user._id,
+          amount: -contest.entryFee,
+          type: 'Entry Fee',
+          status: 'Completed',
+          description: `Entry fee for contest ${contest.contestId || ''}: ${contest.title}`,
+          reference: `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+        });
       }
-
-      // Deduct entry fee
-      user.walletBalance -= contest.entryFee;
-      await user.save();
-
-      // Create transaction record
-      await this.transRepo.create({
-        userId: user._id,
-        amount: -contest.entryFee,
-        type: 'Entry Fee',
-        status: 'Completed',
-        description: `Entry fee for contest ${contest.contestId || ''}: ${contest.title}`,
-        reference: `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
-      });
     }
 
     // Assign to a group. If no groups exist, auto-create a default group

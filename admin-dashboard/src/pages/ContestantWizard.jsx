@@ -5,6 +5,7 @@ import { User, ShieldAlert, Sparkles, ChevronLeft, ChevronRight, Save, ArrowLeft
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
 import { CustomSelect } from '../components/CustomSelect';
+import { CustomDobPicker } from '../components/CustomDobPicker';
 import { useNavigate } from 'react-router-dom';
 
 export const ContestantWizard = () => {
@@ -254,14 +255,10 @@ export const ContestantWizard = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] text-white/50 font-bold uppercase mb-1.5">Date of Birth</label>
-                <input
-                  type="date"
-                  name="dob"
+                <CustomDobPicker
+                  label="Date of Birth"
                   value={formik.values.dob}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="w-full bg-[#080b12] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brandPrimary"
+                  onChange={(val) => formik.setFieldValue('dob', val)}
                 />
               </div>
               <div>

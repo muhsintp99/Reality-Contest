@@ -3,18 +3,92 @@ import { useSelector } from 'react-redux';
 import axios from 'axios';
 import {
   Users, Search, ShieldAlert, UserCheck, Key, Shield, Plus, Edit3, Trash2, Eye,
-  Check, X, AlertTriangle, Download, ToggleLeft, ToggleRight, Lock, Unlock, Mail, Phone, RefreshCw, Wallet, Smartphone, Share2
+  Check, X, AlertTriangle, Download, ToggleLeft, ToggleRight, Lock, Unlock, Mail, Phone, RefreshCw, Wallet, Smartphone, Share2, User
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
 
 const MOCK_ALL_USERS = [
-  { id: 'USR-101', _id: 'USR-101', name: 'Aarav Sharma', username: 'aarav', email: 'aarav@example.com', phone: '+91 9876543210', status: 'Active', kycStatus: 'Verified', walletBalance: 1450, device: 'iPhone 14 Pro (iOS 17.2)', ip: '103.22.45.12', referrals: 14, joins: 28 },
-  { id: 'USR-102', _id: 'USR-102', name: 'Priya Nair', username: 'priya', email: 'priya@example.com', phone: '+91 9812345678', status: 'Suspended', kycStatus: 'Pending', walletBalance: 320, device: 'Samsung S23 (Android 14)', ip: '49.36.12.89', referrals: 3, joins: 12 },
-  { id: 'USR-103', _id: 'USR-103', name: 'Rohan Mehta', username: 'rohan', email: 'rohan@example.com', phone: '+91 9765432109', status: 'Banned', kycStatus: 'Rejected', walletBalance: 0, device: 'OnePlus 11 (Android 13)', ip: '157.33.19.4', referrals: 0, joins: 4 },
-  { id: 'USR-104', _id: 'USR-104', name: 'Ananya Verma', username: 'ananya', email: 'ananya@example.com', phone: '+91 9988776655', status: 'Active', kycStatus: 'Verified', walletBalance: 2890, device: 'Google Pixel 8 (Android 14)', ip: '103.88.92.11', referrals: 29, joins: 54 },
+  { id: 'USR-104', _id: 'USR-104', name: 'Ananya Verma', username: 'ananya', email: 'ananya@example.com', phone: '+91 9988776655', status: 'Active', kycStatus: 'Verified', walletBalance: 2890, device: 'Google Pixel 8 (Android 14)', ip: '103.88.92.11', referrals: 29, joins: 54, createdAt: '2026-08-12T10:00:00.000Z', profileImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ananya' },
+  { id: 'USR-103', _id: 'USR-103', name: 'Rohan Mehta', username: 'rohan', email: 'rohan@example.com', phone: '+91 9765432109', status: 'Banned', kycStatus: 'Rejected', walletBalance: 0, device: 'OnePlus 11 (Android 13)', ip: '157.33.19.4', referrals: 0, joins: 4, createdAt: '2026-08-10T10:00:00.000Z', profileImage: null, avatar: '' },
+  { id: 'USR-102', _id: 'USR-102', name: 'Priya Nair', username: 'priya', email: 'priya@example.com', phone: '+91 9812345678', status: 'Suspended', kycStatus: 'Pending', walletBalance: 320, device: 'Samsung S23 (Android 14)', ip: '49.36.12.89', referrals: 3, joins: 12, createdAt: '2026-08-05T10:00:00.000Z', profileImage: null, avatar: null },
+  { id: 'USR-101', _id: 'USR-101', name: 'Aarav Sharma', username: 'aarav', email: 'aarav@example.com', phone: '+91 9876543210', status: 'Active', kycStatus: 'Verified', walletBalance: 1450, device: 'iPhone 14 Pro (iOS 17.2)', ip: '103.22.45.12', referrals: 14, joins: 28, createdAt: '2026-08-01T10:00:00.000Z', profileImage: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aarav' },
 ];
+
+const getBackendOrigin = () => {
+  if (typeof window === 'undefined') return '';
+  const { protocol, hostname } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:10000`;
+  }
+  return '';
+};
+
+const resolveAvatarSrc = (u) => {
+  if (!u) return null;
+
+  // Priority 1: User's uploaded profile image
+  // Priority 2: User's saved avatar
+  const rawUrl = typeof u === 'string' 
+    ? u 
+    : (u.profileImage || u.photo || u.image || u.profilePicture || u.avatar);
+  
+  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+    // If empty or missing, return null to show User Icon fallback
+    return null;
+  }
+
+  const cleanUrl = rawUrl.trim();
+
+  // Absolute / blob / data URLs
+  if (cleanUrl.startsWith('blob:') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    return cleanUrl;
+  }
+
+  const backendOrigin = getBackendOrigin();
+
+  // Prepend backend upload path if relative
+  if (cleanUrl.includes('/uploads/') || cleanUrl.includes('/public/uploads/')) {
+    const pathPart = cleanUrl.includes('/uploads/') 
+      ? cleanUrl.split('/uploads/')[1] 
+      : cleanUrl.split('/public/uploads/')[1];
+    return `${backendOrigin}/uploads/${pathPart}`;
+  }
+
+  if (cleanUrl.startsWith('/')) {
+    return `${backendOrigin}${cleanUrl}`;
+  }
+
+  return `${backendOrigin}/uploads/${cleanUrl}`;
+};
+
+export const UserAvatar = ({ user, className = "w-10 h-10" }) => {
+  const [imgError, setImgError] = useState(false);
+  const avatarSrc = resolveAvatarSrc(user);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user, avatarSrc]);
+
+  if (!avatarSrc || imgError) {
+    return (
+      <div className={`${className} rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 dark:text-slate-400 shadow-sm shrink-0`}>
+        <User className="w-1/2 h-1/2 text-slate-400 dark:text-slate-400" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={avatarSrc}
+      alt={typeof user === 'object' ? user?.name || 'User' : 'User'}
+      loading="lazy"
+      onError={() => setImgError(true)}
+      className={`${className} rounded-full object-cover border border-slate-200 dark:border-white/10 shadow-sm shrink-0`}
+    />
+  );
+};
 
 export const AllUsersPage = () => {
   const { showSnackbar, showConfirm } = useAlert();
@@ -61,7 +135,10 @@ export const AllUsersPage = () => {
           device: u.device || 'Android 14 / Chrome',
           ip: u.ip || '103.22.45.12',
           referrals: u.referrals || Math.floor(Math.random() * 20),
-          joins: u.joins || Math.floor(Math.random() * 40)
+          joins: u.joins || Math.floor(Math.random() * 40),
+          createdAt: u.createdAt || new Date().toISOString(),
+          profileImage: u.profileImage || u.photo || u.image || u.profilePicture || null,
+          avatar: u.avatar || null
         }));
         setUsers(mapped);
       }
@@ -82,6 +159,13 @@ export const AllUsersPage = () => {
     const matchesStatus = statusFilter === 'All' || u.status === statusFilter;
     const matchesKyc = kycFilter === 'All' || u.kycStatus === kycFilter;
     return matchesSearch && matchesStatus && matchesKyc;
+  }).sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (timeA && timeB && !isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+      return timeB - timeA;
+    }
+    return String(b._id || b.id || '').localeCompare(String(a._id || a.id || ''));
   });
 
   const handleCreateUser = async (e) => {
@@ -242,8 +326,31 @@ export const AllUsersPage = () => {
               {filteredUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5">
                   <td className="px-5 py-4">
-                    <div className="font-bold text-slate-900 dark:text-white">{u.name}</div>
-                    <div className="text-[11px] text-slate-400">@{u.username} • {u.email}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        <UserAvatar user={u} className="w-10 h-10" />
+                        {u.status === 'Active' && (
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-[#0B1120] rounded-full" />
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white text-xs">
+                          <span>{u.name}</span>
+                          <span className="text-[11px] font-normal text-slate-400 font-mono">(@{u.username})</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-slate-400" />
+                            {u.email}
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-slate-400" />
+                            {u.phone || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-5 py-4 font-bold">{u.status}</td>
                   <td className="px-5 py-4 font-bold text-blue-500">{u.kycStatus}</td>
@@ -278,6 +385,14 @@ export const AllUsersPage = () => {
       <RightDrawer isOpen={!!selectedUser} onClose={() => setSelectedUser(null)} title="Edit Contestant Controls">
         {selectedUser && (
           <form onSubmit={handleUpdateUser} className="space-y-4 text-left">
+            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-white/10">
+              <UserAvatar user={selectedUser} className="w-12 h-12" />
+              <div className="min-w-0 flex-1">
+                <p className="font-extrabold text-slate-900 dark:text-white text-xs truncate">{selectedUser.name}</p>
+                <p className="text-[11px] text-slate-400 font-mono truncate">@{selectedUser.username}</p>
+              </div>
+            </div>
+
             <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
             <input type="text" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-900 border p-2.5 rounded-xl text-xs text-slate-900 dark:text-white" />
             <CustomSelect value={editForm.status} onChange={val => setEditForm({ ...editForm, status: val })} options={[{ value: 'Active', label: 'Active' }, { value: 'Suspended', label: 'Suspended' }, { value: 'Banned', label: 'Banned' }]} />
@@ -291,12 +406,23 @@ export const AllUsersPage = () => {
       {/* View Drawer */}
       <RightDrawer isOpen={!!viewingUser} onClose={() => setViewingUser(null)} title="Contestant Specs">
         {viewingUser && (
-          <div className="space-y-3 text-xs text-left">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">{viewingUser.name}</h3>
-            <p className="text-slate-400">@{viewingUser.username} • {viewingUser.email}</p>
-            <p className="text-slate-400">Phone: {viewingUser.phone}</p>
-            <p className="font-bold text-amber-500">Wallet: ₹{Number(viewingUser.walletBalance).toLocaleString()}</p>
-            <p className="text-slate-400">Device: {viewingUser.device} ({viewingUser.ip})</p>
+          <div className="space-y-4 text-xs text-left">
+            <div className="flex items-center gap-3.5 p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-white/10">
+              <UserAvatar user={viewingUser} className="w-14 h-14" />
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">{viewingUser.name}</h3>
+                <p className="text-slate-400 font-mono text-xs">@{viewingUser.username} • {viewingUser.email}</p>
+                <span className="inline-block mt-1 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-brandPrimary/10 text-brandPrimary border border-brandPrimary/20">
+                  {viewingUser.profileImage ? 'Uploaded Profile Photo' : viewingUser.avatar ? 'Saved Avatar' : 'Default User Icon'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-white/10">
+              <p className="text-slate-400">Phone: <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingUser.phone}</span></p>
+              <p className="font-bold text-amber-500">Wallet Balance: ₹{Number(viewingUser.walletBalance).toLocaleString()}</p>
+              <p className="text-slate-400">Device Specs: <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingUser.device}</span> ({viewingUser.ip})</p>
+            </div>
           </div>
         )}
       </RightDrawer>

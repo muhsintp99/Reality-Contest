@@ -101,6 +101,7 @@ export const ReferralAbusePage = () => {
             { label: 'Banned Accounts', value: 'Banned' },
             { label: 'Dismissed Audits', value: 'Dismissed' }
           ]}
+          className="w-full sm:w-48"
         />
       </div>
 

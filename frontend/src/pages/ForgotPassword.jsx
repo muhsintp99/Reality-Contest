@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { forgotPasswordRequest, resetPasswordRequest } from '../store/authSlice';
-import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { KeyRound, Mail, Lock, CheckCircle, ArrowLeft, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { HakaLogo } from '../components/HakaLogo';
 import { motion } from 'framer-motion';
 
@@ -13,6 +13,8 @@ export const ForgotPassword = ({ onBackToLogin }) => {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -168,13 +170,25 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
-                      type="password"
+                      type={showNewPassword ? 'text' : 'password'}
                       required
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs transition-all"
+                      className={`block w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none text-xs transition-all ${
+                        confirmPassword && newPassword !== confirmPassword
+                          ? 'border-rose-500/60 focus:border-rose-500'
+                          : 'border-slate-200/60 dark:border-white/5 focus:border-brandPrimary/50'
+                      }`}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                      tabIndex={-1}
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -187,14 +201,31 @@ export const ForgotPassword = ({ onBackToLogin }) => {
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="block w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border border-slate-200/60 dark:border-white/5 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brandPrimary/50 text-xs transition-all"
+                      className={`block w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-[#080b12]/30 border rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none text-xs transition-all ${
+                        confirmPassword && newPassword !== confirmPassword
+                          ? 'border-rose-500/60 focus:border-rose-500 ring-1 ring-rose-500/20'
+                          : 'border-slate-200/60 dark:border-white/5 focus:border-brandPrimary/50'
+                      }`}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
+                  {confirmPassword && newPassword !== confirmPassword && (
+                    <span className="text-[11px] text-rose-400 font-bold mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" /> Passwords do not match
+                    </span>
+                  )}
                 </div>
               </div>
 

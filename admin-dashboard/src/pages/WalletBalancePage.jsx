@@ -88,6 +88,7 @@ export const WalletBalancePage = () => {
             { label: 'Active Wallets', value: 'Active' },
             { label: 'Frozen Wallets', value: 'Frozen' }
           ]}
+          className="w-full sm:w-48"
         />
       </div>
 

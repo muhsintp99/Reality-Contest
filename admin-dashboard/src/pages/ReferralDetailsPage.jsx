@@ -50,6 +50,7 @@ export const ReferralDetailsPage = () => {
             { label: 'Top Partner', value: 'Top Partner' },
             { label: 'Active Partner', value: 'Active' }
           ]}
+          className="w-full sm:w-48"
         />
       </div>
 

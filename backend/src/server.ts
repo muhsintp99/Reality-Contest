@@ -78,7 +78,7 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     app.use(compression()); // Compress text response payloads
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
-    app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+    app.use('/uploads', express.static(path.resolve(process.cwd(), 'public/uploads')));
 
     const allowedOrigins = Array.from(
       new Set([

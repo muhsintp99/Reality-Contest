@@ -209,7 +209,15 @@ export const KycDirectory = () => {
               {filteredKycs.map((k) => (
                 <tr key={k._id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4 font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                    <img src={k.userId?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${k.userId?.username}`} className="w-7 h-7 rounded-full border border-slate-200 dark:border-white/10" alt="" />
+                    <img 
+                      src={k.userId?.avatar || k.userId?.profileImage || k.userId?.photo || k.userId?.image || k.userId?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(k.userId?.username || k.userId?.name || 'Applicant')}`} 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(k.userId?.username || k.userId?.name || 'Applicant')}`;
+                      }}
+                      className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-white/10" 
+                      alt="" 
+                    />
                     <span>{k.userId?.name || 'Applicant'}</span>
                   </td>
                   <td className="px-6 py-4">

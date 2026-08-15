@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, BarChart3, Wallet, 
-  MessageSquare, Settings, LogOut, ChevronLeft, X, Trophy, Clock, Award
+  MessageSquare, Settings, LogOut, ChevronLeft, X, Trophy, Clock, Award, Globe
 } from 'lucide-react';
 import { HakaLogo } from '../HakaLogo';
 
 const MENU_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/' },
+  { id: 'website', label: 'Public Website 🌐', icon: Globe, route: '/website' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/dashboard' },
   { id: 'contests', label: 'Contest Tournaments', icon: Trophy, route: '/contests' },
   { id: 'daily-contests', label: 'Daily Contests ⚡', icon: Clock, route: '/daily-contests' },
   { id: 'rewards', label: 'Badges & Rewards', icon: Award, route: '/rewards' },
@@ -41,10 +42,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
   // Role-based visibility logic
   const allowedIds = role === 'Judge'
-    ? ['dashboard', 'wallet', 'notifications', 'settings']
+    ? ['website', 'dashboard', 'wallet', 'notifications', 'settings']
     : role === 'Sponsor'
-      ? ['dashboard', 'wallet', 'notifications', 'settings']
-      : ['dashboard', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings'];
+      ? ['website', 'dashboard', 'wallet', 'notifications', 'settings']
+      : ['website', 'dashboard', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings'];
 
   const filteredMenu = MENU_ITEMS.filter(item => allowedIds.includes(item.id)).map(item => {
     // Custom label overwrites for special roles
@@ -59,7 +60,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     if (item.id === 'dashboard') {
       if (role === 'Judge') navigate('/judge');
       else if (role === 'Sponsor') navigate('/sponsor');
-      else navigate('/');
+      else navigate('/dashboard');
     } else {
       navigate(item.route);
     }

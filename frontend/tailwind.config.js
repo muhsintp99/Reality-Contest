@@ -15,17 +15,31 @@ module.exports = {
         darkSurface: '#1F2937',
         darkBorder: '#334155',
 
+        // Requested User Color Combination from Reference Images
+        brandNavy: '#0D0714',
+        brandYellow: '#CEF500',
+        brandLime: '#CEF500',
+        brandEmerald: '#B983FF',
+
+        // Exact Image Reference Colors
+        imageCanvas: '#0D0714',
+        imageCard: '#1C1335',
+        imageLime: '#CEF500',
+        imagePurple: '#B983FF',
+        imagePurpleDark: '#6B21A8',
+        imageBorder: '#2E1E54',
+
         // Light theme tokens
         lightBg: '#EDF6E5',
         lightCard: '#F6FCF0',
         lightSurface: '#E2F1D5',
         lightBorder: '#C4E2A8',
 
-        // Brand colors (Custom Light Palette: #499A13, #BBDC12, #8ECA3C, #276F27)
-        brandPrimary: '#499A13',
-        brandSecondary: '#8ECA3C',
-        brandAccent: '#BBDC12',
-        brandDark: '#276F27',
+        // Brand colors (Custom Palette)
+        brandPrimary: '#6EC207',
+        brandSecondary: '#FFEB00',
+        brandAccent: '#117554',
+        brandDark: '#13005A',
 
         // Compatibility colors mapped to the green palette
         primary: {

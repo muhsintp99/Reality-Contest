@@ -7,6 +7,7 @@ import {
   ToggleLeft, ToggleRight, Copy, Check, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { resolveAvatarSrc } from '../utils/avatar';
 
 const TABS = [
   { id: 'general', label: 'General', icon: User },
@@ -103,7 +104,7 @@ export const SettingsPage = () => {
               {/* Profile Header Summary with Image */}
               <div className="flex flex-col sm:flex-row items-center gap-5 p-5 bg-slate-50 dark:bg-[#080b12]/20 border border-slate-200/60 dark:border-white/5 rounded-2xl shadow-sm">
                 <img 
-                  src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Raj'} 
+                  src={resolveAvatarSrc(user, user?.name || 'User')} 
                   className="w-20 h-20 rounded-full object-cover border border-slate-200 dark:border-white/10 shadow-md"
                   alt="Profile"
                 />

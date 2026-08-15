@@ -96,6 +96,7 @@ export const ReferralEarningsPage = () => {
             { label: 'Pending Approval', value: 'Pending' },
             { label: 'Flagged Entries', value: 'Flagged' }
           ]}
+          className="w-full sm:w-48"
         />
       </div>
 

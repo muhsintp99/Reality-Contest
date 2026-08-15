@@ -57,7 +57,13 @@ export class CategoryService {
   }
 
   async listCategories(filter: any = {}): Promise<ICategory[]> {
-    return this.categoryRepo.find(filter, null, { sort: { title: 1 } });
+    try {
+      const categories = await this.categoryRepo.find(filter, null, { sort: { title: 1 } });
+      return categories || [];
+    } catch (err) {
+      console.warn('[CategoryService] Error fetching categories from database:', err);
+      return [];
+    }
   }
 
   async updateCategory(id: string, data: Partial<ICategory>): Promise<ICategory> {

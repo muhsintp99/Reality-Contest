@@ -132,6 +132,7 @@ export const RewardCouponPage = () => {
             { label: 'Active Status', value: 'Active' },
             { label: 'Disabled Status', value: 'Disabled' }
           ]}
+          className="w-full sm:w-48"
         />
       </div>
 

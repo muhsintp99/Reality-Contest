@@ -394,12 +394,15 @@ export const DailyContestPage = () => {
             onChange={setStatusFilter}
             options={[
               { value: 'All', label: 'All Statuses' },
-              { value: 'Registration Open', label: 'Registration Open' },
-              { value: 'In Progress', label: 'In Progress' },
               { value: 'Draft', label: 'Draft' },
-              { value: 'Completed', label: 'Completed' }
+              { value: 'Registration Open', label: 'Registration Open' },
+              { value: 'Upcoming', label: 'Upcoming' },
+              { value: 'Active', label: 'Active ⚡' },
+              { value: 'In Progress', label: 'In Progress' },
+              { value: 'Completed', label: 'Completed' },
+              { value: 'Maintenance', label: 'Maintenance 🛠️' }
             ]}
-            className="w-44"
+            className="w-48"
           />
 
           {/* Active / Inactive State Filter */}
@@ -458,8 +461,12 @@ export const DailyContestPage = () => {
                       {c.isActive !== false && c.status !== 'Draft' && c.status !== 'In Progress' ? '🟢 Live' : '🔴 Paused'}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-emerald-500 font-extrabold">
-                    {c.entryFee === 0 ? 'FREE ENTRY' : `Entry: ${c.entryFee} Coins 🪙`}
+                  <span className="text-[10px] font-mono font-extrabold">
+                    {c.entryFee === 0 || c.isFree === true || c.entryFeeType === 'Free' ? (
+                      <span className="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">FREE ENTRY</span>
+                    ) : (
+                      <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Entry: {c.entryFeeCoins || c.entryFee} Coins 🪙</span>
+                    )}
                   </span>
                 </div>
 

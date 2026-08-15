@@ -2,12 +2,20 @@ import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IKYC extends Document {
   userId: mongoose.Types.ObjectId;
-  documentType: 'Aadhaar' | 'PAN' | 'Passport' | 'Driving License';
+  address?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  pincode?: string;
+  education?: string;
+  occupation?: string;
+  documentType: 'Aadhaar' | 'PAN' | 'Passport' | 'Driving License' | 'Voter ID' | 'Other';
   documentNumber: string;
   documentFrontUrl: string;
   documentBackUrl?: string;
   selfieUrl: string;
   addressProofUrl?: string;
+  otherDocUrl?: string;
   declarationAccepted: boolean;
   livenessScore: number;
   aiMatchResult: 'PASSED' | 'REVIEW_REQUIRED' | 'FAILED';
@@ -22,16 +30,24 @@ export interface IKYC extends Document {
 const kycSchema = new Schema<IKYC>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
+    address: { type: String, default: '' },
+    state: { type: String, default: '' },
+    district: { type: String, default: '' },
+    city: { type: String, default: '' },
+    pincode: { type: String, default: '' },
+    education: { type: String, default: '' },
+    occupation: { type: String, default: '' },
     documentType: {
       type: String,
-      enum: ['Aadhaar', 'PAN', 'Passport', 'Driving License'],
+      enum: ['Aadhaar', 'PAN', 'Passport', 'Driving License', 'Voter ID', 'Other'],
       required: true
     },
     documentNumber: { type: String, required: true },
     documentFrontUrl: { type: String, required: true },
-    documentBackUrl: { type: String },
+    documentBackUrl: { type: String, default: '' },
     selfieUrl: { type: String, required: true },
-    addressProofUrl: { type: String },
+    addressProofUrl: { type: String, default: '' },
+    otherDocUrl: { type: String, default: '' },
     declarationAccepted: { type: Boolean, required: true, default: false },
     livenessScore: { type: Number, default: 0 },
     aiMatchResult: {

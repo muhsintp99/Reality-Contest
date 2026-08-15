@@ -41,6 +41,7 @@ const TaskManagementPage = lazy(() => import('./pages/TaskManagementPage').then(
 const ChallengeManagement = lazy(() => import('./pages/ChallengeManagement').then(m => ({ default: m.ChallengeManagement })));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
 const WalletManagementPage = lazy(() => import('./pages/WalletManagementPage').then(m => ({ default: m.WalletManagementPage })));
+const CoinManagementPage = lazy(() => import('./pages/CoinManagementPage').then(m => ({ default: m.CoinManagementPage })));
 const WithdrawalManagementPage = lazy(() => import('./pages/WithdrawalManagementPage').then(m => ({ default: m.WithdrawalManagementPage })));
 const BannerManagement = lazy(() => import('./pages/BannerManagement').then(m => ({ default: m.BannerManagement })));
 const ReferralManagement = lazy(() => import('./pages/ReferralManagement').then(m => ({ default: m.ReferralManagement })));
@@ -184,6 +185,7 @@ const AppContent = () => {
                   <Route path="challenges" element={<ChallengeManagement />} />
                   <Route path="leaderboard" element={<LeaderboardPage />} />
                   <Route path="wallet" element={<WalletManagementPage />} />
+                  <Route path="coin-management" element={<CoinManagementPage />} />
                   <Route path="withdrawals" element={<WithdrawalManagementPage />} />
                   <Route path="banners" element={<Navigate to="banners/home" replace />} />
                   <Route path="banners/home" element={<HomeBannerPage />} />
