@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -10,7 +10,7 @@ import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
 import { CustomSelect } from '../components/CustomSelect';
 import { MultiSelect } from '../components/MultiSelect';
-import { FileUploadPicker } from '../components/FileUploadPicker';
+import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { TimePicker12h } from '../components/TimePicker12h';
 import { useNavigate } from 'react-router-dom';
@@ -61,8 +61,11 @@ export const DailyContestWizard = () => {
     }
   };
 
+  const initialDailyId = useMemo(() => `DLC-${Math.floor(100000 + Math.random() * 900000)}`, []);
+
   const formik = useFormik({
     initialValues: {
+      dailyContestId: initialDailyId,
       title: '',
       category: '',
       selectedCategories: [],
@@ -107,7 +110,14 @@ export const DailyContestWizard = () => {
     onSubmit: async (values) => {
       setSubmitting(true);
       const feeVal = values.isFree ? 0 : (Number(values.fee) || 0);
+
+      // Persist pending media previews to disk ONLY upon form save
+      const uploadedImageUrl = await uploadPendingFile(values.imageUrl, 'daily-contest');
+      const uploadedVideoUrl = await uploadPendingFile(values.videoUrl, 'daily-contest');
+      const uploadedFileAttachmentUrl = await uploadPendingFile(values.fileAttachmentUrl, 'daily-contest');
+
       const payload = {
+        dailyContestId: formik.values.dailyContestId || `DLC-${Date.now()}`,
         title: values.title,
         category: values.selectedCategories[0] || values.category || 'General',
         categories: values.selectedCategories,
@@ -122,9 +132,9 @@ export const DailyContestWizard = () => {
         difficulty: values.difficulty,
         description: values.description,
         rules: values.rules,
-        imageUrl: values.imageUrl,
-        videoUrl: values.videoUrl,
-        fileAttachmentUrl: values.fileAttachmentUrl,
+        imageUrl: uploadedImageUrl,
+        videoUrl: uploadedVideoUrl,
+        fileAttachmentUrl: uploadedFileAttachmentUrl,
         status: values.status,
         isActive: values.isActive && values.status !== 'Draft' && values.status !== 'In Progress',
         dailyStartTime: values.dailyStartTime,
@@ -153,8 +163,24 @@ export const DailyContestWizard = () => {
     }
   });
 
+  const handleFormSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const errors = await formik.validateForm();
+    if (Object.keys(errors).length > 0) {
+      formik.setTouched({
+        title: true,
+        description: true,
+        timerLimit: true
+      });
+      const firstError = Object.values(errors)[0];
+      showSnackbar(`Please fix: ${firstError}`, 'warning');
+      return;
+    }
+    await formik.submitForm();
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 text-left animate-fade-in p-2 pb-16">
+    <form onSubmit={handleFormSubmit} className="max-w-7xl mx-auto space-y-6 text-left animate-fade-in p-2 pb-16">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-[#0B1120] p-5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div>
@@ -176,7 +202,7 @@ export const DailyContestWizard = () => {
 
         <button
           type="button"
-          onClick={() => formik.handleSubmit()}
+          onClick={handleFormSubmit}
           disabled={submitting}
           className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold text-xs rounded-xl flex items-center gap-2 transition-all shadow-lg shrink-0 cursor-pointer"
         >
@@ -190,7 +216,7 @@ export const DailyContestWizard = () => {
       </div>
 
       {/* Main Single Page Grid: Left Form Sections | Right Live Preview */}
-      <form onSubmit={formik.handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT COLUMN: All Form Sections */}
         <div className="lg:col-span-7 space-y-6">
@@ -204,22 +230,44 @@ export const DailyContestWizard = () => {
               </h3>
             </div>
 
-            <div>
-              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">CONTEST TITLE</label>
-              <input
-                type="text"
-                name="title"
-                value={formik.values.title}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="Enter daily contest title..."
-                className={`w-full bg-slate-50 dark:bg-black/40 border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none transition-all ${
-                  formik.touched.title && formik.errors.title ? 'border-red-500' : 'border-slate-200 dark:border-white/10 focus:border-brandPrimary'
-                }`}
-              />
-              {formik.touched.title && formik.errors.title && (
-                <span className="text-[10px] text-red-500 mt-1 block">{formik.errors.title}</span>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5 flex items-center justify-between">
+                  <span>CONTEST ID</span>
+                  <button
+                    type="button"
+                    onClick={() => formik.setFieldValue('dailyContestId', `DLC-${Math.floor(100000 + Math.random() * 900000)}`)}
+                    className="text-[9px] text-indigo-500 hover:underline flex items-center gap-0.5 cursor-pointer font-extrabold"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" /> Auto ID
+                  </button>
+                </label>
+                <input
+                  type="text"
+                  name="dailyContestId"
+                  value={formik.values.dailyContestId}
+                  onChange={formik.handleChange}
+                  placeholder="DLC-XXXXXX"
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-indigo-500 focus:outline-none"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">CONTEST TITLE</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formik.values.title}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  placeholder="Enter daily contest title..."
+                  className={`w-full bg-slate-50 dark:bg-black/40 border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none transition-all ${
+                    formik.touched.title && formik.errors.title ? 'border-red-500' : 'border-slate-200 dark:border-white/10 focus:border-brandPrimary'
+                  }`}
+                />
+                {formik.touched.title && formik.errors.title && (
+                  <span className="text-[10px] text-red-500 mt-1 block">{formik.errors.title}</span>
+                )}
+              </div>
             </div>
 
             <div>
@@ -595,6 +643,32 @@ export const DailyContestWizard = () => {
               )}
             </div>
 
+            {/* Video & File Attachment Previews */}
+            {formik.values.videoUrl && (
+              <div className="text-left space-y-1">
+                <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  <Video className="w-3 h-3 text-purple-500" /> PROMO VIDEO PREVIEW
+                </div>
+                <video src={formik.values.videoUrl} controls className="w-full max-h-36 rounded-xl border border-slate-200 dark:border-white/10 object-cover" />
+              </div>
+            )}
+
+            {formik.values.fileAttachmentUrl && (
+              <div className="text-left space-y-1">
+                <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  <FileText className="w-3 h-3 text-indigo-500" /> RULES ATTACHMENT
+                </div>
+                <a
+                  href={formik.values.fileAttachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 p-2 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 rounded-xl text-xs font-bold hover:bg-indigo-500/20 transition-all"
+                >
+                  <File className="w-3.5 h-3.5" /> View Attached Rules Document 📄
+                </a>
+              </div>
+            )}
+
             {/* Preview Title & Badges */}
             <div className="space-y-2 text-left">
               <span className="text-[9px] font-mono uppercase text-amber-500 font-extrabold">24H DAILY RESET ARENA</span>
@@ -649,8 +723,8 @@ export const DailyContestWizard = () => {
             </button>
           </div>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 };
 

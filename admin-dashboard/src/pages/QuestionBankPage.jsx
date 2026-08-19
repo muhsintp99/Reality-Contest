@@ -12,6 +12,21 @@ import { CustomSelect } from '../components/CustomSelect';
 import { RightDrawer } from '../components/RightDrawer';
 import { FileUploadPicker } from '../components/FileUploadPicker';
 
+const formatNegMarks = (val) => {
+  if (val === undefined || val === null || val === '') return '-0.25';
+  const clean = String(val).replace(/-/g, '').trim();
+  const num = parseFloat(clean);
+  if (isNaN(num)) return '-0.25';
+  return `-${num}`;
+};
+
+const parseNegNum = (val) => {
+  if (val === undefined || val === null || val === '') return 0.25;
+  const clean = String(val).replace(/-/g, '').trim();
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0.25 : num;
+};
+
 export const QuestionBankPage = ({ defaultTab }) => {
   const { showAlert, showSnackbar, showConfirm } = useAlert();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
@@ -190,7 +205,7 @@ export const QuestionBankPage = ({ defaultTab }) => {
             : 'Option A',
           difficulty: q.difficulty || 'Medium',
           explanation: q.explanation || '',
-          negativeMarks: `-${q.negativeMarks || 0.25}`,
+          negativeMarks: formatNegMarks(q.negativeMarks),
           approvalStatus: 'Approved',
           imageUrl: q.mediaUrl || '',
           videoUrl: '',
@@ -252,7 +267,7 @@ export const QuestionBankPage = ({ defaultTab }) => {
         options: optionsArray,
         difficulty: questionForm.difficulty,
         explanation: questionForm.explanation,
-        negativeMarks: Math.abs(parseFloat(questionForm.negativeMarks) || 0.25),
+        negativeMarks: parseNegNum(questionForm.negativeMarks),
         mediaUrl: questionForm.imageUrl || '',
         imageUrl: questionForm.imageUrl || '',
         videoUrl: questionForm.videoUrl || ''
@@ -292,7 +307,7 @@ export const QuestionBankPage = ({ defaultTab }) => {
           options: optionsArray,
           difficulty: editingQuestion.difficulty,
           explanation: editingQuestion.explanation,
-          negativeMarks: Math.abs(parseFloat(editingQuestion.negativeMarks) || 0.25),
+          negativeMarks: parseNegNum(editingQuestion.negativeMarks),
           mediaUrl: editingQuestion.imageUrl || '',
           imageUrl: editingQuestion.imageUrl || '',
           videoUrl: editingQuestion.videoUrl || ''

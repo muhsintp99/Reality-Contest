@@ -67,6 +67,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/auth/register/topics', validateRequest(saveTopicsSchema), registrationController.saveTopics);
   router.post('/auth/register/kyc', validateRequest(saveKycSchema), registrationController.completeRegistration);
   router.post('/auth/register/upload', upload.single('file'), uploadController.uploadFile);
+  router.post('/upload/base64', uploadController.uploadBase64);
   router.post('/upload', upload.single('file'), uploadController.uploadFile);
   router.post('/upload/:folder', upload.single('file'), uploadController.uploadFile);
   router.put('/upload', upload.single('file'), uploadController.updateFile);
@@ -74,6 +75,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/upload', uploadController.deleteFile);
   router.delete('/upload/:folder', uploadController.deleteFile);
 
+  router.post('/admin/upload/base64', uploadController.uploadBase64);
   router.post('/admin/upload', upload.single('file'), uploadController.uploadFile);
   router.post('/admin/upload/:folder', upload.single('file'), uploadController.uploadFile);
   router.put('/admin/upload', upload.single('file'), uploadController.updateFile);
@@ -97,6 +99,7 @@ export function createApiRouter(authLimiter: any): Router {
 
   // 2. User profile routes
   router.get('/users/profile', authenticate, userController.getProfile);
+  router.get('/users/profile/:id', mobileContestantController.getProfileById);
   router.put('/users/profile', authenticate, validateRequest(updateProfileSchema), userController.updateProfile);
   router.put('/users/avatar', authenticate, validateRequest(updateAvatarSchema), userController.updateAvatar);
   router.put('/users/password', authenticate, validateRequest(updatePasswordSchema), userController.updatePassword);
@@ -120,6 +123,8 @@ export function createApiRouter(authLimiter: any): Router {
   // Contest routes
   router.post('/contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.createContest);
   router.get('/contests', authenticate, contestController.listContests);
+  router.get('/contests/:id/analytics', authenticate, contestController.getContestAnalytics);
+  router.get('/admin/contests/:id/analytics', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), contestController.getContestAnalytics);
   router.get('/contests/:id', authenticate, contestController.getContestDetail);
   router.put('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.updateContest);
   router.delete('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.deleteContest);
@@ -151,6 +156,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/question-pools/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updateQuestion);
   router.delete('/question-pools/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deleteQuestion);
   router.get('/questions', authenticate, questionController.listQuestions);
+  router.get('/questions/:id', authenticate, questionController.getQuestionById);
   router.post('/questions', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.createSingleQuestion);
   router.put('/question-pools/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.updatePool);
   router.delete('/question-pools/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.deletePool);
@@ -202,6 +208,7 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Question Bank REST APIs
   router.get('/admin/questions', authenticate, moduleManagementController.listQuestions);
+  router.get('/admin/questions/:id', authenticate, questionController.getQuestionById);
   router.post('/admin/questions', authenticate, authorize('Super Admin', 'Admin', 'Question Manager'), moduleManagementController.createQuestion);
   router.put('/admin/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Question Manager'), moduleManagementController.updateQuestion);
   router.delete('/admin/questions/:id', authenticate, authorize('Super Admin', 'Admin', 'Question Manager'), moduleManagementController.deleteQuestion);
@@ -278,6 +285,10 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Public CMS REST APIs (Accessible for Member Platform & Visitors)
   router.get('/cms/doc/:type', cmsController.getDocument);
+  router.get('/cms/document/:type', cmsController.getDocument);
+  router.get('/cms/privacy', (req: any, res, next) => { req.params = { ...req.params, type: 'privacy' }; cmsController.getDocument(req, res, next); });
+  router.get('/cms/terms', (req: any, res, next) => { req.params = { ...req.params, type: 'terms' }; cmsController.getDocument(req, res, next); });
+  router.get('/cms/about', (req: any, res, next) => { req.params = { ...req.params, type: 'about' }; cmsController.getDocument(req, res, next); });
   router.get('/cms/faqs', cmsController.listFaqs);
   router.get('/cms/help', cmsController.listHelpArticles);
   router.get('/cms/blogs', cmsController.listBlogs);
@@ -321,9 +332,11 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Daily Contests Routes
   router.get('/daily-contests', authenticate, dailyContestsController.listDailyContests);
+  router.get('/daily-contests/:id/analytics', authenticate, dailyContestsController.getDailyContestAnalytics);
   router.get('/daily-contests/:id', authenticate, dailyContestsController.getDailyContestDetail);
   router.post('/daily-contests/:id/join', authenticate, dailyContestsController.joinDailyContest);
   router.get('/admin/daily-contests', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.listDailyContests);
+  router.get('/admin/daily-contests/:id/analytics', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.getDailyContestAnalytics);
   router.post('/admin/daily-contests', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.createDailyContest);
   router.put('/admin/daily-contests/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.updateDailyContest);
   router.delete('/admin/daily-contests/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.deleteDailyContest);
@@ -364,6 +377,10 @@ export function createApiRouter(authLimiter: any): Router {
   // Step 6: Get & Update Contestant Profile
   router.get('/v1/mobile/profile', authenticate, mobileContestantController.getProfile);
   router.get('/mobile/profile', authenticate, mobileContestantController.getProfile);
+
+  // Get Profile by ID (Public - Without Token)
+  router.get('/v1/mobile/profile/:id', mobileContestantController.getProfileById);
+  router.get('/mobile/profile/:id', mobileContestantController.getProfileById);
 
   router.put('/v1/mobile/profile', authenticate, upload.single('profileImage'), mobileContestantController.updateProfile);
   router.put('/mobile/profile', authenticate, upload.single('profileImage'), mobileContestantController.updateProfile);

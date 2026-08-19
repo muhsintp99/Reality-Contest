@@ -66,6 +66,15 @@ export class ContestController {
       next(err);
     }
   }
+
+  async getContestAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const data = await contestService.getContestAnalytics(req.params.id);
+      res.status(200).json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 export const contestController = new ContestController();
 export default contestController;

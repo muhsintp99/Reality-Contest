@@ -37,8 +37,12 @@ export class CategoryService {
       throw new BadRequestError('A category with a similar title (slug collision) already exists.');
     }
 
+    const count = await this.categoryRepo.countDocuments({});
+    const categoryId = data.categoryId || `CAT-${1001 + count}`;
+
     const categoryData = {
       ...data,
+      categoryId,
       title,
       name: (data as any).name || title,
       icon,

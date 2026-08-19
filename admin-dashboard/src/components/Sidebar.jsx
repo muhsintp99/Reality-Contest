@@ -116,7 +116,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState(null);
   const [tooltipY, setTooltipY] = useState(0);
-  const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(true);
+  const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(false);
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
   const [isBannerMgmtOpen, setIsBannerMgmtOpen] = useState(false);
   const [isCmsOpen, setIsCmsOpen] = useState(false);
@@ -125,6 +125,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   const [isReferralsOpen, setIsReferralsOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   React.useEffect(() => {
     if (!hoveredItem) return;
@@ -171,31 +172,16 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   }, [role, searchQuery]);
 
   React.useEffect(() => {
-    if (activeView && activeView.startsWith('user-management')) {
-      setIsUserMgmtOpen(true);
-    }
-    if (activeView && activeView.startsWith('question-bank')) {
-      setIsQuestionBankOpen(true);
-    }
-    if (activeView && activeView.startsWith('banners')) {
-      setIsBannerMgmtOpen(true);
-    }
-    if (activeView && activeView.startsWith('cms')) {
-      setIsCmsOpen(true);
-    }
-    if (activeView && activeView.startsWith('advertisements')) {
-      setIsAdsOpen(true);
-    }
-    if (activeView && activeView.startsWith('coupons')) {
-      setIsCouponsOpen(true);
-    }
-    if (activeView && activeView.startsWith('referrals')) {
-      setIsReferralsOpen(true);
-    }
-    if (activeView && activeView.startsWith('analytics')) {
-      setIsAnalyticsOpen(true);
-    }
-  }, [location.pathname]);
+    if (!activeView) return;
+    if (activeView.startsWith('user-management')) setIsUserMgmtOpen(true);
+    if (activeView.startsWith('question-bank')) setIsQuestionBankOpen(true);
+    if (activeView.startsWith('banners')) setIsBannerMgmtOpen(true);
+    if (activeView.startsWith('cms')) setIsCmsOpen(true);
+    if (activeView.startsWith('advertisements')) setIsAdsOpen(true);
+    if (activeView.startsWith('coupons')) setIsCouponsOpen(true);
+    if (activeView.startsWith('referrals')) setIsReferralsOpen(true);
+    if (activeView.startsWith('analytics')) setIsAnalyticsOpen(true);
+  }, [activeView]);
 
   const handleMenuClick = (id) => {
     if (id === 'user-management') {

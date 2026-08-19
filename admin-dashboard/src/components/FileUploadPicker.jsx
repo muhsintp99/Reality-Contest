@@ -21,43 +21,16 @@ export const FileUploadPicker = ({
     }
   };
 
-  const processFile = async (file) => {
+  const processFile = (file) => {
     setFileName(file.name);
     setIsUploading(true);
 
-    const oldUrl = value;
-
-    // Instant Base64 preview fallback
     const reader = new FileReader();
     reader.onloadend = () => {
-      if (!value) onChange(reader.result);
+      onChange(reader.result);
+      setIsUploading(false);
     };
     reader.readAsDataURL(file);
-
-    // Upload to server under target folder public/uploads/<folder>/<filename>
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      if (oldUrl && typeof oldUrl === 'string' && oldUrl.includes('/uploads/')) {
-        formData.append('oldFileUrl', oldUrl);
-      }
-
-      const targetFolder = (folder || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '');
-      const isReplacement = Boolean(oldUrl && typeof oldUrl === 'string' && oldUrl.includes('/uploads/'));
-      const endpoint = isReplacement ? `/api/upload/${targetFolder}` : `/api/upload/${targetFolder}`;
-
-      const res = isReplacement 
-        ? await axios.put(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true })
-        : await axios.post(endpoint, formData, { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true });
-
-      if (res.data && res.data.fileUrl) {
-        onChange(res.data.fileUrl);
-      }
-    } catch (err) {
-      console.warn('Server upload fallback to base64 preview:', err);
-    } finally {
-      setIsUploading(false);
-    }
   };
 
   const handleDragOver = (e) => {
@@ -178,6 +151,27 @@ export const FileUploadPicker = ({
       )}
     </div>
   );
+};
+
+// Helper function to persist pending Base64 image/media preview to public/uploads disk upon form save
+export const uploadPendingFile = async (fileUrlOrBase64, folder = 'general') => {
+  if (!fileUrlOrBase64 || typeof fileUrlOrBase64 !== 'string') return fileUrlOrBase64 || '';
+  if (!fileUrlOrBase64.startsWith('data:')) return fileUrlOrBase64;
+
+  try {
+    const targetFolder = (folder || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const res = await axios.post('/api/upload/base64', {
+      base64Data: fileUrlOrBase64,
+      folder: targetFolder
+    }, { withCredentials: true });
+
+    if (res.data && res.data.fileUrl) {
+      return res.data.fileUrl;
+    }
+  } catch (err) {
+    console.warn('Failed to upload base64 file to server disk:', err);
+  }
+  return fileUrlOrBase64;
 };
 
 export default FileUploadPicker;

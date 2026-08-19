@@ -101,6 +101,11 @@ export interface ICMSNews extends Document {
   headline: string;
   badgeTag: string;
   priority: string; // 'High', 'Normal'
+  publisher?: string;
+  externalUrl?: string;
+  imageUrl?: string;
+  coverImage?: string;
+  videoUrl?: string;
   summary: string;
   content: string;
   publishedAt: string;
@@ -112,8 +117,13 @@ const CMSNewsSchema: Schema = new Schema(
     headline: { type: String, required: true },
     badgeTag: { type: String, default: 'Update' },
     priority: { type: String, default: 'Normal' },
+    publisher: { type: String, default: 'Platform Press' },
+    externalUrl: { type: String, default: '' },
+    imageUrl: { type: String, default: '' },
+    coverImage: { type: String, default: '' },
+    videoUrl: { type: String, default: '' },
     summary: { type: String, default: '' },
-    content: { type: String, required: true },
+    content: { type: String, default: '' },
     publishedAt: { type: String, default: () => new Date().toISOString().split('T')[0] },
     status: { type: String, default: 'Active' }
   },
@@ -123,8 +133,10 @@ const CMSNewsSchema: Schema = new Schema(
 // 6. Social Media Link & Logo Schema
 export interface ICMSSocial extends Document {
   platform: string;
+  username?: string;
   handle: string;
   url: string;
+  link?: string;
   logoUrl: string;
   followerCount: string;
   status: string; // 'Active', 'Disabled'
@@ -133,6 +145,7 @@ export interface ICMSSocial extends Document {
 const CMSSocialSchema: Schema = new Schema(
   {
     platform: { type: String, required: true },
+    username: { type: String, default: '' },
     handle: { type: String, required: true },
     url: { type: String, required: true },
     logoUrl: { type: String, default: '' },

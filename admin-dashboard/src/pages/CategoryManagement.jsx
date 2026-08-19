@@ -35,40 +35,25 @@ const ICON_OPTIONS = [
   { name: 'Compass', label: 'Adventure' }
 ];
 
-const MOCK_CATEGORIES = [
-  { _id: 'cat-1', title: 'GK', icon: 'Brain', status: 'Active' },
-  { _id: 'cat-2', title: 'Current Affairs', icon: 'Globe', status: 'Active' },
-  { _id: 'cat-3', title: 'Sports', icon: 'Trophy', status: 'Active' },
-  { _id: 'cat-4', title: 'Science', icon: 'Atom', status: 'Active' },
-  { _id: 'cat-5', title: 'Technology', icon: 'Code', status: 'Active' },
-  { _id: 'cat-6', title: 'Movies', icon: 'Film', status: 'Active' },
-  { _id: 'cat-7', title: 'Music', icon: 'Music', status: 'Active' },
-  { _id: 'cat-8', title: 'History', icon: 'BookOpen', status: 'Active' },
-  { _id: 'cat-9', title: 'Geography', icon: 'Compass', status: 'Active' },
-  { _id: 'cat-10', title: 'Politics', icon: 'Shield', status: 'Active' },
-  { _id: 'cat-11', title: 'Business', icon: 'Briefcase', status: 'Active' },
-  { _id: 'cat-12', title: 'Finance', icon: 'Coins', status: 'Active' },
-  { _id: 'cat-13', title: 'Travel', icon: 'Compass', status: 'Active' },
-  { _id: 'cat-14', title: 'Food', icon: 'Heart', status: 'Active' },
-  { _id: 'cat-15', title: 'Automobiles', icon: 'Zap', status: 'Active' },
-  { _id: 'cat-16', title: 'Gaming', icon: 'Gamepad2', status: 'Active' },
-  { _id: 'cat-17', title: 'Artificial Intelligence', icon: 'Brain', status: 'Active' },
-  { _id: 'cat-18', title: 'Health', icon: 'HeartPulse', status: 'Active' },
-  { _id: 'cat-19', title: 'Space', icon: 'Atom', status: 'Active' },
-  { _id: 'cat-20', title: 'Nature', icon: 'Leaf', status: 'Active' },
-  { _id: 'cat-21', title: 'Kerala', icon: 'Globe', status: 'Active' },
-  { _id: 'cat-22', title: 'India', icon: 'Globe', status: 'Active' },
-  { _id: 'cat-23', title: 'World', icon: 'Globe', status: 'Active' },
-  { _id: 'cat-24', title: 'Entertainment', icon: 'Tv', status: 'Active' },
-  { _id: 'cat-25', title: 'Fashion', icon: 'Palette', status: 'Active' },
-  { _id: 'cat-26', title: 'Social Media', icon: 'Video', status: 'Active' },
-  { _id: 'cat-27', title: 'Startup', icon: 'Briefcase', status: 'Active' },
-  { _id: 'cat-28', title: 'Cricket', icon: 'Trophy', status: 'Active' },
-  { _id: 'cat-29', title: 'Football', icon: 'Trophy', status: 'Active' },
-  { _id: 'cat-30', title: 'Olympics', icon: 'Trophy', status: 'Active' },
-  { _id: 'cat-31', title: 'Mathematics', icon: 'Brain', status: 'Active' },
-  { _id: 'cat-32', title: 'Logical Reasoning', icon: 'Brain', status: 'Active' }
-];
+const MOCK_CATEGORIES = [];
+
+export const getCategoryId = (c, idx = 0) => {
+  if (!c) return 'N/A';
+  if (c.categoryId) return c.categoryId;
+  if (c._id && typeof c._id === 'string') {
+    if (c._id.startsWith('CAT-')) return c._id;
+    if (c._id.startsWith('cat-')) {
+      const num = parseInt(c._id.replace('cat-', ''), 10);
+      return `CAT-${1000 + (isNaN(num) ? idx + 1 : num)}`;
+    }
+    if (c._id.length === 24 && /^[0-9a-fA-F]+$/.test(c._id)) {
+      const numPart = parseInt(c._id.slice(-4), 16);
+      return `CAT-${1000 + (numPart % 9000)}`;
+    }
+    return c._id;
+  }
+  return c.id || 'N/A';
+};
 
 const DynamicIcon = ({ name, className }) => {
   const IconComponent = Icons[name] || Icons.Layers;
@@ -86,6 +71,7 @@ export const CategoryManagement = () => {
   // Filter & Search states
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   const [viewingCategory, setViewingCategory] = useState(null);
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -152,7 +138,7 @@ export const CategoryManagement = () => {
 
   const fetchCategories = async () => {
     if (isMockMode) {
-      setCategories(prev => prev.length ? prev : MOCK_CATEGORIES);
+      setCategories(prev => prev || []);
       return;
     }
     setLoading(true);
@@ -285,7 +271,7 @@ export const CategoryManagement = () => {
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative flex-1">
               <Icons.Search className="absolute left-3.5 top-3 w-4 h-4 text-white/30" />
               <input
@@ -296,16 +282,45 @@ export const CategoryManagement = () => {
                 className="w-full bg-[#0c1322]/60 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brandPrimary/60"
               />
             </div>
-            <div className="w-full md:w-48">
-              <CustomSelect
-                value={statusFilter}
-                onChange={setStatusFilter}
-                options={[
-                  { value: 'All', label: 'All Statuses' },
-                  { value: 'Active', label: 'Active' },
-                  { value: 'Archived', label: 'Archived' }
-                ]}
-              />
+
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="w-full md:w-48">
+                <CustomSelect
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={[
+                    { value: 'All', label: 'All Statuses' },
+                    { value: 'Active', label: 'Active' },
+                    { value: 'Archived', label: 'Archived' }
+                  ]}
+                />
+              </div>
+
+              {/* View Mode Toggle Buttons */}
+              <div className="flex items-center bg-white/5 border border-white/10 p-1 rounded-xl shrink-0">
+                <button
+                  onClick={() => setViewMode('table')}
+                  title="Data Table List View"
+                  className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    viewMode === 'table'
+                      ? 'bg-brandPrimary text-white shadow-sm'
+                      : 'text-white/40 hover:text-white'
+                  }`}
+                >
+                  <Icons.List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  title="Grid Cards View"
+                  className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    viewMode === 'grid'
+                      ? 'bg-brandPrimary text-white shadow-sm'
+                      : 'text-white/40 hover:text-white'
+                  }`}
+                >
+                  <Icons.LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -317,11 +332,91 @@ export const CategoryManagement = () => {
             <div className="flex justify-center items-center h-48 bg-white/5 border border-white/5 rounded-2xl">
               <span className="text-sm text-white/40">No categories found matching criteria.</span>
             </div>
+          ) : viewMode === 'table' ? (
+            /* Data Table List View */
+            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#0B1120] shadow-sm">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-white/5 text-slate-400 uppercase font-extrabold text-[10px] tracking-wider border-b border-white/10">
+                  <tr>
+                    <th className="p-3.5">Category Details</th>
+                    <th className="p-3.5">Category ID</th>
+                    <th className="p-3.5">Slug / Route</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredCategories.map((c, idx) => (
+                    <tr key={c._id || idx} className="hover:bg-white/5 transition-all group">
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-brandPrimary/10 border border-brandPrimary/20 rounded-xl text-brandPrimary flex items-center justify-center w-9 h-9 shrink-0 overflow-hidden">
+                            {c.icon && (c.icon.startsWith('http') || c.icon.startsWith('/') || c.icon.startsWith('data:')) ? (
+                              <img src={c.icon} alt={c.title} className="w-5 h-5 object-contain rounded-md" />
+                            ) : (
+                              <DynamicIcon name={c.icon} className="w-4.5 h-4.5" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-white group-hover:text-brandSecondary transition-colors">
+                              {c.title}
+                            </h4>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3.5 font-mono text-[11px] text-slate-400 font-bold">
+                        {getCategoryId(c, idx)}
+                      </td>
+                      <td className="p-3.5 font-mono text-[11px] text-brandPrimary font-bold">
+                        /{c.slug || c.title.toLowerCase().replace(/\s+/g, '-')}
+                      </td>
+                      <td className="p-3.5">
+                        <span
+                          className={`text-[9px] border px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wider ${
+                            c.status === 'Active'
+                              ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                              : 'bg-rose-500/10 border-rose-500/25 text-rose-400'
+                          }`}
+                        >
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleViewClick(c)}
+                            title="View Category Details"
+                            className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-all cursor-pointer"
+                          >
+                            <Icons.Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditClick(c)}
+                            title="Edit Category"
+                            className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-all cursor-pointer"
+                          >
+                            <Icons.Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(c._id, c.title)}
+                            title="Delete Category"
+                            className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg transition-all cursor-pointer"
+                          >
+                            <Icons.Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
+            /* Grid Cards View */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCategories.map((c) => (
+              {filteredCategories.map((c, idx) => (
                 <div
-                  key={c._id}
+                  key={c._id || idx}
                   className={`p-5 bg-white/5 border rounded-2xl flex flex-col justify-between min-h-[160px] transition-all relative overflow-hidden group border-white/5 hover:border-brandPrimary/30 hover:bg-white/[0.07]`}
                 >
                   <div>
@@ -609,7 +704,7 @@ export const CategoryManagement = () => {
 
                 <div>
                   <label className="block text-[10px] text-white/40 uppercase font-extrabold tracking-wider">Internal Reference ID</label>
-                  <p className="font-mono text-[10px] text-white/30 mt-1">{viewingCategory._id}</p>
+                  <p className="font-mono text-xs font-bold text-brandPrimary mt-1">{getCategoryId(viewingCategory)}</p>
                 </div>
 
                 {viewingCategory.createdAt && (

@@ -2,16 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { 
+import {
   Trophy, Plus, Settings, Sparkles, ShieldAlert, Check, X, Save, Layers, Trash2, Eye, Search,
-  Copy, FileText, Video, Image, Clock, HelpCircle, FileCheck, Award, Upload
+  Copy, FileText, Video, Image, Clock, HelpCircle, FileCheck, Award, Upload, BarChart2
 } from 'lucide-react';
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { MultiSelect } from '../components/MultiSelect';
 import { CustomSelect } from '../components/CustomSelect';
-import { FileUploadPicker } from '../components/FileUploadPicker';
+import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
@@ -39,13 +39,13 @@ const splitDateTime = (dateVal) => {
   if (!dateVal) return { date: '', time: '' };
   const d = new Date(dateVal);
   if (isNaN(d.getTime())) return { date: '', time: '' };
-  
+
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   const hours = String(d.getHours()).padStart(2, '0');
   const minutes = String(d.getMinutes()).padStart(2, '0');
-  
+
   return {
     date: `${year}-${month}-${day}`,
     time: `${hours}:${minutes}`
@@ -78,8 +78,11 @@ export const ContestManagement = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
+  const initialCustomId = useMemo(() => `GNC-${Math.floor(100000 + Math.random() * 900000)}`, []);
+
   const formik = useFormik({
     initialValues: {
+      customContestId: initialCustomId,
       title: '',
       description: '',
       rules: '1. Each correct answer carries 10 points.\n2. Negative marking -2 for wrong attempts.\n3. Complete within timer countdown.',
@@ -103,7 +106,7 @@ export const ContestManagement = () => {
       tEndDate: '',
       tEndTime: ''
     },
-    enableReinitialize: true,
+    enableReinitialize: false,
     validationSchema: Yup.object({
       title: Yup.string().required('Contest title is required'),
       description: Yup.string().required('Contest description is required'),
@@ -113,7 +116,13 @@ export const ContestManagement = () => {
       timerLimit: Yup.number().min(1, 'Timer limit must be at least 1 minute').required('Timer is required')
     }),
     onSubmit: async (values) => {
+      // Persist pending Base64 media previews to disk strictly upon form save
+      const uploadedImageUrl = await uploadPendingFile(values.imageUrl, 'contest');
+      const uploadedVideoUrl = await uploadPendingFile(values.videoUrl, 'contest');
+      const uploadedFileAttachmentUrl = await uploadPendingFile(values.fileAttachmentUrl, 'contest');
+
       const data = {
+        contestId: values.customContestId || `GNC-${Date.now()}`,
         title: values.title,
         description: values.description,
         rules: values.rules,
@@ -123,9 +132,9 @@ export const ContestManagement = () => {
         timerLimit: parseInt(values.timerLimit, 10),
         difficulty: values.difficulty,
         questionsCount: parseInt(values.questionsCount, 10),
-        imageUrl: values.imageUrl,
-        videoUrl: values.videoUrl,
-        fileAttachmentUrl: values.fileAttachmentUrl,
+        imageUrl: uploadedImageUrl || '',
+        videoUrl: uploadedVideoUrl || '',
+        fileAttachmentUrl: uploadedFileAttachmentUrl || '',
         registrationStart: combineDateTime(values.regStartDate, values.regStartTime),
         registrationEnd: combineDateTime(values.regEndDate, values.regEndTime),
         startDate: combineDateTime(values.tStartDate, values.tStartTime),
@@ -341,10 +350,10 @@ export const ContestManagement = () => {
   const filteredContests = useMemo(() => {
     const q = search.toLowerCase().trim();
     return contests.filter(c => {
-      const matchesSearch = 
+      const matchesSearch =
         !q ||
-        (c.title && c.title.toLowerCase().includes(q)) || 
-        (c.contestId && c.contestId.toLowerCase().includes(q)) || 
+        (c.title && c.title.toLowerCase().includes(q)) ||
+        (c.contestId && c.contestId.toLowerCase().includes(q)) ||
         (c.description && c.description.toLowerCase().includes(q));
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
       const matchesCategory = categoryFilter === 'All' || (c.categories && c.categories.includes(categoryFilter));
@@ -368,7 +377,7 @@ export const ContestManagement = () => {
         </div>
         <button
           onClick={() => navigate('/admin-dashboard/contests/create')}
-          className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all"
+          className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow-indigo-500/20"
         >
           <Plus className="w-4 h-4" /> Create Contest
         </button>
@@ -442,14 +451,13 @@ export const ContestManagement = () => {
                     </span>
                     <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">{c.title}</h3>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    c.status === 'Registration Open' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                  }`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${c.status === 'Registration Open' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                    }`}>
                     {c.status}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{c.description}</p>
-                
+
                 {/* Financial & Logistics Info */}
                 <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-white/5 p-2.5 rounded-xl text-center text-xs">
                   <div>
@@ -476,148 +484,30 @@ export const ContestManagement = () => {
 
               {/* Card Action Buttons */}
               <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
-                <div className="flex items-center gap-1">
-                  <button onClick={() => handleViewClick(c)} title="View Contest Details" className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg">
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => navigate(`/admin-dashboard/contests/edit/${c._id}`)} title="Edit Contest" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg">
-                    <Settings className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleDuplicateClick(c)} title="Duplicate Contest" className="p-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-lg">
-                    <Copy className="w-4 h-4" />
-                  </button>
+                <div className="flex items-center gap-1 w-full justify-between">
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => navigate(`/admin-dashboard/contests/${c._id}/analytics`)} title="Contest Analytics" className="p-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-lg flex items-center gap-1 text-[11px] font-bold">
+                      <BarChart2 className="w-4 h-4" /> Analytics
+                    </button>
+                    <button onClick={() => handleViewClick(c)} title="View Contest Details" className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => navigate(`/admin-dashboard/contests/edit/${c._id}`)} title="Edit Contest" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg">
+                      <Settings className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDuplicateClick(c)} title="Duplicate Contest" className="p-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-lg">
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
                   <button onClick={() => handleDeleteClick(c._id, c.title)} title="Delete Contest" className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-lg">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-
-                <button
-                  onClick={() => navigate(`/admin-dashboard/contests/${c._id}`)}
-                  className="px-3 py-1 bg-brandPrimary text-white rounded-lg text-[11px] font-bold hover:bg-brandPrimary/90"
-                >
-                  Manage Stages
-                </button>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {/* Create / Edit Drawer */}
-      <RightDrawer
-        isOpen={isDrawerOpen}
-        onClose={resetForm}
-        title={editingId ? 'Edit Contest Parameters' : 'Create New Tournament Contest'}
-      >
-        <form onSubmit={formik.handleSubmit} className="space-y-4 text-left text-xs">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contest Title</label>
-            <input type="text" name="title" value={formik.values.title} onChange={formik.handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white" />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Description</label>
-            <textarea name="description" value={formik.values.description} onChange={formik.handleChange} rows={2} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white resize-none" />
-          </div>
-
-          <RichTextEditor
-            label="Contest Rules & Guidelines"
-            value={formik.values.rules}
-            onChange={(val) => formik.setFieldValue('rules', val)}
-            placeholder="Enter rules, negative marking guidelines, disqualification policies..."
-            rows={4}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Prize Pool (INR)</label>
-              <input type="number" name="prize" value={formik.values.prize} onChange={formik.handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Entry Fee (INR)</label>
-              <input type="number" name="fee" value={formik.values.fee} onChange={formik.handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Timer (Mins)</label>
-              <input type="number" name="timerLimit" value={formik.values.timerLimit} onChange={formik.handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Max Seats</label>
-              <input type="number" name="maxPart" value={formik.values.maxPart} onChange={formik.handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Difficulty</label>
-              <CustomSelect value={formik.values.difficulty} onChange={v => formik.setFieldValue('difficulty', v)} options={[{value:'Easy',label:'Easy'},{value:'Medium',label:'Medium'},{value:'Hard',label:'Hard'},{value:'Expert',label:'Expert'}]} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Questions Count</label>
-              <input type="number" name="questionsCount" value={formik.values.questionsCount} onChange={formik.handleChange} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl p-2.5 text-slate-800 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contest Status</label>
-              <CustomSelect
-                value={formik.values.status}
-                onChange={v => formik.setFieldValue('status', v)}
-                options={[
-                  { value: 'Draft', label: 'Draft' },
-                  { value: 'Upcoming', label: 'Upcoming' },
-                  { value: 'Registration Open', label: 'Registration Open' },
-                  { value: 'Registration Closed', label: 'Registration Closed' },
-                  { value: 'Live', label: 'Live' },
-                  { value: 'Completed', label: 'Completed' },
-                  { value: 'Cancelled', label: 'Cancelled' }
-                ]}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Contest Categories</label>
-            <MultiSelect
-              options={categories.map(c => ({ value: c._id, label: c.title || c.name || c._id }))}
-              selected={formik.values.selectedCategories}
-              onChange={(vals) => formik.setFieldValue('selectedCategories', vals)}
-              placeholder="Select Contest Categories..."
-            />
-          </div>
-
-          <FileUploadPicker
-            label="Cover Image Upload"
-            type="image"
-            accept="image/*"
-            value={formik.values.imageUrl}
-            onChange={(val) => formik.setFieldValue('imageUrl', val)}
-          />
-
-          <FileUploadPicker
-            label="Trailer Video Upload"
-            type="video"
-            accept="video/*"
-            value={formik.values.videoUrl}
-            onChange={(val) => formik.setFieldValue('videoUrl', val)}
-          />
-
-          <FileUploadPicker
-            label="Rules PDF / Document Upload"
-            type="file"
-            accept=".pdf,.doc,.docx"
-            value={formik.values.fileAttachmentUrl}
-            onChange={(val) => formik.setFieldValue('fileAttachmentUrl', val)}
-          />
-
-          <div className="pt-3">
-            <button type="submit" className="w-full py-3 bg-brandPrimary text-white font-bold rounded-xl text-xs shadow-md hover:bg-brandPrimary/90">
-              {editingId ? 'Save Contest Updates' : 'Create Contest'}
-            </button>
-          </div>
-        </form>
-      </RightDrawer>
 
       {/* View Drawer */}
       <RightDrawer isOpen={isViewDrawerOpen} onClose={() => setIsViewDrawerOpen(false)} title="Contest Overview & Configuration">

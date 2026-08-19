@@ -12,6 +12,14 @@ import { CustomSelect } from '../components/CustomSelect';
 import { RightDrawer } from '../components/RightDrawer';
 import { FileUploadPicker } from '../components/FileUploadPicker';
 
+const formatNegMarks = (val) => {
+  if (val === undefined || val === null || val === '') return '-0.25';
+  const clean = String(val).replace(/-/g, '').trim();
+  const num = parseFloat(clean);
+  if (isNaN(num)) return '-0.25';
+  return `-${num}`;
+};
+
 export const QuestionPoolPage = () => {
   const { showAlert, showSnackbar, showConfirm } = useAlert();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
@@ -145,7 +153,7 @@ export const QuestionPoolPage = () => {
                 : 'Option A'),
               difficulty: q.difficulty || 'Medium',
               explanation: q.explanation || '',
-              negativeMarks: q.negativeMarks ? `-${q.negativeMarks}` : '-0.25',
+              negativeMarks: formatNegMarks(q.negativeMarks),
               approvalStatus: q.approvalStatus || 'Approved',
               imageUrl: q.imageUrl || q.mediaUrl || '',
               videoUrl: q.videoUrl || '',
@@ -182,7 +190,7 @@ export const QuestionPoolPage = () => {
             : 'Option A'),
           difficulty: q.difficulty || 'Medium',
           explanation: q.explanation || '',
-          negativeMarks: q.negativeMarks ? `-${q.negativeMarks}` : '-0.25',
+          negativeMarks: formatNegMarks(q.negativeMarks),
           approvalStatus: q.approvalStatus || 'Approved',
           imageUrl: q.imageUrl || q.mediaUrl || '',
           videoUrl: q.videoUrl || '',
@@ -285,7 +293,7 @@ export const QuestionPoolPage = () => {
       correctOption: q.correctOption || 'Option A',
       difficulty: q.difficulty || 'Medium',
       explanation: q.explanation || '',
-      negativeMarks: q.negativeMarks || '-0.25',
+      negativeMarks: formatNegMarks(q.negativeMarks),
       approvalStatus: q.approvalStatus || 'Approved',
       imageUrl: q.imageUrl || '',
       videoUrl: q.videoUrl || ''

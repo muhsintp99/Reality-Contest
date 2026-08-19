@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { User, IUser } from '../models/User';
@@ -552,6 +553,41 @@ export class MobileContestantController {
       }
 
       const user = await User.findById(req.user.id);
+      if (!user) {
+        res.status(404).json({ success: false, message: 'Contestant profile not found.' });
+        return;
+      }
+
+      const contestantData = formatContestantUser(user, req);
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile retrieved successfully.',
+        data: {
+          user: contestantData
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // STEP 6: GET PUBLIC PROFILE BY ID WITHOUT TOKEN (/api/v1/mobile/profile/:id)
+  // ------------------------------------------------------------------
+  public getProfileById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid profile ID format.'
+        });
+        return;
+      }
+
+      const user = await User.findById(id);
       if (!user) {
         res.status(404).json({ success: false, message: 'Contestant profile not found.' });
         return;

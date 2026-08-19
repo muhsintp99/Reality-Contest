@@ -70,6 +70,15 @@ export class QuestionController {
     }
   }
 
+  async getQuestionById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const question = await questionService.getQuestionById(req.params.id);
+      res.status(200).json({ success: true, question });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async updateQuestion(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const question = await questionService.updateQuestion(req.params.id, req.body);

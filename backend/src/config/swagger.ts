@@ -23,7 +23,9 @@ export const swaggerDocument = {
     { name: '5. Daily Contests (24h Arena)', description: 'Daily contest listing, 24h reset arena, and participation' },
     { name: '6. Admin Contest & Daily Contest Management', description: 'Admin CRUD operations for Contests and Daily Contests' },
     { name: '7. Wallet & Transactions', description: 'Wallet deposits and transaction history' },
-    { name: '8. Mobile App API (Contestant V1)', description: 'Mobile V1 endpoints for contestant registration, login, profile management, image upload, and password change' }
+    { name: '8. Mobile App API (Contestant V1)', description: 'Mobile V1 endpoints for contestant registration, login, profile management, image upload, and password change' },
+    { name: '9. Question Bank & Quiz Builder', description: 'Question bank CRUD, question pools, bulk imports, and random selection' },
+    { name: '10. CMS & Social Media', description: 'CMS social links, platform names, user handles, logos, and legal docs' }
   ],
   components: {
     securitySchemes: {
@@ -104,6 +106,87 @@ export const swaggerDocument = {
             enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Completed', 'Maintenance'],
             example: 'Registration Open' 
           }
+        }
+      },
+      QuestionResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789abc' },
+          poolId: { type: 'string', example: '66bc91f24d9e987654321def' },
+          category: { type: 'string', example: 'Technology & Coding' },
+          type: { type: 'string', enum: ['Single Choice', 'Multiple Choice', 'True False', 'Image Questions', 'Video Questions', 'Audio Questions'], example: 'Single Choice' },
+          text: { type: 'string', example: 'What does CPU stand for?' },
+          mediaUrl: { type: 'string', example: '' },
+          imageUrl: { type: 'string', example: '' },
+          videoUrl: { type: 'string', example: '' },
+          options: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                text: { type: 'string', example: 'Central Processing Unit' },
+                isCorrect: { type: 'boolean', example: true },
+                mediaUrl: { type: 'string', example: '' }
+              }
+            }
+          },
+          marks: { type: 'number', example: 1 },
+          negativeMarks: { type: 'number', example: 0.25 },
+          difficulty: { type: 'string', enum: ['Easy', 'Medium', 'Hard'], example: 'Medium' },
+          explanation: { type: 'string', example: 'CPU stands for Central Processing Unit.' },
+          questionTimer: { type: 'number', example: 30 }
+        }
+      },
+      QuestionPoolResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e987654321def' },
+          name: { type: 'string', example: 'General Knowledge Pool' },
+          category: { type: 'string', example: 'General Knowledge' },
+          description: { type: 'string', example: 'Default Question Pool for General Knowledge' }
+        }
+      },
+      CMSSocialResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e987654321soc' },
+          platform: { type: 'string', example: 'Instagram' },
+          username: { type: 'string', example: '@hakaofficial' },
+          handle: { type: 'string', example: '@hakaofficial' },
+          url: { type: 'string', example: 'https://instagram.com/hakaofficial' },
+          logoUrl: { type: 'string', example: '/uploads/social/logo_1723630000.png' },
+          followerCount: { type: 'string', example: '50K+' },
+          status: { type: 'string', enum: ['Active', 'Disabled'], example: 'Active' }
+        }
+      },
+      CMSNewsResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e987654321nws' },
+          headline: { type: 'string', example: 'Haka Platform Launches Grand Season 2026' },
+          badgeTag: { type: 'string', example: 'Press Release' },
+          priority: { type: 'string', enum: ['Normal', 'High'], example: 'High' },
+          publisher: { type: 'string', example: 'TechCrunch' },
+          externalUrl: { type: 'string', example: 'https://techcrunch.com/article' },
+          imageUrl: { type: 'string', example: '/uploads/news/banner_1723630000.png' },
+          coverImage: { type: 'string', example: '/uploads/news/banner_1723630000.png' },
+          summary: { type: 'string', example: 'Summary of the press release...' },
+          content: { type: 'string', example: 'Full article body content...' },
+          publishedAt: { type: 'string', example: '2026-08-19' },
+          status: { type: 'string', enum: ['Active', 'Archived'], example: 'Active' }
+        }
+      },
+      CMSDocumentResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e987654321doc' },
+          type: { type: 'string', enum: ['privacy', 'terms', 'about'], example: 'privacy' },
+          title: { type: 'string', example: 'Privacy Policy' },
+          version: { type: 'string', example: 'v1.0' },
+          lastUpdated: { type: 'string', example: '2026-08-19' },
+          author: { type: 'string', example: 'Legal Team' },
+          status: { type: 'string', enum: ['Published', 'Draft'], example: 'Published' },
+          content: { type: 'string', example: '<h2>Privacy Policy</h2><p>Your privacy is important to us...</p>' }
         }
       }
     }
@@ -542,6 +625,46 @@ export const swaggerDocument = {
           }
         }
       },
+    '/api/users/profile/{id}': {
+      get: {
+        tags: ['3. Contestant Profile & KYC'],
+        summary: 'Get Public Contestant Profile by ID (Without Token)',
+        description: 'Fetches contestant profile by MongoDB User ID without requiring an authentication token.',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'MongoDB User ID of the contestant',
+            schema: { type: 'string', example: '66bc91f24d9e123456789abc' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'User profile details.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Profile retrieved successfully.' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        user: { $ref: '#/components/schemas/UserResponse' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { description: 'Invalid profile ID format.' },
+          404: { description: 'Contestant profile not found.' }
+        }
+      }
+    },
       put: {
         tags: ['3. Contestant Profile & KYC'],
         summary: 'Update Contestant Profile Info',
@@ -1472,6 +1595,46 @@ export const swaggerDocument = {
         }
       }
     },
+    '/api/v1/mobile/profile/{id}': {
+      get: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Get Public Contestant Profile by ID (Without Token)',
+        description: 'Fetches contestant profile by MongoDB User ID without requiring an authentication token. Always resolves avatar URL with 3-tier fallback.',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'MongoDB User ID of the contestant',
+            schema: { type: 'string', example: '66bc91f24d9e123456789abc' }
+          }
+        ],
+        responses: {
+          200: {
+            description: 'Profile fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Profile retrieved successfully.' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        user: { $ref: '#/components/schemas/UserResponse' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { description: 'Invalid profile ID format.' },
+          404: { description: 'Contestant profile not found.' }
+        }
+      }
+    },
     '/api/v1/mobile/profile/change-password': {
       post: {
         tags: ['8. Mobile App API (Contestant V1)'],
@@ -1498,6 +1661,631 @@ export const swaggerDocument = {
           200: { description: 'Password changed successfully.' },
           400: { description: 'Passwords do not match or new password invalid.' },
           401: { description: 'Current password incorrect.' }
+        }
+      }
+    },
+    // ----------------------------------------------------
+    // 9. QUESTION BANK & QUIZ BUILDER
+    // ----------------------------------------------------
+    '/api/questions': {
+      get: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'List All Questions',
+        description: 'Retrieves all questions from the Question Bank across all categories and pools.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Questions fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    questions: { type: 'array', items: { $ref: '#/components/schemas/QuestionResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Create Single Question',
+        description: 'Adds a new question to the specified category or pool.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['category', 'question', 'options'],
+                properties: {
+                  category: { type: 'string', example: 'Technology & Coding' },
+                  type: { type: 'string', example: 'Single Choice' },
+                  question: { type: 'string', example: 'What does HTML stand for?' },
+                  options: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        text: { type: 'string', example: 'HyperText Markup Language' },
+                        isCorrect: { type: 'boolean', example: true }
+                      }
+                    }
+                  },
+                  marks: { type: 'number', example: 1 },
+                  negativeMarks: { type: 'number', example: 0.25 },
+                  difficulty: { type: 'string', example: 'Easy' },
+                  explanation: { type: 'string', example: 'HTML stands for HyperText Markup Language.' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Question created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    question: { $ref: '#/components/schemas/QuestionResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/questions/{id}': {
+      get: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Get Single Question by ID',
+        description: 'Retrieves full details for a single question by its MongoDB ID.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, description: 'MongoDB Question ID', schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }
+        ],
+        responses: {
+          200: {
+            description: 'Question fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    question: { $ref: '#/components/schemas/QuestionResponse' }
+                  }
+                }
+              }
+            }
+          },
+          404: { description: 'Question not found.' }
+        }
+      },
+      put: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Update Question by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  text: { type: 'string', example: 'Updated question text?' },
+                  marks: { type: 'number', example: 2 },
+                  difficulty: { type: 'string', example: 'Hard' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Question updated successfully.' }
+        }
+      },
+      delete: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Delete Question by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'Question deleted successfully.' }
+        }
+      }
+    },
+    '/api/question-pools': {
+      get: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'List Question Pools',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Pools list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    pools: { type: 'array', items: { $ref: '#/components/schemas/QuestionPoolResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Create Question Pool',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'category'],
+                properties: {
+                  name: { type: 'string', example: 'Speed Battle Pool' },
+                  category: { type: 'string', example: 'Speed Battle' },
+                  description: { type: 'string', example: 'Question pool for 24h speed battle contests' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Question pool created.' }
+        }
+      }
+    },
+    '/api/question-pools/{id}': {
+      put: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Update Question Pool',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'Pool updated.' }
+        }
+      },
+      delete: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Delete Question Pool',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'Pool deleted.' }
+        }
+      }
+    },
+    '/api/question-pools/{poolId}/questions': {
+      get: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'List Questions in Pool',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'poolId', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'Questions in pool.' }
+        }
+      },
+      post: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Add Question to Specific Pool',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'poolId', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          201: { description: 'Question added to pool.' }
+        }
+      }
+    },
+    '/api/question-pools/bulk-import': {
+      post: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Bulk Import Questions',
+        description: 'Bulk imports questions array grouped by category.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['questions'],
+                properties: {
+                  category: { type: 'string', example: 'General Knowledge' },
+                  questions: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        question: { type: 'string', example: 'What is the capital of France?' },
+                        optionA: { type: 'string', example: 'Paris' },
+                        optionB: { type: 'string', example: 'London' },
+                        optionC: { type: 'string', example: 'Berlin' },
+                        optionD: { type: 'string', example: 'Madrid' },
+                        correctOption: { type: 'string', example: 'Option A' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Bulk import successful.' }
+        }
+      }
+    },
+    '/api/question-pools/clear-all': {
+      delete: {
+        tags: ['9. Question Bank & Quiz Builder'],
+        summary: 'Clear All Questions & Pools',
+        description: 'Super Admin reset option to wipe all question pools and questions.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'All questions cleared successfully.' }
+        }
+      }
+    },
+    // ----------------------------------------------------
+    // 10. CMS & SOCIAL MEDIA LINKS & LOGOS
+    // ----------------------------------------------------
+    '/api/cms/social': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Get Public Social Media Links & Logos',
+        description: 'Retrieves active social media links with logos, usernames, and profile URLs.',
+        responses: {
+          200: {
+            description: 'Social links list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    social: { type: 'array', items: { $ref: '#/components/schemas/CMSSocialResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/cms/social': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Admin List Social Media Links',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Social links fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    social: { type: 'array', items: { $ref: '#/components/schemas/CMSSocialResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Create Social Media Link with Logo Upload',
+        description: 'Adds a social media handle with platform name, username, profile link URL, and logo image upload.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['platform', 'url'],
+                properties: {
+                  platform: { type: 'string', example: 'Instagram' },
+                  username: { type: 'string', example: '@hakaofficial' },
+                  handle: { type: 'string', example: '@hakaofficial' },
+                  url: { type: 'string', example: 'https://instagram.com/hakaofficial' },
+                  logoUrl: { type: 'string', example: 'data:image/png;base64,iVBORw0KGgo...' },
+                  followerCount: { type: 'string', example: '50K+' },
+                  status: { type: 'string', example: 'Active' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Social media link created.' }
+        }
+      }
+    },
+    '/api/admin/cms/social/{id}': {
+      put: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Update Social Media Link & Logo',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  platform: { type: 'string', example: 'YouTube' },
+                  username: { type: 'string', example: 'Haka Official Channel' },
+                  url: { type: 'string', example: 'https://youtube.com/@hakaofficial' },
+                  logoUrl: { type: 'string', example: '/uploads/social/logo_1723630000.png' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Social media link updated.' }
+        }
+      },
+      delete: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Delete Social Media Link',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'Social media link deleted.' }
+        }
+      }
+    },
+    '/api/cms/news': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Get Public News & Media Announcements',
+        description: 'Retrieves published news articles, press releases, media links, and cover images.',
+        responses: {
+          200: {
+            description: 'News items list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    news: { type: 'array', items: { $ref: '#/components/schemas/CMSNewsResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/cms/news': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Admin List News Announcements',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'News list fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    news: { type: 'array', items: { $ref: '#/components/schemas/CMSNewsResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Create News Release / Announcement',
+        description: 'Creates a news article with headline, publisher, cover image upload, summary, and rich content.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['headline', 'summary'],
+                properties: {
+                  headline: { type: 'string', example: 'Haka Platform Launches Grand Season 2026' },
+                  badgeTag: { type: 'string', example: 'Press Release' },
+                  priority: { type: 'string', example: 'High' },
+                  publisher: { type: 'string', example: 'Times of India' },
+                  externalUrl: { type: 'string', example: 'https://timesofindia.com' },
+                  imageUrl: { type: 'string', example: 'data:image/png;base64,iVBORw0...' },
+                  summary: { type: 'string', example: 'Summary text...' },
+                  content: { type: 'string', example: 'Full article text...' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'News announcement created.' }
+        }
+      }
+    },
+    '/api/admin/cms/news/{id}': {
+      put: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Update News Announcement',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'News announcement updated.' }
+        }
+      },
+      delete: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Delete News Announcement',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'News announcement deleted.' }
+        }
+      }
+    },
+    // ----------------------------------------------------
+    // CMS LEGAL DOCUMENTS (Privacy Policy, Terms & Conditions, About Us)
+    // ----------------------------------------------------
+    '/api/cms/privacy': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Get Public Privacy Policy Document',
+        description: 'Retrieves the official platform Privacy Policy legal document.',
+        responses: {
+          200: {
+            description: 'Privacy Policy document fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    doc: { $ref: '#/components/schemas/CMSDocumentResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/cms/terms': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Get Public Terms & Conditions Document',
+        description: 'Retrieves the official platform Terms & Conditions legal document.',
+        responses: {
+          200: {
+            description: 'Terms & Conditions document fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    doc: { $ref: '#/components/schemas/CMSDocumentResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/cms/doc/{type}': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Get Public Legal Document by Type',
+        description: 'Fetch legal document by type slug: privacy, terms, or about.',
+        parameters: [
+          { name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['privacy', 'terms', 'about'] }, example: 'privacy' }
+        ],
+        responses: {
+          200: {
+            description: 'Document fetched.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    doc: { $ref: '#/components/schemas/CMSDocumentResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/cms/doc/{type}': {
+      get: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Admin Get Legal Document by Type',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['privacy', 'terms', 'about'] } }
+        ],
+        responses: {
+          200: { description: 'Document details.' }
+        }
+      },
+      put: {
+        tags: ['10. CMS & Social Media'],
+        summary: 'Update Legal Document (Privacy Policy / Terms / About Us)',
+        description: 'Updates document title, content, version, and status.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'type', in: 'path', required: true, schema: { type: 'string', enum: ['privacy', 'terms', 'about'] } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['content'],
+                properties: {
+                  title: { type: 'string', example: 'Privacy Policy' },
+                  version: { type: 'string', example: 'v1.1' },
+                  author: { type: 'string', example: 'Legal Team' },
+                  status: { type: 'string', example: 'Published' },
+                  content: { type: 'string', example: '<h2>Updated Privacy Policy</h2><p>Content...</p>' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Document updated successfully.' }
         }
       }
     }

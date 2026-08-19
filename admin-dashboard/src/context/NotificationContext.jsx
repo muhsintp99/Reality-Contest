@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 
@@ -30,14 +30,14 @@ export const NotificationProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(false);
 
-  const adminRoles = [
+  const adminRoles = useMemo(() => [
     'Super Admin', 'Admin', 'Contest Manager', 'Question Manager',
     'Finance Manager', 'Support Manager', 'Support Executive',
     'Marketing Manager', 'Content Moderator', 'KYC Officer', 'Analytics Manager', 'Sponsor'
-  ];
+  ], []);
   const isAdmin = isAuthenticated && user && adminRoles.includes(user.role);
 
-  const fetchCounts = async () => {
+  const fetchCounts = useCallback(async () => {
     if (!isAdmin) return;
     try {
       const res = await axios.get('/api/admin/sidebar-counts', { withCredentials: true });
@@ -49,9 +49,9 @@ export const NotificationProvider = ({ children }) => {
         console.error('Failed to fetch notification counts:', err);
       }
     }
-  };
+  }, [isAdmin]);
 
-  const markModuleAsRead = async (moduleName) => {
+  const markModuleAsRead = useCallback(async (moduleName) => {
     if (!isAdmin) return;
     try {
       setLoading(true);
@@ -64,7 +64,7 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -79,10 +79,15 @@ export const NotificationProvider = ({ children }) => {
       clearInterval(interval);
       window.removeEventListener('refetch-sidebar-counts', handleRefetch);
     };
-  }, [isAdmin]);
+  }, [isAdmin, fetchCounts]);
+
+  const value = useMemo(
+    () => ({ unreadCounts, fetchCounts, markModuleAsRead, loading }),
+    [unreadCounts, fetchCounts, markModuleAsRead, loading]
+  );
 
   return (
-    <NotificationContext.Provider value={{ unreadCounts, fetchCounts, markModuleAsRead, loading }}>
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

@@ -20,17 +20,20 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        // target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        target: process.env.VITE_API_TARGET || 'http://localhost:10000/api',
         changeOrigin: true,
         secure: false,
       },
       '/api-docs': {
-        target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        // target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        target: process.env.VITE_API_TARGET || 'http://localhost:10000/api',
         changeOrigin: true,
         secure: false,
       },
       '/uploads': {
-        target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        // target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
+        target: process.env.VITE_API_TARGET || 'http://localhost:10000/api',
         changeOrigin: true,
         secure: false,
       }

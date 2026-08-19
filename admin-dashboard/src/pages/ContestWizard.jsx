@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Trophy, Coins, Calendar, ShieldAlert, Sparkles, Save, ArrowLeft, Image, Eye, CheckCircle2, FileText, Layers, Tag } from 'lucide-react';
+import { Trophy, Coins, Calendar, ShieldAlert, Sparkles, Save, ArrowLeft, Image, Eye, CheckCircle2, FileText, Layers, Tag, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
 import { MultiSelect } from '../components/MultiSelect';
 import { CustomSelect } from '../components/CustomSelect';
-import { FileUploadPicker } from '../components/FileUploadPicker';
+import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
@@ -67,8 +67,11 @@ export const ContestWizard = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const initialCustomId = useMemo(() => `GNC-${Math.floor(100000 + Math.random() * 900000)}`, []);
+
   const formik = useFormik({
     initialValues: {
+      customContestId: initialCustomId,
       title: isDailyType ? 'Daily Speed Quiz Rush 2026' : '',
       description: isDailyType ? 'Automated 24-hour daily quiz battle with live reset countdown.' : '',
       rules: '1. Complete all quiz stages within timer countdown.\n2. Negative marking -2 for wrong attempts.\n3. Top scorers qualify for grand prize pool.',
@@ -119,7 +122,14 @@ export const ContestWizard = () => {
     onSubmit: async (values) => {
       setSubmitting(true);
       const feeVal = values.isFree ? 0 : parseFloat(values.fee);
+
+      // Persist pending Base64 media previews to public/uploads disk strictly upon form save
+      const uploadedImageUrl = await uploadPendingFile(values.imageUrl, 'contest');
+      const uploadedVideoUrl = await uploadPendingFile(values.videoUrl, 'contest');
+      const uploadedFileAttachmentUrl = await uploadPendingFile(values.fileAttachmentUrl, 'contest');
+
       const data = {
+        contestId: values.customContestId || `GNC-${Date.now()}`,
         title: values.title,
         description: values.description,
         rules: values.rules,
@@ -133,9 +143,9 @@ export const ContestWizard = () => {
         timerLimit: parseInt(values.timerLimit, 10),
         difficulty: values.difficulty,
         questionsCount: parseInt(values.questionsCount, 10),
-        imageUrl: values.imageUrl,
-        videoUrl: values.videoUrl,
-        fileAttachmentUrl: values.fileAttachmentUrl,
+        imageUrl: uploadedImageUrl || '',
+        videoUrl: uploadedVideoUrl || '',
+        fileAttachmentUrl: uploadedFileAttachmentUrl || '',
         registrationStart: combineDateTime(values.regStartDate, values.regStartTime),
         registrationEnd: combineDateTime(values.regEndDate, values.regEndTime),
         startDate: combineDateTime(values.tStartDate, values.tStartTime),
@@ -187,6 +197,25 @@ export const ContestWizard = () => {
       }
     }
   });
+
+  const handleFormSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const errors = await formik.validateForm();
+    if (Object.keys(errors).length > 0) {
+      formik.setTouched({
+        title: true,
+        description: true,
+        prize: true,
+        fee: true,
+        maxPart: true,
+        timerLimit: true
+      });
+      const firstError = Object.values(errors)[0];
+      showSnackbar(`Please fix: ${firstError}`, 'warning');
+      return;
+    }
+    await formik.submitForm();
+  };
 
   const fetchCategories = async () => {
     if (isMockMode) {
@@ -319,8 +348,7 @@ export const ContestWizard = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 text-left animate-fade-in p-2">
-      {/* Top Header */}
+    <form onSubmit={handleFormSubmit} className="max-w-7xl mx-auto space-y-6 text-left animate-fade-in p-2 pb-16">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-[#0B1120] p-5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm">
         <div>
           <button
@@ -341,9 +369,9 @@ export const ContestWizard = () => {
 
         <button
           type="button"
-          onClick={formik.handleSubmit}
+          onClick={handleFormSubmit}
           disabled={submitting}
-          className="px-6 py-2.5 bg-gradient-to-r from-brandPrimary to-brandSecondary hover:opacity-90 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg shrink-0"
+          className="px-6 py-2.5 bg-gradient-to-r from-brandPrimary to-brandSecondary hover:opacity-90 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg shrink-0 cursor-pointer"
         >
           {submitting ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -355,7 +383,7 @@ export const ContestWizard = () => {
       </div>
 
       {/* Main Single Page Grid: Left Form Sections | Right Live Preview */}
-      <form onSubmit={formik.handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT COLUMN: All Form Sections */}
         <div className="lg:col-span-7 space-y-6">
@@ -369,22 +397,44 @@ export const ContestWizard = () => {
               </h3>
             </div>
 
-            <div>
-              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Contest Title</label>
-              <input
-                type="text"
-                name="title"
-                value={formik.values.title}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                placeholder="National Reality Auditions 2026"
-                className={`w-full bg-slate-50 dark:bg-black/40 border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none transition-all ${
-                  formik.touched.title && formik.errors.title ? 'border-red-500' : 'border-slate-200 dark:border-white/10 focus:border-brandPrimary'
-                }`}
-              />
-              {formik.touched.title && formik.errors.title && (
-                <span className="text-[10px] text-red-500 mt-1 block">{formik.errors.title}</span>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5 flex items-center justify-between">
+                  <span>CONTEST ID</span>
+                  <button
+                    type="button"
+                    onClick={() => formik.setFieldValue('customContestId', `GNC-${Math.floor(100000 + Math.random() * 900000)}`)}
+                    className="text-[9px] text-indigo-500 hover:underline flex items-center gap-0.5 cursor-pointer font-extrabold"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" /> Auto ID
+                  </button>
+                </label>
+                <input
+                  type="text"
+                  name="customContestId"
+                  value={formik.values.customContestId}
+                  onChange={formik.handleChange}
+                  placeholder="GNC-XXXXXX"
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-indigo-500 focus:outline-none"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Contest Title</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formik.values.title}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  placeholder="National Reality Auditions 2026"
+                  className={`w-full bg-slate-50 dark:bg-black/40 border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none transition-all ${
+                    formik.touched.title && formik.errors.title ? 'border-red-500' : 'border-slate-200 dark:border-white/10 focus:border-brandPrimary'
+                  }`}
+                />
+                {formik.touched.title && formik.errors.title && (
+                  <span className="text-[10px] text-red-500 mt-1 block">{formik.errors.title}</span>
+                )}
+              </div>
             </div>
 
             <div>
@@ -865,8 +915,8 @@ export const ContestWizard = () => {
             </button>
           </div>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 };
 

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -10,6 +10,7 @@ import { RedisStore } from 'rate-limit-redis';
 import cluster from 'cluster';
 import os from 'os';
 import path from 'path';
+import fs from 'fs';
 
 import { config } from './config/appConfig';
 import { logger } from './core/logger';
@@ -78,7 +79,41 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     app.use(compression()); // Compress text response payloads
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
-    app.use('/uploads', express.static(path.resolve(process.cwd(), 'public/uploads')));
+
+    // Static upload file serving (mount at /uploads, subfolders, and root fallback)
+    const uploadsPath = path.resolve(process.cwd(), 'public/uploads');
+    app.use('/uploads', express.static(uploadsPath));
+    app.use('/uploads/general', express.static(path.join(uploadsPath, 'general')));
+    app.use('/uploads/question', express.static(path.join(uploadsPath, 'question')));
+    app.use('/uploads/daily-contest', express.static(path.join(uploadsPath, 'daily-contest')));
+    app.use('/uploads/contest', express.static(path.join(uploadsPath, 'contest')));
+    app.use('/uploads/category', express.static(path.join(uploadsPath, 'category')));
+
+    // Fallback static image/media resolver for uploaded files
+    app.use((req: any, res: any, next: any) => {
+      const reqPath = req.path || req.url || '';
+      if (req.method === 'GET' && /\.(png|jpe?g|gif|webp|svg|ico|pdf|mp4|webm)$/i.test(reqPath)) {
+        const filename = path.basename(reqPath);
+        const searchDirs = [
+          uploadsPath,
+          path.join(uploadsPath, 'general'),
+          path.join(uploadsPath, 'question'),
+          path.join(uploadsPath, 'daily-contest'),
+          path.join(uploadsPath, 'contest'),
+          path.join(uploadsPath, 'category'),
+          path.join(uploadsPath, 'kyc'),
+          path.join(uploadsPath, 'avatars')
+        ];
+
+        for (const dir of searchDirs) {
+          const filePath = path.join(dir, filename);
+          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            return res.sendFile(filePath);
+          }
+        }
+      }
+      next();
+    });
 
     const allowedOrigins = Array.from(
       new Set([

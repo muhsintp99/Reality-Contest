@@ -5,12 +5,12 @@ import axios from 'axios';
 import {
   Clock, Plus, Trophy, Award, Sparkles, RefreshCw, Eye, Edit3, Trash2,
   CheckCircle, Play, ShieldAlert, Search, Filter, AlertTriangle, Users, Landmark, Flame,
-  Check, X, ToggleLeft, ToggleRight, DollarSign, Image as ImageIcon, Video, FileText
+  Check, X, ToggleLeft, ToggleRight, DollarSign, Image as ImageIcon, Video, FileText, BarChart2
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
-import { FileUploadPicker } from '../components/FileUploadPicker';
+import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
 
 
 
@@ -36,6 +36,7 @@ export const DailyContestPage = () => {
 
   // Add Form State
   const [formData, setFormData] = useState({
+    dailyContestId: `DLC-${Math.floor(100000 + Math.random() * 900000)}`,
     title: '',
     category: 'Speed Battle',
     entryFee: '0',
@@ -146,6 +147,7 @@ export const DailyContestPage = () => {
     }
 
     const payload = {
+      dailyContestId: formData.dailyContestId || `DLC-${Date.now()}`,
       title: formData.title,
       category: formData.category,
       categories: [formData.category],
@@ -190,7 +192,9 @@ export const DailyContestPage = () => {
     e.preventDefault();
     if (!editingContest) return;
 
-    const id = editingContest._id || editingContest.id || editingContest.dailyContestId;
+    const uploadedImageUrl = await uploadPendingFile(editFormData.imageUrl, 'daily-contest');
+    const uploadedVideoUrl = await uploadPendingFile(editFormData.videoUrl, 'daily-contest');
+
     const payload = {
       title: editFormData.title,
       category: editFormData.category,
@@ -205,8 +209,8 @@ export const DailyContestPage = () => {
       status: editFormData.status,
       isActive: editFormData.isActive,
       autoReset: editFormData.autoReset,
-      imageUrl: editFormData.imageUrl || '',
-      videoUrl: editFormData.videoUrl || ''
+      imageUrl: uploadedImageUrl || '',
+      videoUrl: uploadedVideoUrl || ''
     };
 
     if (!isMockMode) {
@@ -461,13 +465,22 @@ export const DailyContestPage = () => {
                       {c.isActive !== false && c.status !== 'Draft' && c.status !== 'In Progress' ? '🟢 Live' : '🔴 Paused'}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono font-extrabold">
-                    {c.entryFee === 0 || c.isFree === true || c.entryFeeType === 'Free' ? (
-                      <span className="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">FREE ENTRY</span>
-                    ) : (
-                      <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Entry: {c.entryFeeCoins || c.entryFee} Coins 🪙</span>
-                    )}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-extrabold">
+                      {c.entryFee === 0 || c.isFree === true || c.entryFeeType === 'Free' ? (
+                        <span className="text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase">FREE ENTRY</span>
+                      ) : (
+                        <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Entry: {c.entryFeeCoins || c.entryFee} Coins 🪙</span>
+                      )}
+                    </span>
+                    <button
+                      onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id}/analytics`)}
+                      className="p-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 border border-indigo-500/20 rounded-lg transition-all cursor-pointer"
+                      title="Contest Analytics 📊"
+                    >
+                      <BarChart2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -488,6 +501,13 @@ export const DailyContestPage = () => {
               </div>
 
               <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex items-center justify-between gap-1 flex-wrap">
+                <button
+                  onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id}/analytics`)}
+                  className="p-1.5 px-2 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                  title="Daily Contest Analytics"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" /> Analytics
+                </button>
                 <button
                   onClick={() => setViewingContest(c)}
                   className="p-1.5 px-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer"
@@ -784,6 +804,20 @@ export const DailyContestPage = () => {
               <div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Teaser Video</div>
                 <video src={viewingContest.videoUrl} controls className="w-full rounded-xl border border-slate-200 dark:border-white/10 max-h-48" />
+              </div>
+            )}
+
+            {viewingContest.fileAttachmentUrl && (
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Rules & Document Attachment</div>
+                <a
+                  href={viewingContest.fileAttachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 p-2.5 bg-indigo-500/10 text-indigo-500 rounded-xl font-bold text-xs border border-indigo-500/20 hover:bg-indigo-500/20 transition-all"
+                >
+                  <FileText className="w-4 h-4" /> View Rules PDF / Document Attachment 📄
+                </a>
               </div>
             )}
           </div>

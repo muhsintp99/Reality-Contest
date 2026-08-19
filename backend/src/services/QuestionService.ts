@@ -5,6 +5,13 @@ import { IQuestion } from '../models/Question';
 import { BadRequestError, NotFoundError } from '../core/errors';
 import mongoose from 'mongoose';
 
+function parseNegativeMarks(val: any): number {
+  if (val === undefined || val === null || val === '') return 0.25;
+  const clean = String(val).replace(/-/g, '').trim();
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0.25 : num;
+}
+
 export class QuestionService {
   private poolRepo = new QuestionPoolRepository();
   private questionRepo = new QuestionRepository();
@@ -74,7 +81,7 @@ export class QuestionService {
       text: qData.question || qData.text,
       options: optionsList,
       marks: parseFloat(qData.marks) || 1,
-      negativeMarks: Math.abs(parseFloat(qData.negativeMarks)) || 0.25,
+      negativeMarks: parseNegativeMarks(qData.negativeMarks),
       difficulty: qData.difficulty || 'Medium',
       explanation: qData.explanation || '',
       mediaUrl: qData.imageUrl || qData.mediaUrl || '',
@@ -91,11 +98,69 @@ export class QuestionService {
     return this.questionRepo.findByPool(poolId);
   }
 
-  async updateQuestion(id: string, qData: Partial<IQuestion>): Promise<IQuestion | null> {
+  async getQuestionById(id: string): Promise<IQuestion> {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      throw new NotFoundError('Question not found.');
+    }
+    const question = await this.questionRepo.findById(id);
+    if (!question) {
+      throw new NotFoundError('Question not found.');
+    }
+    return question;
+  }
+
+  async updateQuestion(id: string, qData: any): Promise<IQuestion | null> {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return null;
     }
-    return this.questionRepo.update(id, qData);
+
+    const updatePayload: any = {};
+
+    if (qData.category !== undefined) updatePayload.category = qData.category;
+    if (qData.type !== undefined) updatePayload.type = qData.type;
+    if (qData.difficulty !== undefined) updatePayload.difficulty = qData.difficulty;
+    if (qData.explanation !== undefined) updatePayload.explanation = qData.explanation;
+    if (qData.videoUrl !== undefined) updatePayload.videoUrl = qData.videoUrl;
+    if (qData.status !== undefined) updatePayload.status = qData.status;
+
+    if (qData.text !== undefined) {
+      updatePayload.text = qData.text;
+    } else if (qData.question !== undefined) {
+      updatePayload.text = qData.question;
+    }
+
+    if (qData.imageUrl !== undefined || qData.mediaUrl !== undefined) {
+      const url = qData.imageUrl || qData.mediaUrl || '';
+      updatePayload.imageUrl = url;
+      updatePayload.mediaUrl = url;
+    }
+
+    if (qData.options && Array.isArray(qData.options)) {
+      updatePayload.options = qData.options;
+    } else if (qData.optionA !== undefined || qData.optionB !== undefined) {
+      updatePayload.options = [
+        { text: qData.optionA || 'Option A', isCorrect: qData.correctOption === 'Option A' },
+        { text: qData.optionB || 'Option B', isCorrect: qData.correctOption === 'Option B' },
+        { text: qData.optionC || 'Option C', isCorrect: qData.correctOption === 'Option C' },
+        { text: qData.optionD || 'Option D', isCorrect: qData.correctOption === 'Option D' }
+      ];
+    }
+
+    if (qData.marks !== undefined && qData.marks !== null) {
+      const parsedMarks = parseFloat(qData.marks);
+      updatePayload.marks = isNaN(parsedMarks) ? 1 : parsedMarks;
+    }
+
+    if (qData.negativeMarks !== undefined && qData.negativeMarks !== null) {
+      updatePayload.negativeMarks = parseNegativeMarks(qData.negativeMarks);
+    }
+
+    if (qData.questionTimer !== undefined) {
+      const timer = parseInt(qData.questionTimer, 10);
+      updatePayload.questionTimer = isNaN(timer) ? 0 : timer;
+    }
+
+    return this.questionRepo.update(id, updatePayload);
   }
 
   async deleteQuestion(id: string): Promise<boolean> {
@@ -144,7 +209,7 @@ export class QuestionService {
         text: r.text || r.question,
         options: optionsList,
         marks: parseFloat(r.marks) || 1,
-        negativeMarks: parseFloat(r.negativeMarks) || 0.25,
+        negativeMarks: parseNegativeMarks(r.negativeMarks),
         difficulty: r.difficulty || 'Medium',
         explanation: r.explanation || '',
         mediaUrl: r.imageUrl || r.mediaUrl || '',
@@ -202,7 +267,7 @@ export class QuestionService {
           text: r.text || r.question,
           options: optionsList,
           marks: parseFloat(r.marks) || 1,
-          negativeMarks: Math.abs(parseFloat(r.negativeMarks)) || 0.25,
+          negativeMarks: parseNegativeMarks(r.negativeMarks),
           difficulty: r.difficulty || 'Medium',
           explanation: r.explanation || '',
           mediaUrl: r.imageUrl || r.mediaUrl || '',

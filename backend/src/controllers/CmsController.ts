@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { CMSDocument, CMSFaq, CMSHelp, CMSBlog, CMSNews, CMSSocial } from '../models/CMS';
 import { NotFoundError, BadRequestError } from '../core/errors';
+import { saveBase64File } from './UploadController';
 
 export class CMSController {
   // -------------------------------------------------------------
@@ -198,8 +199,24 @@ export class CMSController {
 
   async createNews(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { headline, badgeTag, priority, summary, content, status } = req.body;
-      const item = await CMSNews.create({ headline, badgeTag: badgeTag || 'Update', priority: priority || 'Normal', summary, content, status: status || 'Active' });
+      let { headline, badgeTag, priority, publisher, externalUrl, imageUrl, coverImage, videoUrl, summary, content, status } = req.body;
+      const mediaImg = imageUrl || coverImage || '';
+      const finalImageUrl = mediaImg ? (saveBase64File(mediaImg, 'news', 'banner') || mediaImg) : '';
+      const finalVideoUrl = videoUrl ? (saveBase64File(videoUrl, 'news', 'video') || videoUrl) : '';
+
+      const item = await CMSNews.create({
+        headline: headline || 'News Announcement',
+        badgeTag: badgeTag || 'Update',
+        priority: priority || 'Normal',
+        publisher: publisher || 'Platform Press',
+        externalUrl: externalUrl || '',
+        imageUrl: finalImageUrl,
+        coverImage: finalImageUrl,
+        videoUrl: finalVideoUrl,
+        summary: summary || '',
+        content: content || summary || '',
+        status: status || 'Active'
+      });
       res.status(201).json({ success: true, message: 'News announcement created.', news: item });
     } catch (err) {
       next(err);
@@ -209,7 +226,18 @@ export class CMSController {
   async updateNews(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const item = await CMSNews.findByIdAndUpdate(id, req.body, { new: true });
+      const updateData = { ...req.body };
+      const mediaImg = updateData.imageUrl || updateData.coverImage;
+      if (mediaImg) {
+        const finalImg = saveBase64File(mediaImg, 'news', 'banner') || mediaImg;
+        updateData.imageUrl = finalImg;
+        updateData.coverImage = finalImg;
+      }
+      if (updateData.videoUrl) {
+        updateData.videoUrl = saveBase64File(updateData.videoUrl, 'news', 'video') || updateData.videoUrl;
+      }
+
+      const item = await CMSNews.findByIdAndUpdate(id, updateData, { new: true });
       if (!item) throw new NotFoundError('News item not found.');
       res.status(200).json({ success: true, message: 'News announcement updated.', news: item });
     } catch (err) {
@@ -241,8 +269,21 @@ export class CMSController {
 
   async createSocial(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { platform, handle, url, logoUrl, followerCount, status } = req.body;
-      const social = await CMSSocial.create({ platform, handle, url, logoUrl, followerCount, status: status || 'Active' });
+      let { platform, username, handle, url, link, logoUrl, followerCount, status } = req.body;
+      const cleanUrl = url || link || '';
+      const cleanHandle = handle || username || '';
+      const cleanUsername = username || handle || '';
+      const finalLogoUrl = logoUrl ? saveBase64File(logoUrl, 'social', 'logo') : '';
+
+      const social = await CMSSocial.create({
+        platform: platform || 'Social',
+        username: cleanUsername,
+        handle: cleanHandle,
+        url: cleanUrl,
+        logoUrl: finalLogoUrl || logoUrl || '',
+        followerCount: followerCount || '',
+        status: status || 'Active'
+      });
       res.status(201).json({ success: true, message: 'Social media link added.', social });
     } catch (err) {
       next(err);
@@ -252,7 +293,19 @@ export class CMSController {
   async updateSocial(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const social = await CMSSocial.findByIdAndUpdate(id, req.body, { new: true });
+      const updateData = { ...req.body };
+      if (updateData.url || updateData.link) {
+        updateData.url = updateData.url || updateData.link;
+      }
+      if (updateData.username || updateData.handle) {
+        updateData.username = updateData.username || updateData.handle;
+        updateData.handle = updateData.handle || updateData.username;
+      }
+      if (updateData.logoUrl) {
+        updateData.logoUrl = saveBase64File(updateData.logoUrl, 'social', 'logo') || updateData.logoUrl;
+      }
+
+      const social = await CMSSocial.findByIdAndUpdate(id, updateData, { new: true });
       if (!social) throw new NotFoundError('Social link not found.');
       res.status(200).json({ success: true, message: 'Social media link updated.', social });
     } catch (err) {

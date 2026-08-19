@@ -6,7 +6,7 @@ import * as Icons from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
-import { ChevronRight, Plus, Clock, Play, Trash2, Edit, GripVertical } from 'lucide-react';
+import { ChevronRight, Plus, Clock, Play, Trash2, Edit, GripVertical, BarChart2 } from 'lucide-react';
 
 const STAGE_ICON_OPTIONS = [
   'Milestone', 'Trophy', 'Brain', 'Code', 'Video', 'Play', 'Users', 'Search', 'Shield', 'FileText', 'Star', 'Camera', 'Mic', 'HeartPulse', 'Globe', 'CheckCircle'
@@ -181,13 +181,22 @@ export const ContestDetails = () => {
           <h2 className="text-xl font-bold text-white">{contest.title}</h2>
           <p className="text-xs text-white/50 mt-1">Manage the sequence of stages for this contest.</p>
         </div>
-        <button
-          onClick={() => setIsDrawerOpen(true)}
-          className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-brandPrimary/20 flex items-center justify-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Stage
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/admin-dashboard/contests/${contestId}/analytics`)}
+            className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <BarChart2 className="w-4 h-4" />
+            Analytics
+          </button>
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white text-xs font-bold rounded-xl transition-colors shadow-lg shadow-brandPrimary/20 flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Stage
+          </button>
+        </div>
       </div>
 
       {/* Stages List */}

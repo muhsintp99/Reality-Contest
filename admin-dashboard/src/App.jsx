@@ -19,6 +19,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ 
 const ContestManagement = lazy(() => import('./pages/ContestManagement').then(m => ({ default: m.ContestManagement })));
 const DailyContestPage = lazy(() => import('./pages/DailyContestPage').then(m => ({ default: m.DailyContestPage })));
 const DailyContestWizard = lazy(() => import('./pages/DailyContestWizard').then(m => ({ default: m.DailyContestWizard })));
+const DailyContestAnalyticsPage = lazy(() => import('./pages/DailyContestAnalyticsPage').then(m => ({ default: m.DailyContestAnalyticsPage })));
 const QuizBuilder = lazy(() => import('./pages/QuizBuilder').then(m => ({ default: m.QuizBuilder })));
 const StageManagement = lazy(() => import('./pages/StageManagement').then(m => ({ default: m.StageManagement })));
 const UsersDirectory = lazy(() => import('./pages/UsersDirectory').then(m => ({ default: m.UsersDirectory })));
@@ -237,8 +238,11 @@ const AppContent = () => {
                   <Route path="judges" element={<UsersDirectory type="Judge" />} />
                   <Route path="sponsors" element={<UsersDirectory type="Sponsor" />} />
                   <Route path="contests" element={<ContestManagement />} />
+                  <Route path="contests/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
                   <Route path="daily-contest" element={<DailyContestPage />} />
                   <Route path="daily-contest/create" element={<DailyContestWizard />} />
+                  <Route path="daily-contest/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
+                  <Route path="daily-contests/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
                   <Route path="contests/create" element={<ContestWizard />} />
                   <Route path="contests/edit/:contestId" element={<ContestWizard />} />
                   <Route path="contests/:contestId" element={<ContestDetails />} />

@@ -38,10 +38,32 @@ export const removeLocalFile = (fileUrlOrPath: string): boolean => {
     const safePath = path.normalize(relPath).replace(/^(\.\.[\/\\])+/, '');
     const absolutePath = path.join(baseUploadDir, safePath);
 
-    if (absolutePath.startsWith(baseUploadDir) && fs.existsSync(absolutePath)) {
+    if (absolutePath.startsWith(baseUploadDir) && fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
       fs.unlinkSync(absolutePath);
       logger.info(`Successfully deleted local upload file: ${absolutePath}`);
       return true;
+    }
+
+    // Fallback: search by filename across subfolders
+    const filename = path.basename(fileUrlOrPath);
+    const searchDirs = [
+      baseUploadDir,
+      path.join(baseUploadDir, 'general'),
+      path.join(baseUploadDir, 'question'),
+      path.join(baseUploadDir, 'daily-contest'),
+      path.join(baseUploadDir, 'contest'),
+      path.join(baseUploadDir, 'category'),
+      path.join(baseUploadDir, 'kyc'),
+      path.join(baseUploadDir, 'avatars')
+    ];
+
+    for (const dir of searchDirs) {
+      const targetPath = path.join(dir, filename);
+      if (fs.existsSync(targetPath) && fs.statSync(targetPath).isFile()) {
+        fs.unlinkSync(targetPath);
+        logger.info(`Successfully deleted local upload file via fallback: ${targetPath}`);
+        return true;
+      }
     }
   } catch (err) {
     logger.warn(`Failed to delete local upload file (${fileUrlOrPath}):`, err);
@@ -147,6 +169,29 @@ export class UploadController {
     }
   }
 
+  // Upload Base64 Data String
+  async uploadBase64(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { base64Data, folder: folderParam, fileName: rawFileName } = req.body;
+      if (!base64Data || typeof base64Data !== 'string' || !base64Data.startsWith('data:')) {
+        throw new AppError('Valid base64 data string starting with data: is required.', 400);
+      }
+
+      const folder = getTargetFolder(req) || folderParam || 'general';
+      const fileUrl = saveBase64File(base64Data, folder, rawFileName || 'media');
+
+      res.status(200).json({
+        success: true,
+        message: `File saved successfully to public/uploads/${folder}`,
+        folder,
+        fileUrl,
+        fullUrl: `${req.protocol}://${req.get('host')}${fileUrl}`
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   // Delete File
   async deleteFile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -173,6 +218,48 @@ export class UploadController {
     }
   }
 }
+
+// Helper function to save a Base64 string directly to disk under target folder upon form save
+export const saveBase64File = (base64Data: string, folderName = 'general', customPrefix = 'file'): string => {
+  if (!base64Data || typeof base64Data !== 'string') return base64Data || '';
+  if (!base64Data.startsWith('data:')) return base64Data;
+
+  try {
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return base64Data;
+
+    const mimeType = matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+
+    let ext = '.png';
+    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = '.jpg';
+    else if (mimeType.includes('gif')) ext = '.gif';
+    else if (mimeType.includes('webp')) ext = '.webp';
+    else if (mimeType.includes('svg')) ext = '.svg';
+    else if (mimeType.includes('pdf')) ext = '.pdf';
+    else if (mimeType.includes('mp4')) ext = '.mp4';
+    else if (mimeType.includes('webm')) ext = '.webm';
+
+    const folder = (folderName || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'general';
+    const targetDir = path.join(baseUploadDir, folder);
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const timestamp = Date.now();
+    const randomHash = Math.round(Math.random() * 1e4);
+    const cleanPrefix = (customPrefix || 'media').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
+    const filename = `${cleanPrefix}_${timestamp}_${randomHash}${ext}`;
+    const filePath = path.join(targetDir, filename);
+
+    fs.writeFileSync(filePath, buffer);
+    logger.info(`Saved Base64 upload file to disk at form save time: ${filePath}`);
+    return `/uploads/${folder}/${filename}`;
+  } catch (err) {
+    logger.warn('Failed to save Base64 file:', err);
+    return base64Data;
+  }
+};
 
 export const uploadController = new UploadController();
 export default uploadController;
