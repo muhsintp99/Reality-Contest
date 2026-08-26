@@ -130,6 +130,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.deleteContest);
   router.post('/contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.duplicateContest);
   router.post('/contests/:id/join', authenticate, requireNotGuest, contestController.joinContest);
+  router.post('/contest/:id/join', authenticate, requireNotGuest, contestController.joinContest);
   router.get('/contests/:contestId/stages', authenticate, stageController.getStagesByContest);
   router.post('/contests/:contestId/stages', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), stageController.createStageForContest);
 

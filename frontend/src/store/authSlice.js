@@ -20,6 +20,11 @@ const authSlice = createSlice({
         state.user.walletBalance += action.payload;
       }
     },
+    updateUserData: (state, action) => {
+      if (state.user && action.payload) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
     // Login
     loginRequest: (state) => {
       state.loading = true;
@@ -252,6 +257,7 @@ const authSlice = createSlice({
 
 export const {
   updateWalletBalance,
+  updateUserData,
   loginRequest,
   googleAuthRequest,
   guestLoginRequest,

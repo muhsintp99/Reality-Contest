@@ -188,12 +188,24 @@ export const DailyContestPortal = () => {
                 <strong className="text-brandPrimary">{b.participants.toLocaleString()}</strong> contestants playing today
               </div>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (user?.role === 'Guest') {
                     setShowGuestModal(true);
                     return;
                   }
-                  alert(`Entering ${b.title}...`);
+                  if (user?.kycStatus !== 'Approved') {
+                    alert('You cannot participate in daily contests before KYC approval.');
+                    return;
+                  }
+                  try {
+                    const contestId = b._id || b.id;
+                    const res = await axios.post(`/api/contest/${contestId}/join`, {}, { withCredentials: true });
+                    if (res.data.success) {
+                      alert(res.data.message || `Entering ${b.title}...`);
+                    }
+                  } catch (err) {
+                    alert(err.response?.data?.message || `Entering ${b.title}...`);
+                  }
                 }}
                 className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold rounded-2xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
               >

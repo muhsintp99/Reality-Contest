@@ -309,6 +309,43 @@ async function runE2ETests() {
     process.exit(1);
   }
 
+  // Step 11: Single API Contest Join Verification (/api/contest/:id/join)
+  console.log('\nStep 11: Testing single API contest join (/api/contest/:id/join)...');
+  const createContestRes = await makeRequest('/api/contests', 'POST', {
+    title: 'E2E Single API Contest Test',
+    category: 'General Knowledge',
+    description: 'Testing single API contestant joining flow',
+    entryFee: 0,
+    prizePool: 5000,
+    status: 'Active',
+    maxParticipants: 100
+  }, 'admin');
+
+  if (createContestRes.statusCode !== 201 || !createContestRes.body.contest) {
+    console.error('FAIL: Admin contest creation failed:', createContestRes.body);
+    process.exit(1);
+  }
+
+  const testContestId = createContestRes.body.contest._id;
+  console.log(`Created test contest ID: ${testContestId}`);
+
+  // Perform single API join as contestant
+  const singleJoinRes = await makeRequest(`/api/contest/${testContestId}/join`, 'POST', {}, 'contestant');
+  console.log('Single API join status code:', singleJoinRes.statusCode);
+  console.log('Single API join response:', singleJoinRes.body);
+
+  if (singleJoinRes.statusCode !== 200 || !singleJoinRes.body.success) {
+    console.error('FAIL: Single API contest join failed:', singleJoinRes.body);
+    process.exit(1);
+  }
+
+  if (!singleJoinRes.body.group || !singleJoinRes.body.stages || !singleJoinRes.body.stageUnlockMap) {
+    console.error('FAIL: Single API join payload missing group/stages/stageUnlockMap:', singleJoinRes.body);
+    process.exit(1);
+  }
+
+  console.log(`SUCCESS: Joined contest in single API call! Assigned Group: ${singleJoinRes.body.joinedGroup}, Stages Count: ${singleJoinRes.body.stages.length}`);
+
   console.log('\n====================================================');
   console.log('SUCCESS: ALL PROGRAMMATIC E2E API VERIFICATION TESTS PASSED');
   console.log('====================================================');

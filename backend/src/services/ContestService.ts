@@ -2,7 +2,10 @@ import { ContestRepository } from '../repositories/ContestRepository';
 import { GroupRepository } from '../repositories/GroupRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { TransactionRepository } from '../repositories/TransactionRepository';
+import { StageRepository } from '../repositories/StageRepository';
+import { ResultRepository } from '../repositories/ResultRepository';
 import { IContest, ContestStatus, Contest } from '../models/Contest';
+import { IGroup } from '../models/Group';
 import { BadRequestError, NotFoundError } from '../core/errors';
 import { questionSelectionService } from './QuestionSelectionService';
 import mongoose from 'mongoose';
@@ -18,6 +21,8 @@ export class ContestService {
   private groupRepo = new GroupRepository();
   private userRepo = new UserRepository();
   private transRepo = new TransactionRepository();
+  private stageRepo = new StageRepository();
+  private resultRepo = new ResultRepository();
 
   async createContest(data: Partial<IContest>): Promise<IContest> {
     if (!data.title) {
@@ -96,7 +101,24 @@ export class ContestService {
     return this.contestRepo.find(query, null, { sort: { createdAt: -1 } });
   }
 
-  async joinContest(contestId: string, userId: string): Promise<{ success: boolean; joinedGroup: string }> {
+  async joinContest(contestId: string, userId: string): Promise<{
+    success: boolean;
+    message: string;
+    alreadyJoined?: boolean;
+    joinedGroup: string;
+    group: any;
+    stages: any[];
+    stageUnlockMap: Record<string, boolean>;
+    user: {
+      _id: any;
+      name: string;
+      email: string;
+      walletBalance: number;
+      coins: number;
+      kycStatus: string;
+      role: string;
+    };
+  }> {
     const contest = await this.getContestById(contestId);
     const user = await this.userRepo.findById(userId);
     if (!user) {
@@ -114,90 +136,142 @@ export class ContestService {
 
     // Check if user already joined any group in this contest
     const groupsInContest = await this.groupRepo.find({ contestId: contest._id });
-    const alreadyJoined = groupsInContest.some((g) =>
+    const existingGroup = groupsInContest.find((g) =>
       g.participants.some((pId) => pId.toString() === userId)
     );
 
-    if (alreadyJoined) {
-      throw new BadRequestError('You have already registered for this contest.');
-    }
+    let assignedGroup: IGroup | null = existingGroup || null;
+    let isAlreadyJoined = false;
 
-    // Check maximum participants limit
-    if (contest.maxParticipants > 0) {
-      const currentParticipantsCount = groupsInContest.reduce((sum, g) => sum + g.participants.length, 0);
-      if (currentParticipantsCount >= contest.maxParticipants) {
-        throw new BadRequestError('Contest has reached its maximum participants limit.');
-      }
-    }
-
-    // Free Entry vs Coins Fee vs Cash Fee deduction
-    const isFreeEntry = contest.entryFee === 0 || contest.entryFeeType === 'Free' || contest.isFree === true;
-
-    if (!isFreeEntry) {
-      const isCoinFee = contest.entryFeeType === 'Coins' || (contest.entryFeeCoins && contest.entryFeeCoins > 0);
-
-      if (isCoinFee) {
-        const coinFee = contest.entryFeeCoins || contest.entryFee;
-        const currentCoins = user.coins || 0;
-
-        if (currentCoins < coinFee && user.walletBalance < coinFee) {
-          throw new BadRequestError(`Insufficient balance. This contest requires ${coinFee} Coins 🪙 for entry.`);
+    if (existingGroup) {
+      isAlreadyJoined = true;
+    } else {
+      // Check maximum participants limit
+      if (contest.maxParticipants > 0) {
+        const currentParticipantsCount = groupsInContest.reduce((sum, g) => sum + g.participants.length, 0);
+        if (currentParticipantsCount >= contest.maxParticipants) {
+          throw new BadRequestError('Contest has reached its maximum participants limit.');
         }
+      }
 
-        if (currentCoins >= coinFee) {
-          user.coins = currentCoins - coinFee;
+      // Free Entry vs Coins Fee vs Cash Fee deduction
+      const isFreeEntry = contest.entryFee === 0 || contest.entryFeeType === 'Free' || contest.isFree === true;
+
+      if (!isFreeEntry) {
+        const isCoinFee = contest.entryFeeType === 'Coins' || (contest.entryFeeCoins && contest.entryFeeCoins > 0);
+
+        if (isCoinFee) {
+          const coinFee = contest.entryFeeCoins || contest.entryFee;
+          const currentCoins = user.coins || 0;
+
+          if (currentCoins < coinFee && user.walletBalance < coinFee) {
+            throw new BadRequestError(`Insufficient balance. This contest requires ${coinFee} Coins 🪙 for entry.`);
+          }
+
+          if (currentCoins >= coinFee) {
+            user.coins = currentCoins - coinFee;
+          } else {
+            user.walletBalance -= coinFee;
+          }
+          await user.save();
+
+          await this.transRepo.create({
+            userId: user._id,
+            amount: -coinFee,
+            type: 'Entry Fee',
+            status: 'Completed',
+            description: `Coin entry fee for contest ${contest.contestId || ''}: ${contest.title} (${coinFee} Coins 🪙)`,
+            reference: `COIN-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+          });
         } else {
-          user.walletBalance -= coinFee;
+          // Cash wallet entry fee
+          if (user.walletBalance < contest.entryFee) {
+            throw new BadRequestError('Insufficient wallet balance to pay the entry fee.');
+          }
+
+          user.walletBalance -= contest.entryFee;
+          await user.save();
+
+          await this.transRepo.create({
+            userId: user._id,
+            amount: -contest.entryFee,
+            type: 'Entry Fee',
+            status: 'Completed',
+            description: `Entry fee for contest ${contest.contestId || ''}: ${contest.title}`,
+            reference: `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+          });
         }
-        await user.save();
+      }
 
-        await this.transRepo.create({
-          userId: user._id,
-          amount: -coinFee,
-          type: 'Entry Fee',
-          status: 'Completed',
-          description: `Coin entry fee for contest ${contest.contestId || ''}: ${contest.title} (${coinFee} Coins 🪙)`,
-          reference: `COIN-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
-        });
-      } else {
-        // Cash wallet entry fee
-        if (user.walletBalance < contest.entryFee) {
-          throw new BadRequestError('Insufficient wallet balance to pay the entry fee.');
-        }
-
-        user.walletBalance -= contest.entryFee;
-        await user.save();
-
-        await this.transRepo.create({
-          userId: user._id,
-          amount: -contest.entryFee,
-          type: 'Entry Fee',
-          status: 'Completed',
-          description: `Entry fee for contest ${contest.contestId || ''}: ${contest.title}`,
-          reference: `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+      // Assign to a group. If no groups exist, auto-create a default group
+      assignedGroup = groupsInContest[0];
+      if (!assignedGroup) {
+        assignedGroup = await this.groupRepo.create({
+          contestId: contest._id,
+          name: 'Group A',
+          participants: [],
+          qualificationRules: {},
+          maxParticipants: 1000,
+          stageSequence: []
         });
       }
+
+      assignedGroup.participants.push(user._id as any);
+      await assignedGroup.save();
     }
 
-    // Assign to a group. If no groups exist, auto-create a default group
-    let assignedGroup = groupsInContest[0];
     if (!assignedGroup) {
-      assignedGroup = await this.groupRepo.create({
-        contestId: contest._id,
-        name: 'Group A',
-        participants: [],
-        qualificationRules: {},
-        maxParticipants: 1000,
-        stageSequence: []
+      throw new NotFoundError('Failed to assign group for contest.');
+    }
+
+    const currentGroup: IGroup = assignedGroup;
+
+    // Fetch stages for the assigned group
+    const stages = await this.stageRepo.findByGroup(currentGroup._id.toString());
+
+    // Calculate stage unlock statuses for this user
+    const stageUnlockMap: Record<string, boolean> = {};
+    if (currentGroup.stageSequence && currentGroup.stageSequence.length > 0) {
+      for (let i = 0; i < currentGroup.stageSequence.length; i++) {
+        const sId = currentGroup.stageSequence[i].toString();
+        if (i === 0) {
+          stageUnlockMap[sId] = true;
+        } else {
+          const prevStageId = currentGroup.stageSequence[i - 1].toString();
+          const prevResult = await this.resultRepo.findOne({
+            userId,
+            stageId: prevStageId,
+            passed: true
+          });
+          stageUnlockMap[sId] = !!prevResult;
+        }
+      }
+    } else {
+      // Fallback: if stageSequence is empty, unlock first stage by default
+      stages.forEach((stg, index) => {
+        stageUnlockMap[stg._id.toString()] = index === 0;
       });
     }
 
-    assignedGroup.participants.push(user._id as any);
-    await assignedGroup.save();
+    const updatedUser = await this.userRepo.findById(userId);
 
     return {
       success: true,
-      joinedGroup: assignedGroup.name
+      message: isAlreadyJoined ? 'You have already registered for this contest.' : 'Joined contest successfully!',
+      alreadyJoined: isAlreadyJoined,
+      joinedGroup: currentGroup.name,
+      group: currentGroup,
+      stages,
+      stageUnlockMap,
+      user: {
+        _id: updatedUser?._id || user._id,
+        name: updatedUser?.name || user.name,
+        email: updatedUser?.email || user.email,
+        walletBalance: updatedUser?.walletBalance ?? user.walletBalance,
+        coins: updatedUser?.coins ?? user.coins,
+        kycStatus: updatedUser?.kycStatus || user.kycStatus,
+        role: updatedUser?.role || user.role
+      }
     };
   }
 

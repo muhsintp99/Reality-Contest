@@ -34,7 +34,7 @@ export class ContestController {
       const userId = (req as any).user.id;
       const contestId = req.params.id;
       const result = await contestService.joinContest(contestId, userId);
-      res.status(200).json({ message: 'Joined contest successfully!', ...result });
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { updateWalletBalance } from '../store/authSlice';
+import { updateWalletBalance, updateUserData } from '../store/authSlice';
 import { Trophy, Milestone, Lock, Unlock, HelpCircle, ShieldCheck, Check, UploadCloud, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import { QuizEngine } from './QuizEngine';
@@ -51,17 +51,19 @@ export const ParticipantContestPortal = () => {
       alert('You cannot register for contests before your KYC is approved.');
       return;
     }
-    if (user.walletBalance < c.entryFee) {
-      alert('Insufficient wallet balance to register.');
-      return;
-    }
 
     try {
-      const res = await axios.post(`/api/contests/${c._id}/join`, {}, { withCredentials: true });
+      // Single API call for joining / getting group & stages
+      const res = await axios.post(`/api/contest/${c._id}/join`, {}, { withCredentials: true });
       if (res.data.success) {
-        alert('Joined contest successfully!');
-        dispatch(updateWalletBalance(-c.entryFee));
-        handleSelectContest(c);
+        alert(res.data.message || 'Joined contest successfully!');
+        if (res.data.user) {
+          dispatch(updateUserData(res.data.user));
+        }
+        setSelectedContest(c);
+        setSelectedGroup(res.data.group || null);
+        setStages(res.data.stages || []);
+        setStageUnlockMap(res.data.stageUnlockMap || {});
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to join contest');
@@ -72,35 +74,18 @@ export const ParticipantContestPortal = () => {
     setSelectedContest(c);
 
     try {
-      // Find which group contestant is in
-      const res = await axios.get('/api/users/profile', { withCredentials: true });
-      const profile = res.data.user;
-      
-      const contestDetail = await axios.get(`/api/contests/${c._id}`, { withCredentials: true });
-      const userGroup = (contestDetail.data.groups || []).find((g) =>
-        g.participants.some((pId) => pId.toString() === profile._id)
-      );
-
-      if (userGroup) {
-        setSelectedGroup(userGroup);
-        // Fetch stages
-        const stagesRes = await axios.get(`/api/groups/${userGroup._id}/stages`, { withCredentials: true });
-        const list = stagesRes.data.stages || [];
-        setStages(list);
-
-        // Fetch unlock statuses
-        const unlockMap = {};
-        for (const s of list) {
-          const uRes = await axios.get(`/api/stages/${s._id}/unlock-status`, { withCredentials: true });
-          unlockMap[s._id] = uRes.data.unlocked;
+      // Single API call retrieves group, stages, and stage unlock status in 1 request
+      const res = await axios.post(`/api/contest/${c._id}/join`, {}, { withCredentials: true });
+      if (res.data.success) {
+        setSelectedGroup(res.data.group || null);
+        setStages(res.data.stages || []);
+        setStageUnlockMap(res.data.stageUnlockMap || {});
+        if (res.data.user) {
+          dispatch(updateUserData(res.data.user));
         }
-        setStageUnlockMap(unlockMap);
-      } else {
-        setSelectedGroup(null);
-        setStages([]);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load contest details:', err);
     }
   };
 

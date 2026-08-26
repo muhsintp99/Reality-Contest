@@ -241,3 +241,5 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     logger.error(`Critical server startup failure: ${err.message}`);
   });
 }
+// Server startup trigger
+

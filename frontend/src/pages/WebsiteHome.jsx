@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { updateWalletBalance } from '../store/authSlice';
+import { updateWalletBalance, updateUserData } from '../store/authSlice';
 import { 
   Trophy, Play, Tag, Gift, Zap, Sparkles, Coins, Star, ShieldCheck, 
   ArrowRight, CheckCircle2, Clock, Eye, ShoppingBag, Award, Users, 
@@ -268,15 +268,27 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
     setTimeout(() => setCopiedCode(false), 2500);
   };
 
-  const handleConfirmJoinContest = (contest) => {
+  const handleConfirmJoinContest = async (contest) => {
     if (!isAuthenticated) {
       setSelectedContestModal(null);
       navigate('/login');
       return;
     }
-    setJoinedContestIds(prev => [...prev, contest.id]);
-    setSelectedContestModal(null);
-    alert(`🎉 Success! You joined "${contest.title}". Best of luck!`);
+
+    try {
+      const contestId = contest._id || contest.id;
+      const res = await axios.post(`/api/contest/${contestId}/join`, {}, { withCredentials: true });
+      if (res.data.success) {
+        if (res.data.user) {
+          dispatch(updateUserData(res.data.user));
+        }
+        setJoinedContestIds(prev => [...prev, contest.id]);
+        setSelectedContestModal(null);
+        alert(res.data.message || `🎉 Success! You joined "${contest.title}". Best of luck!`);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to join contest');
+    }
   };
 
   // Data Collections

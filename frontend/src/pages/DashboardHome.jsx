@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { updateWalletBalance } from '../store/authSlice';
+import { updateWalletBalance, updateUserData } from '../store/authSlice';
+import axios from 'axios';
 import { 
   Activity, Wallet, Trophy, Award, Landmark, 
   ArrowUpRight, ArrowDownRight, ArrowRight, Play, Check, Clock, Plus, Zap
@@ -67,15 +68,20 @@ export const DashboardHome = ({ onViewChange }) => {
     alert(`₹${val} loaded into platform wallet.`);
   };
 
-  const handleJoinContest = (id, fee) => {
+  const handleJoinContest = async (id, fee) => {
     if (!user) return;
-    if (user.walletBalance < fee) {
-      alert('Insufficient wallet balance. Please add funds first.');
-      return;
+    try {
+      const res = await axios.post(`/api/contest/${id}/join`, {}, { withCredentials: true });
+      if (res.data.success) {
+        alert(res.data.message || 'Joined contest successfully!');
+        if (res.data.user) {
+          dispatch(updateUserData(res.data.user));
+        }
+        setJoinedContests((prev) => [...prev, id]);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to join contest');
     }
-    dispatch(updateWalletBalance(-fee));
-    setJoinedContests(prev => [...prev, id]);
-    alert('Joined contest successfully!');
   };
 
   const handleSponsorLaunch = (e) => {
