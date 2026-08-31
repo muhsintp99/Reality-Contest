@@ -782,7 +782,8 @@ export class MobileContestantController {
         return;
       }
 
-      const user = await User.findById(decoded.id);
+      const targetUserId = decoded.id || decoded.userId || decoded.sub;
+      const user = await User.findById(targetUserId);
       if (!user || user.status === 'Banned') {
         res.status(401).json({ success: false, message: 'User account invalid or suspended.' });
         return;

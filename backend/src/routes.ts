@@ -22,6 +22,7 @@ import { dailyContestsController } from './controllers/DailyContestsController';
 import { coinController } from './controllers/CoinController';
 import { rolePermissionController } from './controllers/RolePermissionController';
 import { mobileContestantController } from './controllers/MobileContestantController';
+import { biWeeklyRoomCycleController } from './controllers/BiWeeklyRoomCycleController';
 
 // Import Middlewares
 import { authenticate, authorize, requireNotGuest } from './middleware/AuthMiddleware';
@@ -390,5 +391,52 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/v1/mobile/profile/change-password', authenticate, mobileContestantController.changePassword);
   router.post('/mobile/profile/change-password', authenticate, mobileContestantController.changePassword);
 
+  // ==================================================================
+  // BI-WEEKLY ROOM CYCLE MODULE API ENDPOINTS
+  // ==================================================================
+  // Room Management
+  router.get('/admin/room-cycle/rooms', authenticate, biWeeklyRoomCycleController.getRooms);
+  router.get('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
+  router.post('/admin/room-cycle/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
+  router.put('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
+  router.delete('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
+  router.post('/admin/room-cycle/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
+
+  // Member Assignment & Transfer
+  router.post('/admin/room-cycle/members/assign', authenticate, biWeeklyRoomCycleController.assignMembers);
+  router.post('/admin/room-cycle/members/random-assign', authenticate, biWeeklyRoomCycleController.randomAssign);
+  router.post('/admin/room-cycle/members/transfer', authenticate, biWeeklyRoomCycleController.transferMember);
+  router.delete('/admin/room-cycle/members/:roomId/:userId', authenticate, biWeeklyRoomCycleController.removeMember);
+
+  // Cycle Management
+  router.get('/admin/room-cycle/cycles', authenticate, biWeeklyRoomCycleController.getCycles);
+  router.put('/admin/room-cycle/cycles/:id/set-active', authenticate, biWeeklyRoomCycleController.setActiveCycle);
+  router.put('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.updateCycle);
+
+  // Task Management
+  router.get('/admin/room-cycle/tasks', authenticate, biWeeklyRoomCycleController.getTasks);
+  router.post('/admin/room-cycle/tasks', authenticate, biWeeklyRoomCycleController.createTask);
+  router.put('/admin/room-cycle/tasks/:id', authenticate, biWeeklyRoomCycleController.updateTask);
+  router.delete('/admin/room-cycle/tasks/:id', authenticate, biWeeklyRoomCycleController.deleteTask);
+
+  // Submission Management
+  router.get('/admin/room-cycle/submissions', authenticate, biWeeklyRoomCycleController.getSubmissions);
+  router.put('/admin/room-cycle/submissions/:id/review', authenticate, biWeeklyRoomCycleController.reviewSubmission);
+
+  // Leaderboard & Recalculation
+  router.get('/admin/room-cycle/leaderboard', authenticate, biWeeklyRoomCycleController.getLeaderboard);
+  router.post('/admin/room-cycle/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
+
+  // Rewards Management
+  router.get('/admin/room-cycle/rewards', authenticate, biWeeklyRoomCycleController.getRewards);
+  router.post('/admin/room-cycle/rewards', authenticate, biWeeklyRoomCycleController.createRewardRule);
+  router.post('/admin/room-cycle/rewards/distribute', authenticate, biWeeklyRoomCycleController.distributeRewards);
+
+  // Analytics & Settings
+  router.get('/admin/room-cycle/analytics', authenticate, biWeeklyRoomCycleController.getAnalytics);
+  router.get('/admin/room-cycle/settings', authenticate, biWeeklyRoomCycleController.getSettings);
+  router.put('/admin/room-cycle/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
+
   return router;
 }
+

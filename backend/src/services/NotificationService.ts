@@ -73,35 +73,66 @@ export class NotificationService {
   }
 
   async getUnreadCount(userId: string): Promise<number> {
-    return Notification.countDocuments({ recipient: userId, isRead: false });
+    if (mongoose.connection.readyState !== 1) return 0;
+    try {
+      return await Notification.countDocuments({ recipient: userId, isRead: false });
+    } catch {
+      return 0;
+    }
   }
 
   async getModuleUnreadCounts(recipientId: string): Promise<any> {
-    const contestant = await Notification.countDocuments({ recipient: recipientId, module: 'Contestant', isRead: false });
-    const judge = await Notification.countDocuments({ recipient: recipientId, module: 'Judge', isRead: false });
-    const sponsor = await Notification.countDocuments({ recipient: recipientId, module: 'Sponsor', isRead: false });
-    const kyc = await Notification.countDocuments({ recipient: recipientId, module: 'KYC', isRead: false });
-    const contest = await Notification.countDocuments({ recipient: recipientId, module: 'Contest', isRead: false });
-    const finance = await Notification.countDocuments({ recipient: recipientId, module: 'Finance', isRead: false });
-    const support = await Notification.countDocuments({ recipient: recipientId, module: 'Support', isRead: false });
-    const marketing = await Notification.countDocuments({ recipient: recipientId, module: 'Marketing', isRead: false });
-    const analytics = await Notification.countDocuments({ recipient: recipientId, module: 'Analytics', isRead: false });
-    const system = await Notification.countDocuments({ recipient: recipientId, module: 'System', isRead: false });
-    const total = contestant + judge + sponsor + kyc + contest + finance + support + marketing + analytics + system;
-
-    return {
-      contestant,
-      judge,
-      sponsor,
-      kyc,
-      contest,
-      finance,
-      support,
-      marketing,
-      analytics,
-      system,
-      total
+    const defaultCounts = {
+      contestant: 0,
+      judge: 0,
+      sponsor: 0,
+      kyc: 0,
+      contest: 0,
+      finance: 0,
+      support: 0,
+      marketing: 0,
+      analytics: 0,
+      system: 0,
+      total: 0
     };
+
+    if (mongoose.connection.readyState !== 1) {
+      return defaultCounts;
+    }
+
+    try {
+      if (!recipientId) return defaultCounts;
+
+      const [contestant, judge, sponsor, kyc, contest, finance, support, marketing, analytics, system] = await Promise.all([
+        Notification.countDocuments({ recipient: recipientId, module: 'Contestant', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'Judge', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'Sponsor', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'KYC', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'Contest', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'Finance', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'Support', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'Marketing', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'Analytics', isRead: false }),
+        Notification.countDocuments({ recipient: recipientId, module: 'System', isRead: false })
+      ]);
+      const total = contestant + judge + sponsor + kyc + contest + finance + support + marketing + analytics + system;
+
+      return {
+        contestant,
+        judge,
+        sponsor,
+        kyc,
+        contest,
+        finance,
+        support,
+        marketing,
+        analytics,
+        system,
+        total
+      };
+    } catch {
+      return defaultCounts;
+    }
   }
 
   async markAllRead(userId: string): Promise<void> {

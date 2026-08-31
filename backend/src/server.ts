@@ -66,6 +66,11 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     initKycWorker();
     initWalletWorker();
 
+    // Start Bi-Weekly Room Cycle background automation service
+    const { roomCycleAutomationService } = require('./services/RoomCycleAutomationService');
+    roomCycleAutomationService.startAutomation();
+
+
     // Parser and Compression Middlewares
     app.use(
       helmet({

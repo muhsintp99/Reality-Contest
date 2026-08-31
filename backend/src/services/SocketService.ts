@@ -98,10 +98,23 @@ class SocketService {
     }
   }
 
+  public emitToRoom(room: string, event: string, data: any) {
+    if (this.io) {
+      this.io.to(room).emit(event, data);
+    }
+  }
+
+  public broadcast(event: string, data: any) {
+    if (this.io) {
+      this.io.emit(event, data);
+    }
+  }
+
   public getIO(): Server | null {
     return this.io;
   }
 }
+
 
 export const socketService = new SocketService();
 export default socketService;

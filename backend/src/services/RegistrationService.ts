@@ -189,12 +189,12 @@ export class RegistrationService {
       await session.deleteOne();
 
       const accessToken = jwt.sign(
-        { userId: existingUser._id, role: existingUser.role },
+        { id: existingUser._id.toString(), userId: existingUser._id.toString(), role: existingUser.role },
         config.JWT_ACCESS_SECRET,
         { expiresIn: config.ACCESS_TOKEN_EXPIRY as any }
       );
       const refreshToken = jwt.sign(
-        { userId: existingUser._id, role: existingUser.role },
+        { id: existingUser._id.toString(), userId: existingUser._id.toString(), role: existingUser.role },
         config.JWT_REFRESH_SECRET,
         { expiresIn: config.REFRESH_TOKEN_EXPIRY as any }
       );
@@ -337,12 +337,12 @@ export class RegistrationService {
 
     // Create access token & refresh token for auto-login
     const accessToken = jwt.sign(
-      { userId: user._id, role: user.role },
+      { id: user._id.toString(), userId: user._id.toString(), role: user.role },
       config.JWT_ACCESS_SECRET,
       { expiresIn: config.ACCESS_TOKEN_EXPIRY as any }
     );
     const refreshToken = jwt.sign(
-      { userId: user._id, role: user.role },
+      { id: user._id.toString(), userId: user._id.toString(), role: user.role },
       config.JWT_REFRESH_SECRET,
       { expiresIn: config.REFRESH_TOKEN_EXPIRY as any }
     );

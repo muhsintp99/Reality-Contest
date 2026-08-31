@@ -39,8 +39,13 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
       throw new UnauthorizedError('Invalid token.');
     }
 
+    const userId = decoded.id || decoded.userId || decoded.sub;
+    if (!userId) {
+      throw new UnauthorizedError('Invalid token payload: missing user identifier.');
+    }
+
     // Attempt to load profile from Redis Cache first to prevent MongoDB DB overhead on every API request
-    const cacheKey = `user:profile:${decoded.id}`;
+    const cacheKey = `user:profile:${userId}`;
     let userDetails = await redisService.get<any>(cacheKey);
 
     if (!userDetails) {
@@ -61,11 +66,11 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
       
       let userDoc: any;
       if (decoded.role && adminRoles.includes(decoded.role)) {
-        userDoc = await Admin.findById(decoded.id).select('role status email name').exec();
+        userDoc = await Admin.findById(userId).select('role status email name').exec();
       } else {
-        userDoc = await User.findById(decoded.id).select('role status email name').exec();
+        userDoc = await User.findById(userId).select('role status email name').exec();
         if (!userDoc) {
-          userDoc = await Admin.findById(decoded.id).select('role status email name').exec();
+          userDoc = await Admin.findById(userId).select('role status email name').exec();
         }
       }
 

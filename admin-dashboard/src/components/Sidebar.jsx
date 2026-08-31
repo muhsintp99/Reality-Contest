@@ -15,7 +15,9 @@ const MENU_ITEMS = [
   { id: 'user-management', label: 'User Management', icon: Users, hasSub: true },
   { id: 'contests', label: 'Contest Management', icon: Trophy },
   { id: 'daily-contest', label: 'Daily Contest Desk', icon: Clock },
+  { id: 'bi-weekly-room-cycle', label: 'Bi-Weekly Room Cycle', icon: Sparkles, hasSub: true },
   { id: 'categories', label: 'Category Management', icon: Layers },
+
   { id: 'grand-contest', label: 'Grand Contest', icon: Crown },
   { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, hasSub: true },
   { id: 'surveys', label: 'Survey Management', icon: ClipboardList },
@@ -112,12 +114,26 @@ const ANALYTICS_SUBITEMS = [
   { id: 'analytics/withdrawal-trends', label: 'Withdrawal Trends', icon: Landmark }
 ];
 
+const ROOM_CYCLE_SUBITEMS = [
+  { id: 'bi-weekly-room-cycle/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'bi-weekly-room-cycle/rooms', label: 'Rooms', icon: Layers },
+  { id: 'bi-weekly-room-cycle/cycles', label: 'Cycles', icon: Clock },
+  { id: 'bi-weekly-room-cycle/tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'bi-weekly-room-cycle/submissions', label: 'Submissions', icon: FileText },
+  { id: 'bi-weekly-room-cycle/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'bi-weekly-room-cycle/rewards', label: 'Rewards', icon: Gift },
+  { id: 'bi-weekly-room-cycle/analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'bi-weekly-room-cycle/settings', label: 'Settings', icon: Settings }
+];
+
 export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, role, isCollapsed, setIsCollapsed, counts }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState(null);
   const [tooltipY, setTooltipY] = useState(0);
   const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(false);
+  const [isRoomCycleOpen, setIsRoomCycleOpen] = useState(false);
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(false);
+
   const [isBannerMgmtOpen, setIsBannerMgmtOpen] = useState(false);
   const [isCmsOpen, setIsCmsOpen] = useState(false);
   const [isAdsOpen, setIsAdsOpen] = useState(false);
@@ -174,6 +190,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   React.useEffect(() => {
     if (!activeView) return;
     if (activeView.startsWith('user-management')) setIsUserMgmtOpen(true);
+    if (activeView.startsWith('bi-weekly-room-cycle')) setIsRoomCycleOpen(true);
     if (activeView.startsWith('question-bank')) setIsQuestionBankOpen(true);
     if (activeView.startsWith('banners')) setIsBannerMgmtOpen(true);
     if (activeView.startsWith('cms')) setIsCmsOpen(true);
@@ -189,7 +206,13 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
       if (!isUserMgmtOpen && !location.pathname.includes('/user-management/')) {
         navigate(`/admin-dashboard/user-management/all-users`);
       }
+    } else if (id === 'bi-weekly-room-cycle') {
+      setIsRoomCycleOpen(!isRoomCycleOpen);
+      if (!isRoomCycleOpen && !location.pathname.includes('/bi-weekly-room-cycle/')) {
+        navigate(`/admin-dashboard/bi-weekly-room-cycle/dashboard`);
+      }
     } else if (id === 'question-bank') {
+
       setIsQuestionBankOpen(!isQuestionBankOpen);
       if (!isQuestionBankOpen && !location.pathname.includes('/question-bank/')) {
         navigate(`/admin-dashboard/question-bank/pool`);
@@ -386,6 +409,69 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
               </div>
             );
           }
+
+          if (item.id === 'bi-weekly-room-cycle') {
+            const isRoomCycleActive = activeView.startsWith('bi-weekly-room-cycle');
+            return (
+              <div key={item.id} className="space-y-1">
+                <button
+                  onClick={() => handleMenuClick(item.id)}
+                  onMouseEnter={(e) => handleMouseEnter(item, e)}
+                  onMouseLeave={handleMouseLeave}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
+                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                  } ${isRoomCycleActive
+                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                  }`}
+                >
+                  {isRoomCycleActive && (
+                    <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
+                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${isRoomCycleActive ? 'text-brandPrimary dark:text-brandSecondary' : 'text-slate-400'}`} />
+                    {(!isCollapsed || isOpenMobile) && <span className="whitespace-nowrap truncate pr-1">{item.label}</span>}
+                  </div>
+                  {(!isCollapsed || isOpenMobile) && (
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isRoomCycleOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  )}
+                </button>
+
+                {/* Sub-Items Dropdown */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isRoomCycleOpen && (!isCollapsed || isOpenMobile)
+                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
+                      {ROOM_CYCLE_SUBITEMS.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeView === sub.id || activeView.startsWith(sub.id);
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleSubItemClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                            }`}
+                          >
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
+                            <span className="whitespace-nowrap truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
 
           if (item.id === 'question-bank') {
             const isQbActive = activeView.startsWith('question-bank');

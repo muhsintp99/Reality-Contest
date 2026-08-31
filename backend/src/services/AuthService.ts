@@ -182,10 +182,11 @@ export class AuthService {
     // Verify token cryptographically
     try {
       const decoded = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET) as any;
-      let user = await this.userRepo.findById(decoded.id);
+      const targetUserId = decoded.id || decoded.userId || decoded.sub;
+      let user = await this.userRepo.findById(targetUserId);
       if (!user) {
         const { Admin } = require('../models/Admin');
-        user = await Admin.findById(decoded.id);
+        user = await Admin.findById(targetUserId);
       }
       if (!user || user.status === 'Banned') {
         await session.deleteOne();
@@ -538,7 +539,7 @@ export class AuthService {
   // Helpers
   private generateAccessToken(userId: string, role: string): string {
     return jwt.sign(
-      { id: userId, role },
+      { id: userId, userId, role },
       config.JWT_ACCESS_SECRET as any,
       { expiresIn: config.ACCESS_TOKEN_EXPIRY as any }
     );
@@ -546,7 +547,7 @@ export class AuthService {
 
   private generateRefreshToken(userId: string): string {
     return jwt.sign(
-      { id: userId },
+      { id: userId, userId },
       config.JWT_REFRESH_SECRET as any,
       { expiresIn: config.REFRESH_TOKEN_EXPIRY as any }
     );

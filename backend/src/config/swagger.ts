@@ -25,7 +25,8 @@ export const swaggerDocument = {
     { name: '7. Wallet & Transactions', description: 'Wallet deposits and transaction history' },
     { name: '8. Mobile App API (Contestant V1)', description: 'Mobile V1 endpoints for contestant registration, login, profile management, image upload, and password change' },
     { name: '9. Question Bank & Quiz Builder', description: 'Question bank CRUD, question pools, bulk imports, and random selection' },
-    { name: '10. CMS & Social Media', description: 'CMS social links, platform names, user handles, logos, and legal docs' }
+    { name: '10. CMS & Social Media', description: 'CMS social links, platform names, user handles, logos, and legal docs' },
+    { name: '11. Bi-Weekly Room Cycle Module', description: 'Complete REST API endpoints for Rooms, 10-Cycle Blueprint, Task Configuration, Submissions Evaluation, Leaderboard, Rewards, and Settings' }
   ],
   components: {
     securitySchemes: {
@@ -2288,8 +2289,371 @@ export const swaggerDocument = {
           200: { description: 'Document updated successfully.' }
         }
       }
+    },
+
+    // ----------------------------------------------------
+    // 11. BI-WEEKLY ROOM CYCLE MODULE
+    // ----------------------------------------------------
+    '/api/admin/room-cycle/rooms': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get All Competition Rooms',
+        description: 'Fetch paginated list of rooms with search, status filter, and capacity details.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'number', example: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'number', example: 10 } }
+        ],
+        responses: {
+          200: { description: 'Rooms list fetched successfully.' }
+        }
+      },
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Create New Room',
+        description: 'Create room with name, description, max members, current cycle, room image, and auto-assignment options.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: { type: 'string', example: 'Alpha Strikers' },
+                  description: { type: 'string', example: 'Room for top tier competitors' },
+                  maxMembers: { type: 'number', example: 50 },
+                  currentCycle: { type: 'number', example: 1 },
+                  roomImage: { type: 'string', example: 'https://example.com/image.png' },
+                  status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' },
+                  autoAssignment: { type: 'boolean', example: true }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Room created successfully.' }
+        }
+      }
+    },
+    '/api/admin/room-cycle/rooms/{id}': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get Room Details & Members by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Room details and assigned members.' } }
+      },
+      put: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Update Room Details',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object' } } }
+        },
+        responses: { 200: { description: 'Room updated.' } }
+      },
+      delete: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Delete Room',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Room deleted.' } }
+      }
+    },
+    '/api/admin/room-cycle/rooms/bulk-action': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Bulk Action on Rooms (Activate, Archive, Delete)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['roomIds', 'action'],
+                properties: {
+                  roomIds: { type: 'array', items: { type: 'string' } },
+                  action: { type: 'string', enum: ['Activate', 'Archive', 'Deactivate', 'Delete'] }
+                }
+              }
+            }
+          }
+        },
+        responses: { 200: { description: 'Bulk action completed.' } }
+      }
+    },
+    '/api/admin/room-cycle/members/assign': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Assign Members to Room',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['roomId', 'userIds'],
+                properties: {
+                  roomId: { type: 'string' },
+                  userIds: { type: 'array', items: { type: 'string' } },
+                  role: { type: 'string', enum: ['Member', 'Leader'], default: 'Member' }
+                }
+              }
+            }
+          }
+        },
+        responses: { 200: { description: 'Members assigned.' } }
+      }
+    },
+    '/api/admin/room-cycle/members/random-assign': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Randomly Assign Unassigned Members',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Random member distribution completed.' } }
+      }
+    },
+    '/api/admin/room-cycle/members/transfer': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Transfer Member Between Rooms',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userId', 'fromRoomId', 'toRoomId'],
+                properties: {
+                  userId: { type: 'string' },
+                  fromRoomId: { type: 'string' },
+                  toRoomId: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: { 200: { description: 'Member transferred.' } }
+      }
+    },
+    '/api/admin/room-cycle/members/{roomId}/{userId}': {
+      delete: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Remove Member from Room',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'userId', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: { 200: { description: 'Member removed.' } }
+      }
+    },
+    '/api/admin/room-cycle/cycles': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get 10-Cycle Blueprint List',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'All 10 bi-weekly cycles.' } }
+      }
+    },
+    '/api/admin/room-cycle/cycles/{id}/set-active': {
+      put: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Set Active Cycle',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Active cycle updated.' } }
+      }
+    },
+    '/api/admin/room-cycle/cycles/{id}': {
+      put: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Update Cycle Dates & Settings',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Cycle details updated.' } }
+      }
+    },
+    '/api/admin/room-cycle/tasks': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get All Cycle Tasks',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Task list.' } }
+      },
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Create New Cycle Task (10 Task Types)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title', 'description', 'cycleId', 'taskType'],
+                properties: {
+                  title: { type: 'string', example: 'Day 1 Quiz Challenge' },
+                  description: { type: 'string' },
+                  cycleId: { type: 'string' },
+                  taskType: { type: 'string', enum: ['Quiz', 'Image Upload', 'Video Upload', 'Document Upload', 'Creative Writing', 'AI Prompt', 'Survey', 'Puzzle', 'Logic Challenge', 'Daily Activity'] },
+                  points: { type: 'number', example: 100 },
+                  bonusPoints: { type: 'number', example: 20 },
+                  penalty: { type: 'number', example: 10 },
+                  deadline: { type: 'string', format: 'date' },
+                  reviewType: { type: 'string', enum: ['Auto', 'Manual'], default: 'Manual' }
+                }
+              }
+            }
+          }
+        },
+        responses: { 201: { description: 'Task created.' } }
+      }
+    },
+    '/api/admin/room-cycle/tasks/{id}': {
+      put: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Update Task',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Task updated.' } }
+      },
+      delete: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Delete Task',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Task deleted.' } }
+      }
+    },
+    '/api/admin/room-cycle/submissions': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get Task Submissions for Admin Review',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Submissions list.' } }
+      }
+    },
+    '/api/admin/room-cycle/submissions/{id}/review': {
+      put: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Review & Grade Task Submission',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status', 'score'],
+                properties: {
+                  status: { type: 'string', enum: ['Approved', 'Rejected', 'Resubmit_Requested'] },
+                  score: { type: 'number', example: 100 },
+                  bonus: { type: 'number', example: 10 },
+                  penalty: { type: 'number', example: 0 },
+                  feedback: { type: 'string', example: 'Great submission!' }
+                }
+              }
+            }
+          }
+        },
+        responses: { 200: { description: 'Submission review recorded.' } }
+      }
+    },
+    '/api/admin/room-cycle/leaderboard': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get Leaderboard (Room, Cycle, or Overall Scope)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'scope', in: 'query', required: false, schema: { type: 'string', enum: ['Room', 'Cycle', 'Overall'], default: 'Room' } }
+        ],
+        responses: { 200: { description: 'Leaderboard list.' } }
+      }
+    },
+    '/api/admin/room-cycle/leaderboard/recalculate': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Recalculate Leaderboard Scores',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Leaderboard scores recalculated.' } }
+      }
+    },
+    '/api/admin/room-cycle/rewards': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get Reward Rules List',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Reward rules.' } }
+      },
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Create Reward Rule',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title', 'rewardType', 'minRank', 'maxRank'],
+                properties: {
+                  title: { type: 'string', example: 'Top 3 Cash Pool' },
+                  rewardType: { type: 'string', enum: ['Cash', 'Wallet Credit', 'Coupons', 'Badges', 'Certificates'] },
+                  amountOrValue: { type: 'number', example: 500 },
+                  minRank: { type: 'number', example: 1 },
+                  maxRank: { type: 'number', example: 3 }
+                }
+              }
+            }
+          }
+        },
+        responses: { 201: { description: 'Reward rule created.' } }
+      }
+    },
+    '/api/admin/room-cycle/rewards/distribute': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Distribute Rewards to Winners',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Rewards distributed.' } }
+      }
+    },
+    '/api/admin/room-cycle/settings': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get Room Cycle Module Settings',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Settings details.' } }
+      },
+      put: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Update Settings (Auto-locking, Capacity, Point Weights)',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Settings updated.' } }
+      }
+    },
+    '/api/admin/room-cycle/analytics': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get Module Dashboard Analytics',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Module KPIs, top rooms, and top performers.' } }
+      }
     }
   }
 };
 
 export default swaggerDocument;
+

@@ -86,6 +86,17 @@ const ReferralRulesPage = lazy(() => import('./pages/ReferralRulesPage').then(m 
 const ReferralEarningsPage = lazy(() => import('./pages/ReferralEarningsPage').then(m => ({ default: m.ReferralEarningsPage })));
 const ReferralAbusePage = lazy(() => import('./pages/ReferralAbusePage').then(m => ({ default: m.ReferralAbusePage })));
 
+// Bi-Weekly Room Cycle Module Pages
+const RoomCycleDashboardPage = lazy(() => import('./pages/room-cycle/RoomCycleDashboardPage').then(m => ({ default: m.RoomCycleDashboardPage })));
+const RoomManagementPage = lazy(() => import('./pages/room-cycle/RoomManagementPage').then(m => ({ default: m.RoomManagementPage })));
+const CycleManagementPage = lazy(() => import('./pages/room-cycle/CycleManagementPage').then(m => ({ default: m.CycleManagementPage })));
+const RoomCycleTaskPage = lazy(() => import('./pages/room-cycle/TaskManagementPage').then(m => ({ default: m.TaskManagementPage })));
+const RoomCycleSubmissionPage = lazy(() => import('./pages/room-cycle/SubmissionManagementPage').then(m => ({ default: m.SubmissionManagementPage })));
+const RoomCycleLeaderboardPage = lazy(() => import('./pages/room-cycle/RoomCycleLeaderboardPage').then(m => ({ default: m.RoomCycleLeaderboardPage })));
+const RewardManagementPage = lazy(() => import('./pages/room-cycle/RewardManagementPage').then(m => ({ default: m.RewardManagementPage })));
+const RoomCycleSettingsPage = lazy(() => import('./pages/room-cycle/RoomCycleSettingsPage').then(m => ({ default: m.RoomCycleSettingsPage })));
+
+
 const AppContent = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -168,7 +179,20 @@ const AppContent = () => {
               <Suspense fallback={<PageSkeleton />}>
                 <Routes>
                   <Route path="dashboard" element={<DashboardHome onViewChange={(view) => navigate(`/admin-dashboard/${view}`)} selectedRole={selectedRole} />} />
+                  {/* Bi-Weekly Room Cycle Module Routes */}
+                  <Route path="bi-weekly-room-cycle" element={<Navigate to="bi-weekly-room-cycle/dashboard" replace />} />
+                  <Route path="bi-weekly-room-cycle/dashboard" element={<RoomCycleDashboardPage />} />
+                  <Route path="bi-weekly-room-cycle/rooms" element={<RoomManagementPage />} />
+                  <Route path="bi-weekly-room-cycle/cycles" element={<CycleManagementPage />} />
+                  <Route path="bi-weekly-room-cycle/tasks" element={<RoomCycleTaskPage />} />
+                  <Route path="bi-weekly-room-cycle/submissions" element={<RoomCycleSubmissionPage />} />
+                  <Route path="bi-weekly-room-cycle/leaderboard" element={<RoomCycleLeaderboardPage />} />
+                  <Route path="bi-weekly-room-cycle/rewards" element={<RewardManagementPage />} />
+                  <Route path="bi-weekly-room-cycle/analytics" element={<RoomCycleDashboardPage />} />
+                  <Route path="bi-weekly-room-cycle/settings" element={<RoomCycleSettingsPage />} />
+
                   <Route path="user-management" element={<Navigate to="user-management/all-users" replace />} />
+
                   <Route path="user-management/all-users" element={<AllUsersPage />} />
                   <Route path="user-management/kyc-status" element={<KycStatusPage />} />
                   <Route path="user-management/wallet-balance" element={<WalletBalancePage />} />
