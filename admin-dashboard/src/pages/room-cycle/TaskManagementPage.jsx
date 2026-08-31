@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Plus, Search, Edit3, Trash2, CheckSquare, RefreshCw, X
+  Plus, Search, Edit3, Trash2, CheckSquare, RefreshCw, Eye, Filter
 } from 'lucide-react';
 import axios from 'axios';
 import { setTasks, setLoading } from '../../store/roomCycleSlice';
 import { useAlert } from '../../context/AlertContext';
 import { RightDrawer } from '../../components/RightDrawer';
+import { CustomSelect } from '../../components/CustomSelect';
 
 const TASK_TYPES = [
   'Quiz',
@@ -23,16 +24,19 @@ const TASK_TYPES = [
 
 export const TaskManagementPage = () => {
   const dispatch = useDispatch();
-  const { showAlert } = useAlert();
-  const { tasks, cycles, loading, pagination } = useSelector((state) => state.roomCycle);
+  const { showAlert, showConfirm, showSnackbar } = useAlert();
+  const { tasks, cycles, loading } = useSelector((state) => state.roomCycle);
 
   const [search, setSearch] = useState('');
   const [selectedCycle, setSelectedCycle] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
   const [page, setPage] = useState(1);
 
+  // Drawers
   const [isTaskDrawerOpen, setIsTaskDrawerOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState(null);
+  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
+  const [viewingTask, setViewingTask] = useState(null);
 
   const [taskFormData, setTaskFormData] = useState({
     title: '',
@@ -46,12 +50,7 @@ export const TaskManagementPage = () => {
     deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     reviewType: 'Manual',
     visibility: 'Public',
-    allowDuplicateSubmission: false,
-    fileLimits: {
-      maxSizeMB: 10,
-      allowedTypes: ['image/png', 'image/jpeg', 'application/pdf'],
-      maxFiles: 1
-    }
+    allowDuplicateSubmission: false
   });
 
   const fetchTasks = async () => {
@@ -82,37 +81,43 @@ export const TaskManagementPage = () => {
     try {
       if (editingTaskId) {
         await axios.put(`/api/admin/room-cycle/tasks/${editingTaskId}`, taskFormData);
-        showAlert('success', 'Task updated successfully!');
+        showSnackbar('Task updated successfully!', 'success');
       } else {
         await axios.post('/api/admin/room-cycle/tasks', taskFormData);
-        showAlert('success', 'Task created successfully!');
+        showSnackbar('Task created successfully!', 'success');
       }
       setIsTaskDrawerOpen(false);
       fetchTasks();
     } catch (err) {
-      showAlert('error', err.response?.data?.message || 'Failed to save task');
+      showAlert(err.response?.data?.message || 'Failed to save task', 'error');
     }
   };
 
-  const handleDeleteTask = async (id) => {
-    if (!window.confirm('Delete this task?')) return;
-    try {
-      await axios.delete(`/api/admin/room-cycle/tasks/${id}`);
-      showAlert('success', 'Task deleted!');
-      fetchTasks();
-    } catch (err) {
-      showAlert('error', 'Failed to delete task');
-    }
+  const handleDeleteTaskClick = (task) => {
+    showConfirm('Delete Task', `Are you sure you want to permanently delete task "${task.title}"?`, async () => {
+      try {
+        await axios.delete(`/api/admin/room-cycle/tasks/${task._id}`);
+        showSnackbar(`Task "${task.title}" deleted!`, 'success');
+        fetchTasks();
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Failed to delete task', 'error');
+      }
+    });
   };
+
+  const taskTypeOptions = [
+    { value: 'All', label: 'All Task Types' },
+    ...TASK_TYPES.map((t) => ({ value: t, label: t }))
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Header Controls */}
+      {/* Header Controls matching RoomManagementPage */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Task Management</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Create and configure cycle tasks supporting 10 task types (Quiz, Uploads, Writing, AI Prompt, Logic, etc.).
+            Create, view details, update, delete, and configure cycle tasks supporting 10 task types.
           </p>
         </div>
         <button
@@ -130,8 +135,7 @@ export const TaskManagementPage = () => {
               deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
               reviewType: 'Manual',
               visibility: 'Public',
-              allowDuplicateSubmission: false,
-              fileLimits: { maxSizeMB: 10, allowedTypes: ['image/png', 'image/jpeg', 'application/pdf'], maxFiles: 1 }
+              allowDuplicateSubmission: false
             });
             setIsTaskDrawerOpen(true);
           }}
@@ -141,35 +145,29 @@ export const TaskManagementPage = () => {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Filters matching RoomManagementPage */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
             <input
               type="text"
-              placeholder="Search tasks..."
+              placeholder="Search tasks by title or description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none"
             />
           </div>
-          <select
+          <CustomSelect
             value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-          >
-            <option value="All">All Task Types</option>
-            {TASK_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedType}
+            options={taskTypeOptions}
+            className="w-52"
+          />
         </div>
       </div>
 
-      {/* Task List Datatable */}
+      {/* Task List Datatable matching RoomManagementPage */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-12 text-center text-slate-500 dark:text-slate-400">
@@ -235,7 +233,17 @@ export const TaskManagementPage = () => {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => {
+                            setViewingTask(task);
+                            setIsDetailsDrawerOpen(true);
+                          }}
+                          title="View Full Task Details"
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => {
                             setEditingTaskId(task._id);
@@ -251,18 +259,19 @@ export const TaskManagementPage = () => {
                               deadline: task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '',
                               reviewType: task.reviewType,
                               visibility: task.visibility || 'Public',
-                              allowDuplicateSubmission: task.allowDuplicateSubmission || false,
-                              fileLimits: task.fileLimits || { maxSizeMB: 10, allowedTypes: [], maxFiles: 1 }
+                              allowDuplicateSubmission: task.allowDuplicateSubmission || false
                             });
                             setIsTaskDrawerOpen(true);
                           }}
-                          className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                          title="Edit Task"
+                          className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteTask(task._id)}
-                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg"
+                          onClick={() => handleDeleteTaskClick(task)}
+                          title="Delete Task"
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -275,6 +284,62 @@ export const TaskManagementPage = () => {
           </div>
         )}
       </div>
+
+      {/* Task Full Details Drawer */}
+      <RightDrawer
+        isOpen={isDetailsDrawerOpen}
+        onClose={() => setIsDetailsDrawerOpen(false)}
+        title={viewingTask ? `Task Details: ${viewingTask.title}` : 'Task Details'}
+      >
+        {viewingTask && (
+          <div className="space-y-6">
+            <div className="p-4 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl border border-indigo-200 dark:border-indigo-800">
+              <span className="px-2.5 py-0.5 bg-indigo-600 text-white text-[10px] font-extrabold uppercase rounded-md">
+                {viewingTask.taskType}
+              </span>
+              <h3 className="font-extrabold text-slate-900 dark:text-white text-lg mt-2">{viewingTask.title}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{viewingTask.description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Base Points</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">+{viewingTask.points} pts</span>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Bonus Points</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">+{viewingTask.bonusPoints || 0} bonus</span>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Penalty</span>
+                <span className="font-bold text-red-500 text-sm">-{viewingTask.penalty || 0} pen</span>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Review Type</span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm">{viewingTask.reviewType === 'Auto' ? '⚡ Auto' : '🔍 Manual Admin'}</span>
+              </div>
+            </div>
+
+            {viewingTask.instructions && (
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Submission Instructions</h4>
+                <p className="text-xs text-slate-700 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                  {viewingTask.instructions}
+                </p>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                onClick={() => setIsDetailsDrawerOpen(false)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl font-bold text-xs"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        )}
+      </RightDrawer>
 
       {/* Task Creation / Edit Drawer */}
       <RightDrawer
@@ -297,31 +362,19 @@ export const TaskManagementPage = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Task Type</label>
-              <select
+              <CustomSelect
                 value={taskFormData.taskType}
-                onChange={(e) => setTaskFormData({ ...taskFormData, taskType: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              >
-                {TASK_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setTaskFormData({ ...taskFormData, taskType: val })}
+                options={TASK_TYPES.map((t) => ({ value: t, label: t }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cycle</label>
-              <select
+              <CustomSelect
                 value={taskFormData.cycleId}
-                onChange={(e) => setTaskFormData({ ...taskFormData, cycleId: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              >
-                {cycles.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    Cycle {c.cycleNumber}: {c.title}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setTaskFormData({ ...taskFormData, cycleId: val })}
+                options={cycles.map((c) => ({ value: c._id, label: `Cycle ${c.cycleNumber}: ${c.title}` }))}
+              />
             </div>
           </div>
 
@@ -372,14 +425,14 @@ export const TaskManagementPage = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Review Type</label>
-              <select
+              <CustomSelect
                 value={taskFormData.reviewType}
-                onChange={(e) => setTaskFormData({ ...taskFormData, reviewType: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              >
-                <option value="Manual">Manual Admin Review</option>
-                <option value="Auto">Automatic Evaluation</option>
-              </select>
+                onChange={(val) => setTaskFormData({ ...taskFormData, reviewType: val })}
+                options={[
+                  { value: 'Manual', label: 'Manual Admin Review' },
+                  { value: 'Auto', label: 'Automatic Evaluation' }
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Deadline</label>

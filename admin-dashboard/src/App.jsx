@@ -18,6 +18,7 @@ const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login }
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ContestManagement = lazy(() => import('./pages/ContestManagement').then(m => ({ default: m.ContestManagement })));
 const DailyContestPage = lazy(() => import('./pages/DailyContestPage').then(m => ({ default: m.DailyContestPage })));
+const DailyContestDetailsPage = lazy(() => import('./pages/DailyContestDetailsPage').then(m => ({ default: m.DailyContestDetailsPage })));
 const DailyContestWizard = lazy(() => import('./pages/DailyContestWizard').then(m => ({ default: m.DailyContestWizard })));
 const DailyContestAnalyticsPage = lazy(() => import('./pages/DailyContestAnalyticsPage').then(m => ({ default: m.DailyContestAnalyticsPage })));
 const QuizBuilder = lazy(() => import('./pages/QuizBuilder').then(m => ({ default: m.QuizBuilder })));
@@ -184,7 +185,7 @@ const AppContent = () => {
                   <Route path="bi-weekly-room-cycle/dashboard" element={<RoomCycleDashboardPage />} />
                   <Route path="bi-weekly-room-cycle/rooms" element={<RoomManagementPage />} />
                   <Route path="bi-weekly-room-cycle/cycles" element={<CycleManagementPage />} />
-                  <Route path="bi-weekly-room-cycle/tasks" element={<RoomCycleTaskPage />} />
+                  <Route path="bi-weekly-room-cycle/tasks" element={<Navigate to="/admin-dashboard/tasks" replace />} />
                   <Route path="bi-weekly-room-cycle/submissions" element={<RoomCycleSubmissionPage />} />
                   <Route path="bi-weekly-room-cycle/leaderboard" element={<RoomCycleLeaderboardPage />} />
                   <Route path="bi-weekly-room-cycle/rewards" element={<RewardManagementPage />} />
@@ -265,6 +266,8 @@ const AppContent = () => {
                   <Route path="contests/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
                   <Route path="daily-contest" element={<DailyContestPage />} />
                   <Route path="daily-contest/create" element={<DailyContestWizard />} />
+                  <Route path="daily-contest/:contestId/details" element={<DailyContestDetailsPage />} />
+                  <Route path="daily-contests/:contestId/details" element={<DailyContestDetailsPage />} />
                   <Route path="daily-contest/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
                   <Route path="daily-contests/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
                   <Route path="contests/create" element={<ContestWizard />} />

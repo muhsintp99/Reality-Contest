@@ -267,7 +267,7 @@ export class BiWeeklyRoomCycleService {
     const { cycleId, taskType, status, search, page = 1, limit = 10 } = query;
     const filter: any = {};
 
-    if (cycleId) filter.cycleId = cycleId;
+    if (cycleId && cycleId !== 'All') filter.cycleId = cycleId;
     if (taskType && taskType !== 'All') filter.taskType = taskType;
     if (status && status !== 'All') filter.status = status;
     if (search) {

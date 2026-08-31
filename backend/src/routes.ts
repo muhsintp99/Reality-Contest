@@ -338,6 +338,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/daily-contests/:id', authenticate, dailyContestsController.getDailyContestDetail);
   router.post('/daily-contests/:id/join', authenticate, dailyContestsController.joinDailyContest);
   router.get('/admin/daily-contests', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.listDailyContests);
+  router.get('/admin/daily-contests/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.getDailyContestDetail);
   router.get('/admin/daily-contests/:id/analytics', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.getDailyContestAnalytics);
   router.post('/admin/daily-contests', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.createDailyContest);
   router.put('/admin/daily-contests/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.updateDailyContest);

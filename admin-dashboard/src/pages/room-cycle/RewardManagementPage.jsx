@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Gift, Plus, Send, RefreshCw
+  Gift, Plus, Send, RefreshCw, Eye, Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import { setRewards, setLoading } from '../../store/roomCycleSlice';
 import { useAlert } from '../../context/AlertContext';
 import { RightDrawer } from '../../components/RightDrawer';
+import { CustomSelect } from '../../components/CustomSelect';
 
 export const RewardManagementPage = () => {
   const dispatch = useDispatch();
-  const { showAlert } = useAlert();
+  const { showAlert, showConfirm, showSnackbar } = useAlert();
   const { rewards, loading } = useSelector((state) => state.roomCycle);
 
   const [isRewardDrawerOpen, setIsRewardDrawerOpen] = useState(false);
+  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
+  const [viewingReward, setViewingReward] = useState(null);
+
   const [rewardFormData, setRewardFormData] = useState({
     title: '',
     rewardType: 'Wallet Credit',
@@ -52,31 +56,32 @@ export const RewardManagementPage = () => {
     try {
       const res = await axios.post('/api/admin/room-cycle/rewards', rewardFormData);
       if (res.data?.success) {
-        showAlert('success', 'Reward rule created!');
+        showSnackbar('Reward rule created!', 'success');
         setIsRewardDrawerOpen(false);
         fetchRewards();
       }
     } catch (err) {
-      showAlert('error', 'Failed to create reward rule');
+      showAlert(err.response?.data?.message || 'Failed to create reward rule', 'error');
     }
   };
 
-  const handleDistributeRewards = async () => {
-    if (!window.confirm('Trigger distribution for all pending rewards?')) return;
-    try {
-      const res = await axios.post('/api/admin/room-cycle/rewards/distribute');
-      if (res.data?.success) {
-        showAlert('success', 'Rewards distribution completed!');
-        fetchRewards();
+  const handleDistributeRewardsClick = () => {
+    showConfirm('Distribute Rewards', 'Are you sure you want to trigger payout distribution for all pending rewards?', async () => {
+      try {
+        const res = await axios.post('/api/admin/room-cycle/rewards/distribute');
+        if (res.data?.success) {
+          showSnackbar('Rewards distribution completed!', 'success');
+          fetchRewards();
+        }
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Reward distribution failed', 'error');
       }
-    } catch (err) {
-      showAlert('error', 'Reward distribution failed');
-    }
+    });
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
+      {/* Top Banner matching RoomManagementPage */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Reward Management</h1>
@@ -86,7 +91,7 @@ export const RewardManagementPage = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={handleDistributeRewards}
+            onClick={handleDistributeRewardsClick}
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm shadow-md transition-all"
           >
             <Send className="w-4 h-4" /> Distribute Pending Rewards
@@ -100,7 +105,7 @@ export const RewardManagementPage = () => {
         </div>
       </div>
 
-      {/* Rewards List Datatable */}
+      {/* Rewards List Datatable matching RoomManagementPage */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-12 text-center text-slate-500 dark:text-slate-400">
@@ -124,6 +129,7 @@ export const RewardManagementPage = () => {
                   <th className="p-4">Target Scope</th>
                   <th className="p-4">Rank Tier</th>
                   <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -153,6 +159,20 @@ export const RewardManagementPage = () => {
                         {rw.status}
                       </span>
                     </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => {
+                            setViewingReward(rw);
+                            setIsDetailsDrawerOpen(true);
+                          }}
+                          title="View Reward Rule Details"
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -160,6 +180,45 @@ export const RewardManagementPage = () => {
           </div>
         )}
       </div>
+
+      {/* Reward Details Drawer */}
+      <RightDrawer
+        isOpen={isDetailsDrawerOpen}
+        onClose={() => setIsDetailsDrawerOpen(false)}
+        title={viewingReward ? `Reward Rule: ${viewingReward.title}` : 'Reward Details'}
+      >
+        {viewingReward && (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/50 rounded-2xl border border-emerald-200 dark:border-emerald-800">
+              <span className="px-2.5 py-0.5 bg-emerald-600 text-white text-[10px] font-extrabold uppercase rounded-md">
+                {viewingReward.rewardType}
+              </span>
+              <h3 className="font-extrabold text-slate-900 dark:text-white text-lg mt-2">{viewingReward.title}</h3>
+              <p className="text-xs text-slate-500 mt-1">Status: {viewingReward.status}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Reward Amount / Value</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{viewingReward.amountOrValue ? `₹${viewingReward.amountOrValue}` : 'Custom'}</span>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Rank Qualification</span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm">Rank #{viewingReward.minRank} to #{viewingReward.maxRank}</span>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                onClick={() => setIsDetailsDrawerOpen(false)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl font-bold text-xs"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        )}
+      </RightDrawer>
 
       {/* Add Reward Drawer */}
       <RightDrawer
@@ -182,17 +241,17 @@ export const RewardManagementPage = () => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Type</label>
-              <select
+              <CustomSelect
                 value={rewardFormData.rewardType}
-                onChange={(e) => setRewardFormData({ ...rewardFormData, rewardType: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              >
-                <option value="Cash">Cash</option>
-                <option value="Wallet Credit">Wallet Credit</option>
-                <option value="Coupons">Coupons</option>
-                <option value="Badges">Badges</option>
-                <option value="Certificates">Certificates</option>
-              </select>
+                onChange={(val) => setRewardFormData({ ...rewardFormData, rewardType: val })}
+                options={[
+                  { value: 'Cash', label: 'Cash 💵' },
+                  { value: 'Wallet Credit', label: 'Wallet Credit 💳' },
+                  { value: 'Coupons', label: 'Coupons 🎟️' },
+                  { value: 'Badges', label: 'Badges 🏅' },
+                  { value: 'Certificates', label: 'Certificates 📜' }
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Value / Amount</label>

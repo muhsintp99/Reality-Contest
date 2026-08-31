@@ -118,7 +118,6 @@ const ROOM_CYCLE_SUBITEMS = [
   { id: 'bi-weekly-room-cycle/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'bi-weekly-room-cycle/rooms', label: 'Rooms', icon: Layers },
   { id: 'bi-weekly-room-cycle/cycles', label: 'Cycles', icon: Clock },
-  { id: 'bi-weekly-room-cycle/tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'bi-weekly-room-cycle/submissions', label: 'Submissions', icon: FileText },
   { id: 'bi-weekly-room-cycle/leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'bi-weekly-room-cycle/rewards', label: 'Rewards', icon: Gift },

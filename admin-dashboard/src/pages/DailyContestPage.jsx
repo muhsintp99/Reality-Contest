@@ -5,14 +5,12 @@ import axios from 'axios';
 import {
   Clock, Plus, Trophy, Award, Sparkles, RefreshCw, Eye, Edit3, Trash2,
   CheckCircle, Play, ShieldAlert, Search, Filter, AlertTriangle, Users, Landmark, Flame,
-  Check, X, ToggleLeft, ToggleRight, DollarSign, Image as ImageIcon, Video, FileText, BarChart2
+  Check, X, ToggleLeft, ToggleRight, DollarSign, Image as ImageIcon, Video, FileText, BarChart2, HelpCircle
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
 import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
-
-
 
 export const DailyContestPage = () => {
   const navigate = useNavigate();
@@ -33,6 +31,8 @@ export const DailyContestPage = () => {
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [editingContest, setEditingContest] = useState(null);
   const [viewingContest, setViewingContest] = useState(null);
+  const [viewingContestDetail, setViewingContestDetail] = useState(null);
+  const [specsLoading, setSpecsLoading] = useState(false);
 
   // Add Form State
   const [formData, setFormData] = useState({
@@ -103,6 +103,25 @@ export const DailyContestPage = () => {
     }
   };
 
+  const openSpecsDrawer = async (c) => {
+    setViewingContest(c);
+    setViewingContestDetail(null);
+    setSpecsLoading(true);
+    try {
+      const id = c._id || c.id || c.dailyContestId;
+      const res = await axios.get(`/api/admin/daily-contests/${id}`, { withCredentials: true });
+      if (res.data?.success && res.data.data) {
+        setViewingContestDetail(res.data.data);
+      } else {
+        setViewingContestDetail(c);
+      }
+    } catch (err) {
+      setViewingContestDetail(c);
+    } finally {
+      setSpecsLoading(false);
+    }
+  };
+
   // Combine categories fetched from /api/categories API and loaded contests
   const allCategoryNames = Array.from(new Set([
     ...categories.map(c => c.name || c.title || c.categoryName).filter(Boolean),
@@ -117,7 +136,7 @@ export const DailyContestPage = () => {
       (c.title && c.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.category && c.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     // 2. Category Filter
     const matchesCategory =
       categoryFilter === 'All' ||
@@ -192,6 +211,7 @@ export const DailyContestPage = () => {
     e.preventDefault();
     if (!editingContest) return;
 
+    const id = editingContest._id || editingContest.id || editingContest.dailyContestId;
     const uploadedImageUrl = await uploadPendingFile(editFormData.imageUrl, 'daily-contest');
     const uploadedVideoUrl = await uploadPendingFile(editFormData.videoUrl, 'daily-contest');
 
@@ -304,6 +324,8 @@ export const DailyContestPage = () => {
       videoUrl: contest.videoUrl || ''
     });
   };
+
+  const questionsList = viewingContestDetail?.questions || viewingContest?.questions || [];
 
   return (
     <div className="p-6 space-y-6 text-left animate-fade-in">
@@ -484,7 +506,12 @@ export const DailyContestPage = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white">{c.title}</h3>
+                  <h3
+                    onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id || c.dailyContestId}/details`)}
+                    className="text-base font-extrabold text-slate-900 dark:text-white hover:text-amber-500 cursor-pointer transition-colors"
+                  >
+                    {c.title}
+                  </h3>
                   <p className="text-xs text-slate-400 mt-1">{c.description || '24h automated battle'}</p>
                 </div>
 
@@ -509,10 +536,11 @@ export const DailyContestPage = () => {
                   <BarChart2 className="w-3.5 h-3.5" /> Analytics
                 </button>
                 <button
-                  onClick={() => setViewingContest(c)}
+                  onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id || c.dailyContestId}/details`)}
                   className="p-1.5 px-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                  title="View Specs & Question Details Page"
                 >
-                  <Eye className="w-3.5 h-3.5" /> Specs
+                  <Eye className="w-3.5 h-3.5" /> Specs & Questions
                 </button>
                 <button
                   onClick={() => openEditDrawer(c)}
@@ -726,10 +754,10 @@ export const DailyContestPage = () => {
         )}
       </RightDrawer>
 
-      {/* Drawer: View Daily Contest Specs */}
-      <RightDrawer isOpen={!!viewingContest} onClose={() => setViewingContest(null)} title="Daily Contest Specs 📜">
+      {/* Drawer: View Daily Contest Specs & Question Side Table */}
+      <RightDrawer isOpen={!!viewingContest} onClose={() => setViewingContest(null)} title="Daily Contest Specs & Questions 📜">
         {viewingContest && (
-          <div className="space-y-4 text-xs text-left">
+          <div className="space-y-5 text-xs text-left">
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
               <div>
                 <h3 className="text-base font-extrabold text-slate-900 dark:text-white">{viewingContest.title}</h3>
@@ -746,23 +774,7 @@ export const DailyContestPage = () => {
               </span>
             </div>
 
-            <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Description</div>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-white/5 p-3 rounded-xl">
-                {viewingContest.description || 'Automated 24h daily quiz showdown arena.'}
-              </p>
-            </div>
-
-            {viewingContest.rules && (
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Rules & Guidelines</div>
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-white/5 p-3 rounded-xl">
-                  {viewingContest.rules}
-                </p>
-              </div>
-            )}
-
-            <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl space-y-2.5 border border-slate-200 dark:border-white/10">
+            <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl space-y-2 border border-slate-200 dark:border-white/10">
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-bold">Entry Fee:</span>
                 <span className="font-extrabold text-emerald-500">{viewingContest.entryFee === 0 ? 'FREE ENTRY' : `${viewingContest.entryFee} Coins 🪙`}</span>
@@ -777,47 +789,84 @@ export const DailyContestPage = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-bold">Questions Count:</span>
-                <span className="font-bold text-slate-800 dark:text-white">{viewingContest.questionsCount || 20} Questions</span>
+                <span className="font-bold text-slate-800 dark:text-white">{questionsList.length || viewingContest.questionsCount || 20} Questions</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 font-bold">Difficulty:</span>
                 <span className="font-bold text-brandPrimary">{viewingContest.difficulty || 'Medium'}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-bold">Reset Schedule:</span>
-                <span className="font-mono text-emerald-500 font-bold">24-Hour Automated Reset</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-bold">Status:</span>
-                <span className="font-extrabold text-brandPrimary">{viewingContest.status || 'Registration Open'}</span>
-              </div>
             </div>
 
-            {viewingContest.imageUrl && (
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Banner Image</div>
-                <img src={viewingContest.imageUrl} alt="Contest Banner" className="w-full h-36 object-cover rounded-xl border border-slate-200 dark:border-white/10" />
+            {/* Questions Side Table */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <HelpCircle className="w-4 h-4 text-amber-500" /> Assigned Questions List ({questionsList.length})
+                </h4>
               </div>
-            )}
 
-            {viewingContest.videoUrl && (
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Teaser Video</div>
-                <video src={viewingContest.videoUrl} controls className="w-full rounded-xl border border-slate-200 dark:border-white/10 max-h-48" />
-              </div>
-            )}
+              {specsLoading ? (
+                <div className="p-6 text-center text-slate-400">
+                  <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-1" />
+                  Loading question details...
+                </div>
+              ) : questionsList.length === 0 ? (
+                <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-xl text-center text-slate-400 text-xs border border-slate-200 dark:border-white/10">
+                  No specific questions assigned yet. Random pool selection will be executed during daily battle.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-sm max-h-80 overflow-y-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] border-b border-slate-200 dark:border-white/10 sticky top-0">
+                        <th className="p-2.5">#</th>
+                        <th className="p-2.5">Question Text</th>
+                        <th className="p-2.5">Category</th>
+                        <th className="p-2.5">Difficulty</th>
+                        <th className="p-2.5">Options / Correct Answer</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                      {questionsList.map((q, idx) => (
+                        <tr key={q._id || idx} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                          <td className="p-2.5 font-bold text-slate-400">{idx + 1}</td>
+                          <td className="p-2.5">
+                            <span className="font-bold text-slate-900 dark:text-white block max-w-xs">{q.text || q.questionText || 'Question'}</span>
+                            {q.type && <span className="text-[9px] font-semibold text-indigo-500 bg-indigo-500/10 px-1.5 py-0.5 rounded inline-block mt-0.5">{q.type}</span>}
+                          </td>
+                          <td className="p-2.5 text-slate-600 dark:text-slate-300 font-medium">{q.category || viewingContest.category || 'General'}</td>
+                          <td className="p-2.5">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500">
+                              {q.difficulty || 'Medium'}
+                            </span>
+                          </td>
+                          <td className="p-2.5">
+                            {Array.isArray(q.options) && q.options.length > 0 ? (
+                              <div className="space-y-1">
+                                {q.options.map((opt, oIdx) => (
+                                  <div key={oIdx} className={`text-[11px] px-2 py-0.5 rounded ${opt.isCorrect ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30' : 'text-slate-500'}`}>
+                                    {opt.text} {opt.isCorrect ? '✓' : ''}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 italic">No options loaded</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
-            {viewingContest.fileAttachmentUrl && (
+            {viewingContest.description && (
               <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Rules & Document Attachment</div>
-                <a
-                  href={viewingContest.fileAttachmentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 p-2.5 bg-indigo-500/10 text-indigo-500 rounded-xl font-bold text-xs border border-indigo-500/20 hover:bg-indigo-500/20 transition-all"
-                >
-                  <FileText className="w-4 h-4" /> View Rules PDF / Document Attachment 📄
-                </a>
+                <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Description</div>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10">
+                  {viewingContest.description}
+                </p>
               </div>
             )}
           </div>

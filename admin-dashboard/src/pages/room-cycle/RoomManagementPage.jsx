@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Layers, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, AlertTriangle
+  Layers, Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, ShieldCheck, Award, Calendar, Grid, List
 } from 'lucide-react';
 import axios from 'axios';
 import { setRooms, setActiveRoom, setLoading } from '../../store/roomCycleSlice';
 import { useAlert } from '../../context/AlertContext';
 import { RightDrawer } from '../../components/RightDrawer';
+import { CustomSelect } from '../../components/CustomSelect';
 
 export const RoomManagementPage = () => {
   const dispatch = useDispatch();
-  const { showAlert } = useAlert();
+  const { showAlert, showConfirm, showSnackbar } = useAlert();
   const { rooms, activeRoom, roomMembers, loading, pagination } = useSelector((state) => state.roomCycle);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedRooms, setSelectedRooms] = useState([]);
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
 
   // Drawer states
   const [isRoomDrawerOpen, setIsRoomDrawerOpen] = useState(false);
@@ -25,9 +27,6 @@ export const RoomManagementPage = () => {
   const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState(false);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [viewingRoom, setViewingRoom] = useState(null);
-
-  // Delete Alert Box Modal State
-  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'room' | 'member' | 'bulk', id: string, name?: string, payload?: any }
 
   // Form states
   const [roomFormData, setRoomFormData] = useState({
@@ -73,12 +72,12 @@ export const RoomManagementPage = () => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      showAlert('error', 'Please select a valid image file');
+      showAlert('Please select a valid image file', 'error');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      showAlert('error', 'Image size should be less than 5MB');
+      showAlert('Image size should be less than 5MB', 'error');
       return;
     }
 
@@ -95,49 +94,63 @@ export const RoomManagementPage = () => {
       if (drawerMode === 'create') {
         const res = await axios.post('/api/admin/room-cycle/rooms', roomFormData);
         if (res.data?.success) {
-          showAlert('success', 'Room created successfully!');
+          showSnackbar('Room created successfully!', 'success');
           setIsRoomDrawerOpen(false);
           fetchRooms();
         }
       } else {
         const res = await axios.put(`/api/admin/room-cycle/rooms/${editingRoomId}`, roomFormData);
         if (res.data?.success) {
-          showAlert('success', 'Room updated successfully!');
+          showSnackbar('Room updated successfully!', 'success');
           setIsRoomDrawerOpen(false);
           fetchRooms();
         }
       }
     } catch (err) {
-      showAlert('error', err.response?.data?.message || 'Failed to save room');
+      showAlert(err.response?.data?.message || 'Failed to save room', 'error');
     }
   };
 
-  const confirmDeleteAction = async () => {
-    if (!deleteTarget) return;
-
-    try {
-      if (deleteTarget.type === 'room') {
-        await axios.delete(`/api/admin/room-cycle/rooms/${deleteTarget.id}`);
-        showAlert('success', `Room "${deleteTarget.name}" deleted successfully!`);
+  const handleDeleteRoomClick = (room) => {
+    showConfirm('Delete Room', `Are you sure you want to permanently delete room "${room.name}"?`, async () => {
+      try {
+        await axios.delete(`/api/admin/room-cycle/rooms/${room._id}`);
+        showSnackbar(`Room "${room.name}" deleted!`, 'success');
         fetchRooms();
-      } else if (deleteTarget.type === 'member') {
-        await axios.delete(`/api/admin/room-cycle/members/${deleteTarget.roomId}/${deleteTarget.id}`);
-        showAlert('success', 'Member removed from room');
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Failed to delete room', 'error');
+      }
+    });
+  };
+
+  const handleRemoveMemberClick = (member) => {
+    const memberName = member.userId?.name || 'User';
+    showConfirm('Remove Member', `Are you sure you want to remove user "${memberName}" from this room?`, async () => {
+      try {
+        await axios.delete(`/api/admin/room-cycle/members/${activeRoom._id}/${member.userId?._id || member.userId}`);
+        showSnackbar('Member removed from room', 'success');
         if (activeRoom) openViewMembers(activeRoom);
-      } else if (deleteTarget.type === 'bulk') {
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Failed to remove member', 'error');
+      }
+    });
+  };
+
+  const handleBulkActionClick = (action) => {
+    if (!selectedRooms.length) return;
+    showConfirm(`Bulk ${action}`, `Are you sure you want to execute bulk "${action}" on ${selectedRooms.length} selected rooms?`, async () => {
+      try {
         await axios.post('/api/admin/room-cycle/rooms/bulk-action', {
           roomIds: selectedRooms,
-          action: deleteTarget.action
+          action
         });
-        showAlert('success', `Bulk ${deleteTarget.action} executed for ${selectedRooms.length} rooms`);
+        showSnackbar(`Bulk ${action} executed for ${selectedRooms.length} rooms`, 'success');
         setSelectedRooms([]);
         fetchRooms();
+      } catch (err) {
+        showAlert(err.response?.data?.message || 'Bulk action failed', 'error');
       }
-    } catch (err) {
-      showAlert('error', err.response?.data?.message || 'Operation failed');
-    } finally {
-      setDeleteTarget(null);
-    }
+    });
   };
 
   const openViewDetails = async (room) => {
@@ -175,213 +188,276 @@ export const RoomManagementPage = () => {
         userIds: userIdsArray
       });
       if (res.data?.success) {
-        showAlert('success', 'Members assigned successfully!');
+        showSnackbar('Members assigned successfully!', 'success');
         setIsAssignDrawerOpen(false);
         setAssignUserIds('');
         openViewMembers(activeRoom);
       }
     } catch (err) {
-      showAlert('error', err.response?.data?.message || 'Assignment failed');
+      showAlert(err.response?.data?.message || 'Assignment failed', 'error');
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 text-left animate-fade-in relative p-2">
+      {/* Page Title & Controls - Exact Contest Management Desk Layout */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Room Management</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Create, view details, update, delete, and manage competition rooms with direct image uploads and custom confirmation alerts.
+          <h2 className="text-xl font-bold font-poppins text-slate-900 dark:text-white flex items-center gap-2">
+            <Layers className="w-6 h-6 text-brandPrimary" />
+            Room Management Desk
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Create, Edit, Delete, View Room Details, manage Capacity, Cycles, and Member Allocations.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setDrawerMode('create');
               setRoomFormData({ name: '', description: '', maxMembers: 50, currentCycle: 1, roomImage: '', status: 'Active', autoAssignment: true });
               setIsRoomDrawerOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm shadow-md transition-all"
+            className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow-indigo-500/20"
           >
             <Plus className="w-4 h-4" /> Create Room
           </button>
         </div>
       </div>
 
-      {/* Filter and Bulk Action Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by room name or code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none"
-          >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Archived">Archived</option>
-          </select>
+      {/* Search & Filter Desk Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-[#0B1120] p-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search rooms by name, code, or description..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+          />
         </div>
 
-        {selectedRooms.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">{selectedRooms.length} selected:</span>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <CustomSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'All', label: 'All Statuses' },
+              { value: 'Active', label: 'Active ⚡' },
+              { value: 'Inactive', label: 'Inactive' },
+              { value: 'Archived', label: 'Archived 📦' }
+            ]}
+            className="w-48"
+          />
+
+          <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-white/10">
             <button
-              onClick={() => setDeleteTarget({ type: 'bulk', action: 'Activate' })}
-              className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'grid' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-400'
+              }`}
+              title="Grid Cards View"
             >
-              Activate
+              <Grid className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setDeleteTarget({ type: 'bulk', action: 'Archive' })}
-              className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold"
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'table' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-400'
+              }`}
+              title="Table View"
             >
-              Archive
-            </button>
-            <button
-              onClick={() => setDeleteTarget({ type: 'bulk', action: 'Delete' })}
-              className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold"
-            >
-              Delete
+              <List className="w-4 h-4" />
             </button>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Datatable */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        {loading ? (
-          <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-            Loading rooms...
-          </div>
-        ) : rooms.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-            <Layers className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 mb-3" />
-            <p className="font-bold text-slate-700 dark:text-slate-300">No rooms found</p>
-            <p className="text-xs mt-1">Click "Create Room" to create a new room for competition members.</p>
-          </div>
-        ) : (
+      {/* Room Display Cards Grid / Datatable */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-4 animate-pulse">
+              <div className="w-full h-32 bg-slate-200 dark:bg-white/10 rounded-xl" />
+              <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-3/4" />
+              <div className="h-3 bg-slate-200 dark:bg-white/10 rounded w-full" />
+              <div className="h-10 bg-slate-100 dark:bg-white/5 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      ) : rooms.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl text-center space-y-3">
+          <Layers className="w-10 h-10 text-slate-300 dark:text-white/20" />
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Rooms Found</h3>
+          <p className="text-xs text-slate-400 max-w-sm">No competition rooms match your current search query or filter settings.</p>
+        </div>
+      ) : viewMode === 'grid' ? (
+        /* GRID CARDS VIEW */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {rooms.map((room) => (
+            <div
+              key={room._id}
+              className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between hover:border-brandPrimary/30 transition-all"
+            >
+              <div className="space-y-3">
+                {room.roomImage ? (
+                  <img
+                    src={room.roomImage}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-36 object-cover rounded-xl border border-slate-200 dark:border-white/10"
+                    alt={room.name}
+                  />
+                ) : (
+                  <div className="w-full h-36 rounded-xl bg-gradient-to-tr from-brandPrimary/20 via-emerald-500/10 to-indigo-500/20 border border-slate-200 dark:border-white/10 flex items-center justify-center font-black text-2xl text-brandPrimary">
+                    {room.code || 'ROOM'}
+                  </div>
+                )}
+
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <span className="px-2 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold rounded text-[10px] inline-block mb-1">
+                      {room.code}
+                    </span>
+                    <h3 className="font-bold font-poppins text-slate-900 dark:text-white text-base leading-snug">
+                      {room.name}
+                    </h3>
+                  </div>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      room.status === 'Active'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : room.status === 'Archived'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                        : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+                    }`}
+                  >
+                    {room.status}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                  {room.description || 'No description provided.'}
+                </p>
+
+                {/* Capacity & Cycle Pill Metrics */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium uppercase">Members</span>
+                    <span className="font-extrabold text-slate-800 dark:text-white">
+                      {room.membersCount || 0} / {room.maxMembers}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium uppercase">Current Cycle</span>
+                    <span className="font-extrabold text-brandPrimary">
+                      Cycle {room.currentCycle || 1}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons Desk Row */}
+              <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openViewDetails(room)}
+                    title="View Room Details"
+                    className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openViewMembers(room)}
+                    title="Manage Members"
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingRoomId(room._id);
+                      setDrawerMode('edit');
+                      setRoomFormData({
+                        name: room.name,
+                        description: room.description || '',
+                        maxMembers: room.maxMembers,
+                        currentCycle: room.currentCycle || 1,
+                        roomImage: room.roomImage || '',
+                        status: room.status,
+                        autoAssignment: room.autoAssignment
+                      });
+                      setIsRoomDrawerOpen(true);
+                    }}
+                    title="Edit Room"
+                    className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => handleDeleteRoomClick(room)}
+                  title="Delete Room"
+                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-xl transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* TABLE VIEW */
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="p-4 w-10">
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedRooms(rooms.map((r) => r._id));
-                        else setSelectedRooms([]);
-                      }}
-                      checked={selectedRooms.length === rooms.length && rooms.length > 0}
-                    />
-                  </th>
+                <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <th className="p-4">Room Image</th>
                   <th className="p-4">Room Name</th>
-                  <th className="p-4">Room Code</th>
+                  <th className="p-4">Code</th>
                   <th className="p-4">Description</th>
                   <th className="p-4">Max Members</th>
                   <th className="p-4">Current Members</th>
                   <th className="p-4">Current Cycle</th>
                   <th className="p-4">Status</th>
-                  <th className="p-4">Created Date</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+              <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-sm">
                 {rooms.map((room) => (
-                  <tr key={room._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="p-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedRooms.includes(room._id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedRooms([...selectedRooms, room._id]);
-                          else setSelectedRooms(selectedRooms.filter((id) => id !== room._id));
-                        }}
-                      />
-                    </td>
+                  <tr key={room._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors">
                     <td className="p-4">
                       {room.roomImage ? (
-                        <img
-                          src={room.roomImage}
-                          alt={room.name}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
-                        />
+                        <img src={room.roomImage} alt={room.name} className="w-10 h-10 rounded-xl object-cover border" />
                       ) : (
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-extrabold text-xs">
+                        <div className="w-10 h-10 rounded-xl bg-brandPrimary/10 text-brandPrimary flex items-center justify-center font-extrabold text-xs">
                           {room.code ? room.code.slice(0, 3) : 'RM'}
                         </div>
                       )}
                     </td>
                     <td className="p-4 font-bold text-slate-900 dark:text-white">{room.name}</td>
                     <td className="p-4">
-                      <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-mono font-bold">
+                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold rounded">
                         {room.code}
                       </span>
                     </td>
-                    <td className="p-4 text-xs text-slate-500 dark:text-slate-400 max-w-xs truncate">
-                      {room.description || '—'}
-                    </td>
-                    <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">
-                      {room.maxMembers}
-                    </td>
-                    <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">
-                      <div className="flex items-center gap-2">
-                        <span>{room.membersCount || 0}</span>
-                        {room.membersCount >= room.maxMembers && (
-                          <span className="px-2 py-0.5 text-[10px] font-extrabold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 rounded-md">
-                            FULL
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                    <td className="p-4 text-xs text-slate-500 max-w-xs truncate">{room.description || '—'}</td>
+                    <td className="p-4 font-semibold">{room.maxMembers}</td>
+                    <td className="p-4 font-semibold">{room.membersCount || 0}</td>
+                    <td className="p-4 font-bold text-brandPrimary">Cycle {room.currentCycle || 1}</td>
                     <td className="p-4">
-                      <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-full text-xs font-bold">
-                        Cycle {room.currentCycle || 1}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                          room.status === 'Active'
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                            : room.status === 'Archived'
-                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-                        }`}
-                      >
+                      <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold text-xs rounded-full">
                         {room.status}
                       </span>
                     </td>
-                    <td className="p-4 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                      {room.createdDate ? new Date(room.createdDate).toLocaleDateString() : '—'}
-                    </td>
                     <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => openViewDetails(room)}
-                          title="View Full Room Details"
-                          className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
-                        >
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openViewDetails(room)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => openViewMembers(room)}
-                          title="Manage Members"
-                          className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
-                        >
+                        <button onClick={() => openViewMembers(room)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg">
                           <Users className="w-4 h-4" />
                         </button>
                         <button
@@ -399,16 +475,11 @@ export const RoomManagementPage = () => {
                             });
                             setIsRoomDrawerOpen(true);
                           }}
-                          title="Edit Room"
-                          className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => setDeleteTarget({ type: 'room', id: room._id, name: room.name })}
-                          title="Delete Room"
-                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
-                        >
+                        <button onClick={() => handleDeleteRoomClick(room)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -417,46 +488,6 @@ export const RoomManagementPage = () => {
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
-
-      {/* Styled Delete Confirmation Alert Box Modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
-              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-950/80 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">Confirm Action</h3>
-                <p className="text-xs text-slate-500">This action cannot be undone.</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-700 dark:text-slate-300">
-              {deleteTarget.type === 'room' && `Are you sure you want to permanently delete the room "${deleteTarget.name}"?`}
-              {deleteTarget.type === 'member' && `Are you sure you want to remove user "${deleteTarget.name}" from this room?`}
-              {deleteTarget.type === 'bulk' && `Are you sure you want to execute bulk "${deleteTarget.action}" on ${selectedRooms.length} selected rooms?`}
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDeleteAction}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors"
-              >
-                Yes, Delete
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -473,13 +504,13 @@ export const RoomManagementPage = () => {
               {viewingRoom.roomImage ? (
                 <img src={viewingRoom.roomImage} alt={viewingRoom.name} className="w-16 h-16 rounded-2xl object-cover border shadow-sm" />
               ) : (
-                <div className="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-xl shadow-md">
+                <div className="w-16 h-16 rounded-2xl bg-brandPrimary text-white flex items-center justify-center font-extrabold text-xl shadow-md">
                   {viewingRoom.code ? viewingRoom.code.slice(0, 3) : 'RM'}
                 </div>
               )}
               <div>
                 <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">{viewingRoom.name}</h3>
-                <span className="inline-block px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-mono font-bold text-xs rounded-md mt-1">
+                <span className="inline-block px-2.5 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold text-xs rounded-md mt-1">
                   Code: {viewingRoom.code}
                 </span>
               </div>
@@ -570,7 +601,7 @@ export const RoomManagementPage = () => {
                   type="button"
                   onClick={() => setImageInputMode('upload')}
                   className={`px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                    imageInputMode === 'upload' ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm' : 'text-slate-500'
+                    imageInputMode === 'upload' ? 'bg-white dark:bg-slate-900 text-brandPrimary shadow-sm' : 'text-slate-500'
                   }`}
                 >
                   <Upload className="w-3 h-3" /> Upload File
@@ -579,7 +610,7 @@ export const RoomManagementPage = () => {
                   type="button"
                   onClick={() => setImageInputMode('url')}
                   className={`px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                    imageInputMode === 'url' ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm' : 'text-slate-500'
+                    imageInputMode === 'url' ? 'bg-white dark:bg-slate-900 text-brandPrimary shadow-sm' : 'text-slate-500'
                   }`}
                 >
                   <LinkIcon className="w-3 h-3" /> Image URL
@@ -593,7 +624,7 @@ export const RoomManagementPage = () => {
                   type="file"
                   accept="image/*"
                   onChange={handleImageFileUpload}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brandPrimary/10 file:text-brandPrimary hover:file:bg-brandPrimary/20"
                 />
               </div>
             ) : (
@@ -687,7 +718,7 @@ export const RoomManagementPage = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold"
+              className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-sm font-semibold"
             >
               {drawerMode === 'create' ? 'Create Room' : 'Save Changes'}
             </button>
@@ -703,16 +734,16 @@ export const RoomManagementPage = () => {
       >
         {activeRoom && (
           <div className="space-y-6">
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800 flex justify-between items-center">
+            <div className="p-4 bg-brandPrimary/10 dark:bg-slate-900 rounded-xl border border-brandPrimary/20 flex justify-between items-center">
               <div>
-                <p className="text-xs text-emerald-700 dark:text-emerald-300 font-bold uppercase">Room Code: {activeRoom.code}</p>
+                <p className="text-xs text-brandPrimary font-bold uppercase">Room Code: {activeRoom.code}</p>
                 <p className="text-sm font-extrabold text-slate-900 dark:text-white mt-0.5">
                   {roomMembers.length} / {activeRoom.maxMembers} Members Assigned
                 </p>
               </div>
               <button
                 onClick={() => setIsAssignDrawerOpen(true)}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1"
+                className="px-3 py-1.5 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-lg text-xs font-bold flex items-center gap-1"
               >
                 <UserPlus className="w-3.5 h-3.5" /> Assign Users
               </button>
@@ -748,7 +779,7 @@ export const RoomManagementPage = () => {
                         {member.accumulatedPoints || 0} pts
                       </span>
                       <button
-                        onClick={() => setDeleteTarget({ type: 'member', roomId: activeRoom._id, id: member.userId?._id || member.userId, name: member.userId?.name || 'User' })}
+                        onClick={() => handleRemoveMemberClick(member)}
                         className="text-red-500 hover:text-red-700 p-1"
                         title="Remove member"
                       >
@@ -793,7 +824,7 @@ export const RoomManagementPage = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold"
+              className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-sm font-semibold"
             >
               Assign Members
             </button>

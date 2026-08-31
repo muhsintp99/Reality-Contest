@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Download, Search, RefreshCw, X, FileText
+  Download, Search, RefreshCw, X, FileText, Eye, CheckCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { setSubmissions, setLoading } from '../../store/roomCycleSlice';
 import { useAlert } from '../../context/AlertContext';
 import { RightDrawer } from '../../components/RightDrawer';
+import { CustomSelect } from '../../components/CustomSelect';
 
 export const SubmissionManagementPage = () => {
   const dispatch = useDispatch();
-  const { showAlert } = useAlert();
-  const { submissions, cycles, rooms, loading, pagination } = useSelector((state) => state.roomCycle);
+  const { showAlert, showConfirm, showSnackbar } = useAlert();
+  const { submissions, cycles, rooms, loading } = useSelector((state) => state.roomCycle);
 
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Pending');
@@ -19,7 +20,10 @@ export const SubmissionManagementPage = () => {
   const [page, setPage] = useState(1);
 
   const [isReviewDrawerOpen, setIsReviewDrawerOpen] = useState(false);
+  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [viewingSubmission, setViewingSubmission] = useState(null);
+
   const [reviewFormData, setReviewFormData] = useState({
     status: 'Approved',
     score: 100,
@@ -57,18 +61,18 @@ export const SubmissionManagementPage = () => {
     try {
       const res = await axios.put(`/api/admin/room-cycle/submissions/${selectedSubmission._id}/review`, reviewFormData);
       if (res.data?.success) {
-        showAlert('success', `Submission ${reviewFormData.status.toLowerCase()}!`);
+        showSnackbar(`Submission ${reviewFormData.status.toLowerCase()}!`, 'success');
         setIsReviewDrawerOpen(false);
         fetchSubmissions();
       }
     } catch (err) {
-      showAlert('error', err.response?.data?.message || 'Review failed');
+      showAlert(err.response?.data?.message || 'Review failed', 'error');
     }
   };
 
   const exportSubmissions = () => {
     if (!submissions.length) {
-      showAlert('info', 'No submissions to export');
+      showAlert('No submissions to export', 'info');
       return;
     }
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(submissions, null, 2))}`;
@@ -82,12 +86,12 @@ export const SubmissionManagementPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
+      {/* Top Header matching RoomManagementPage */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Submission Management</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Review user task submissions, assign scores/bonus/penalty, provide feedback, and export evaluation reports.
+            Review member task submissions, assign scores/bonus/penalty, provide feedback, and export evaluation reports.
           </p>
         </div>
         <button
@@ -98,7 +102,7 @@ export const SubmissionManagementPage = () => {
         </button>
       </div>
 
-      {/* Filters */}
+      {/* Filters matching RoomManagementPage */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
           <div className="relative flex-1 max-w-md">
@@ -108,24 +112,25 @@ export const SubmissionManagementPage = () => {
               placeholder="Search member name or task..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none"
             />
           </div>
-          <select
+          <CustomSelect
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Pending">Pending Review</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Resubmit_Requested">Resubmit Requested</option>
-          </select>
+            onChange={setSelectedStatus}
+            options={[
+              { value: 'All', label: 'All Statuses' },
+              { value: 'Pending', label: 'Pending Review ⏳' },
+              { value: 'Approved', label: 'Approved ✅' },
+              { value: 'Rejected', label: 'Rejected ❌' },
+              { value: 'Resubmit_Requested', label: 'Resubmit Requested 🔄' }
+            ]}
+            className="w-52"
+          />
         </div>
       </div>
 
-      {/* Datatable */}
+      {/* Datatable matching RoomManagementPage */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-12 text-center text-slate-500 dark:text-slate-400">
@@ -149,7 +154,7 @@ export const SubmissionManagementPage = () => {
                   <th className="p-4">Submission Content</th>
                   <th className="p-4">Score / Final Pts</th>
                   <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Action</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -195,22 +200,34 @@ export const SubmissionManagementPage = () => {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedSubmission(sub);
-                          setReviewFormData({
-                            status: 'Approved',
-                            score: sub.taskId?.points || 100,
-                            bonus: 0,
-                            penalty: 0,
-                            feedback: sub.feedback || ''
-                          });
-                          setIsReviewDrawerOpen(true);
-                        }}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold"
-                      >
-                        Review
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => {
+                            setViewingSubmission(sub);
+                            setIsDetailsDrawerOpen(true);
+                          }}
+                          title="View Submission Details"
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedSubmission(sub);
+                            setReviewFormData({
+                              status: 'Approved',
+                              score: sub.taskId?.points || 100,
+                              bonus: 0,
+                              penalty: 0,
+                              feedback: sub.feedback || ''
+                            });
+                            setIsReviewDrawerOpen(true);
+                          }}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm"
+                        >
+                          Review
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -219,6 +236,59 @@ export const SubmissionManagementPage = () => {
           </div>
         )}
       </div>
+
+      {/* Submission Full Details Drawer */}
+      <RightDrawer
+        isOpen={isDetailsDrawerOpen}
+        onClose={() => setIsDetailsDrawerOpen(false)}
+        title={viewingSubmission ? `Submission: ${viewingSubmission.taskId?.title}` : 'Submission Details'}
+      >
+        {viewingSubmission && (
+          <div className="space-y-6">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/50 rounded-2xl border border-emerald-200 dark:border-emerald-800">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 font-bold uppercase">Member: {viewingSubmission.userId?.name}</p>
+              <h3 className="font-extrabold text-slate-900 dark:text-white text-base mt-1">Task: {viewingSubmission.taskId?.title}</h3>
+              <p className="text-xs text-slate-500 mt-1">Room: {viewingSubmission.roomId?.name} ({viewingSubmission.roomId?.code})</p>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Submitted Content</h4>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 font-mono text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
+                {viewingSubmission.content || 'File Submission Attachment'}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Awarded Score</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">+{viewingSubmission.score || 0} pts</span>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                <span className="text-slate-500 font-medium block">Final Points</span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm">{viewingSubmission.finalPoints || 0} pts</span>
+              </div>
+            </div>
+
+            {viewingSubmission.feedback && (
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Admin Feedback</h4>
+                <p className="text-xs text-slate-700 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                  {viewingSubmission.feedback}
+                </p>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                onClick={() => setIsDetailsDrawerOpen(false)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl font-bold text-xs"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        )}
+      </RightDrawer>
 
       {/* Review Submission Drawer */}
       <RightDrawer
@@ -238,15 +308,15 @@ export const SubmissionManagementPage = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status Decision</label>
-              <select
+              <CustomSelect
                 value={reviewFormData.status}
-                onChange={(e) => setReviewFormData({ ...reviewFormData, status: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              >
-                <option value="Approved">Approve</option>
-                <option value="Rejected">Reject</option>
-                <option value="Resubmit_Requested">Request Resubmission</option>
-              </select>
+                onChange={(val) => setReviewFormData({ ...reviewFormData, status: val })}
+                options={[
+                  { value: 'Approved', label: 'Approve ✅' },
+                  { value: 'Rejected', label: 'Reject ❌' },
+                  { value: 'Resubmit_Requested', label: 'Request Resubmission 🔄' }
+                ]}
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-3">
