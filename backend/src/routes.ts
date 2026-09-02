@@ -241,8 +241,16 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/admin/surveys/:id', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), moduleManagementController.deleteSurvey);
   router.patch('/admin/surveys/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), moduleManagementController.toggleSurveyStatus);
 
-  // Tasks REST APIs
+  // Tasks REST APIs (/api/tasks & /api/admin/tasks)
+  router.get('/tasks', authenticate, moduleManagementController.listTasks);
+  router.get('/tasks/:id', authenticate, moduleManagementController.getTaskById);
+  router.post('/tasks', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.createTask);
+  router.put('/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.updateTask);
+  router.delete('/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.deleteTask);
+  router.patch('/tasks/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.toggleTaskStatus);
+
   router.get('/admin/tasks', authenticate, moduleManagementController.listTasks);
+  router.get('/admin/tasks/:id', authenticate, moduleManagementController.getTaskById);
   router.post('/admin/tasks', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.createTask);
   router.put('/admin/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.updateTask);
   router.delete('/admin/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.deleteTask);

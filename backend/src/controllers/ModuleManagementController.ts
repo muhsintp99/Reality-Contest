@@ -142,6 +142,17 @@ export class ModuleManagementController {
     }
   };
 
+  getTaskById = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const { id } = req.params;
+      const task = await Task.findById(id);
+      if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+      return res.json({ success: true, data: task });
+    } catch (err: any) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+  };
+
   createTask = async (req: Request, res: Response): Promise<Response> => {
     try {
       const task = await Task.create({

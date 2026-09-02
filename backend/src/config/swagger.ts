@@ -27,7 +27,8 @@ export const swaggerDocument = {
     { name: '9. Question Bank & Quiz Builder', description: 'Question bank CRUD, question pools, bulk imports, and random selection' },
     { name: '10. CMS & Social Media', description: 'CMS social links, platform names, user handles, logos, and legal docs' },
     { name: '11. Bi-Weekly Room Cycle Module', description: 'Complete REST API endpoints for Rooms, 10-Cycle Blueprint, Submissions Evaluation, Leaderboard, Rewards, and Settings' },
-    { name: '12. Grand Contest Management', description: 'Grand Contest creation, task connections, analytics, and lifecycle management' }
+    { name: '12. Grand Contest Management', description: 'Grand Contest creation, task connections, analytics, and lifecycle management' },
+    { name: '13. Task Management', description: 'Complete REST API endpoints for Task creation, listing, details lookup, status toggle, and deletion' }
   ],
   components: {
     securitySchemes: {
@@ -185,6 +186,36 @@ export const swaggerDocument = {
             enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Registration Closed', 'Live', 'Completed', 'Maintenance', 'Cancelled'], 
             example: 'Registration Open' 
           },
+          createdAt: { type: 'string', format: 'date-time', example: '2026-09-02T12:00:00.000Z' },
+          updatedAt: { type: 'string', format: 'date-time', example: '2026-09-02T12:00:00.000Z' }
+        }
+      },
+      TaskResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789abc' },
+          title: { type: 'string', example: 'Daily Creative Video Challenge' },
+          description: { type: 'string', example: 'Record a 30-second video explaining your strategy.' },
+          instructions: { type: 'string', example: 'Ensure clear audio and steady camera.' },
+          mediaUrl: { type: 'string', example: '/uploads/tasks/cover_1723630000.png' },
+          taskType: { 
+            type: 'string', 
+            enum: ['Quiz', 'Creative', 'Photo', 'Video', 'Document', 'AI Prompt', 'Puzzle', 'Logic', 'Survey'], 
+            example: 'Video' 
+          },
+          submissionType: { 
+            type: 'string', 
+            enum: ['Text', 'Image', 'Video', 'PDF', 'Document', 'URL', 'ZIP'], 
+            example: 'Video' 
+          },
+          points: { type: 'number', example: 100 },
+          bonusPoints: { type: 'number', example: 25 },
+          penaltyPoints: { type: 'number', example: 0 },
+          maxAttempts: { type: 'number', example: 3 },
+          reviewType: { type: 'string', enum: ['Manual', 'AI', 'Auto'], example: 'AI' },
+          status: { type: 'string', enum: ['Draft', 'Published', 'Running', 'Completed', 'Archived'], example: 'Published' },
+          isMandatory: { type: 'boolean', example: true },
+          order: { type: 'number', example: 1 },
           createdAt: { type: 'string', format: 'date-time', example: '2026-09-02T12:00:00.000Z' },
           updatedAt: { type: 'string', format: 'date-time', example: '2026-09-02T12:00:00.000Z' }
         }
@@ -3174,6 +3205,376 @@ export const swaggerDocument = {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Grand Contest duplicated successfully' },
                     data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/tasks': {
+      get: {
+        tags: ['13. Task Management'],
+        summary: 'List All Tasks',
+        description: 'Retrieves all tasks with optional search filtering by title/description and status filter.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'search', in: 'query', description: 'Search term for title or description', schema: { type: 'string', example: 'Creative' } },
+          { name: 'status', in: 'query', description: 'Filter by task status', schema: { type: 'string', enum: ['All', 'Draft', 'Published', 'Running', 'Completed', 'Archived'], example: 'Published' } }
+        ],
+        responses: {
+          200: {
+            description: 'List of tasks retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    count: { type: 'integer', example: 5 },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/TaskResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['13. Task Management'],
+        summary: 'Create New Task',
+        description: 'Creates a new Task record for room cycles, grand contests, or standalone challenges.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title'],
+                properties: {
+                  title: { type: 'string', example: 'Daily Creative Video Challenge' },
+                  description: { type: 'string', example: 'Record a 30-second video explaining your strategy.' },
+                  instructions: { type: 'string', example: 'Ensure clear audio and steady camera.' },
+                  mediaUrl: { type: 'string', example: '/uploads/tasks/cover_1723630000.png' },
+                  taskType: { 
+                    type: 'string', 
+                    enum: ['Quiz', 'Creative', 'Photo', 'Video', 'Document', 'AI Prompt', 'Puzzle', 'Logic', 'Survey'], 
+                    example: 'Video',
+                    default: 'Quiz'
+                  },
+                  submissionType: { 
+                    type: 'string', 
+                    enum: ['Text', 'Image', 'Video', 'PDF', 'Document', 'URL', 'ZIP'], 
+                    example: 'Video',
+                    default: 'Video'
+                  },
+                  points: { type: 'number', example: 100, default: 0 },
+                  bonusPoints: { type: 'number', example: 25, default: 0 },
+                  penaltyPoints: { type: 'number', example: 0, default: 0 },
+                  maxAttempts: { type: 'number', example: 3, default: 1 },
+                  reviewType: { type: 'string', enum: ['Manual', 'AI', 'Auto'], example: 'AI', default: 'Manual' },
+                  status: { type: 'string', enum: ['Draft', 'Published', 'Running', 'Completed', 'Archived'], example: 'Published', default: 'Published' },
+                  isMandatory: { type: 'boolean', example: true, default: true },
+                  order: { type: 'number', example: 1, default: 1 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Task created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
+    '/api/tasks/{id}': {
+      get: {
+        tags: ['13. Task Management'],
+        summary: 'Get Task Details by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, description: 'MongoDB ObjectID of the task', schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        responses: {
+          200: {
+            description: 'Task details retrieved.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          },
+          404: { description: 'Task not found.' }
+        }
+      },
+      put: {
+        tags: ['13. Task Management'],
+        summary: 'Update Task Details',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', example: 'Updated Creative Challenge' },
+                  description: { type: 'string' },
+                  instructions: { type: 'string' },
+                  points: { type: 'number', example: 150 },
+                  bonusPoints: { type: 'number', example: 30 },
+                  status: { type: 'string', example: 'Published' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Task updated successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        tags: ['13. Task Management'],
+        summary: 'Delete Task',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        responses: {
+          200: {
+            description: 'Task deleted successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task deleted successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/tasks/{id}/status': {
+      patch: {
+        tags: ['13. Task Management'],
+        summary: 'Toggle Task Status (Published <-> Archived)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        responses: {
+          200: {
+            description: 'Task status toggled successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/tasks': {
+      get: {
+        tags: ['13. Task Management'],
+        summary: 'List All Admin Tasks',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'search', in: 'query', schema: { type: 'string', example: 'Creative' } },
+          { name: 'status', in: 'query', schema: { type: 'string', example: 'Published' } }
+        ],
+        responses: {
+          200: {
+            description: 'List of admin tasks retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    count: { type: 'integer', example: 5 },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/TaskResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['13. Task Management'],
+        summary: 'Create New Admin Task',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title'],
+                properties: {
+                  title: { type: 'string', example: 'Admin Quiz Challenge' },
+                  description: { type: 'string', example: 'Complete admin quiz' },
+                  points: { type: 'number', example: 100 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Admin Task created.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/tasks/{id}': {
+      get: {
+        tags: ['13. Task Management'],
+        summary: 'Get Admin Task Details by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        responses: {
+          200: {
+            description: 'Admin Task details.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['13. Task Management'],
+        summary: 'Update Admin Task',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', example: 'Updated Admin Task' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Admin Task updated.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        tags: ['13. Task Management'],
+        summary: 'Delete Admin Task',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        responses: {
+          200: {
+            description: 'Admin Task deleted.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task deleted successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/tasks/{id}/status': {
+      patch: {
+        tags: ['13. Task Management'],
+        summary: 'Toggle Admin Task Status',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789abc' } }],
+        responses: {
+          200: {
+            description: 'Admin Task status toggled.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
                   }
                 }
               }
