@@ -157,21 +157,36 @@ export const swaggerDocument = {
       GrandContestResponse: {
         type: 'object',
         properties: {
-          _id: { type: 'string', example: '66bc91f24d9e...' },
+          _id: { type: 'string', example: '66bc91f24d9e123456789abc' },
           contestId: { type: 'string', example: 'GNC-2026-98124' },
           title: { type: 'string', example: 'Grand Championship Season 1' },
           description: { type: 'string', example: 'Major competition featuring connected task challenges.' },
-          rules: { type: 'string', example: '1. Submit tasks before timer expiration.' },
-          guidelines: { type: 'string', example: '1. Ensure all file attachments meet max size rules.' },
+          rules: { type: 'string', example: '1. Complete all assigned task challenges before deadline.' },
+          guidelines: { type: 'string', example: '1. Ensure accurate file format and size.' },
           durationDays: { type: 'number', example: 14 },
           prizePool: { type: 'number', example: 100000 },
           entryFee: { type: 'number', example: 499 },
           entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Cash' },
           isFree: { type: 'boolean', example: false },
+          entryFeeCoins: { type: 'number', example: 0 },
+          coinsReward: { type: 'number', example: 0 },
           tasksCount: { type: 'number', example: 5 },
-          tasks: { type: 'array', items: { type: 'string' } },
-          bannerUrl: { type: 'string', example: 'https://example.com/banner.png' },
-          status: { type: 'string', enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Live', 'Completed'], example: 'Registration Open' }
+          tasks: { type: 'array', items: { type: 'string' }, example: ['66bc91f24d9e987654321task'] },
+          bannerUrl: { type: 'string', example: '/uploads/grand-contests/banner_1723630000.png' },
+          imageUrl: { type: 'string', example: '/uploads/grand-contests/banner_1723630000.png' },
+          videoUrl: { type: 'string', example: '' },
+          fileAttachmentUrl: { type: 'string', example: '' },
+          categories: { type: 'array', items: { type: 'string' }, example: ['Technology & Coding'] },
+          sponsors: { type: 'array', items: { type: 'string' }, example: ['Haka Sponsor'] },
+          startDate: { type: 'string', format: 'date-time', example: '2026-09-02T00:00:00.000Z' },
+          endDate: { type: 'string', format: 'date-time', example: '2026-09-16T00:00:00.000Z' },
+          status: { 
+            type: 'string', 
+            enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Registration Closed', 'Live', 'Completed', 'Maintenance', 'Cancelled'], 
+            example: 'Registration Open' 
+          },
+          createdAt: { type: 'string', format: 'date-time', example: '2026-09-02T12:00:00.000Z' },
+          updatedAt: { type: 'string', format: 'date-time', example: '2026-09-02T12:00:00.000Z' }
         }
       },
       QuestionResponse: {
@@ -2737,16 +2752,54 @@ export const swaggerDocument = {
         responses: { 200: { description: 'Module KPIs, top rooms, and top performers.' } }
       }
     },
-    '/api/admin/grand-contests': {
+    '/api/grand-contests': {
       get: {
         tags: ['12. Grand Contest Management'],
         summary: 'List All Grand Contests',
+        description: 'Retrieves paginated list of Grand Contests with connected tasks populated.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'List of grand contests.' } }
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', example: 10 } },
+          { name: 'search', in: 'query', schema: { type: 'string', example: 'Season 1' } },
+          { name: 'status', in: 'query', schema: { type: 'string', example: 'Registration Open' } },
+          { name: 'category', in: 'query', schema: { type: 'string', example: 'Technology' } }
+        ],
+        responses: {
+          200: {
+            description: 'Grand Contests list retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        contests: { type: 'array', items: { $ref: '#/components/schemas/GrandContestResponse' } },
+                        pagination: {
+                          type: 'object',
+                          properties: {
+                            total: { type: 'integer', example: 12 },
+                            page: { type: 'integer', example: 1 },
+                            limit: { type: 'integer', example: 10 },
+                            totalPages: { type: 'integer', example: 2 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       post: {
         tags: ['12. Grand Contest Management'],
-        summary: 'Create New Grand Contest with Tasks',
+        summary: 'Create New Grand Contest (Add Grand Contest)',
+        description: 'Creates a new Grand Contest record with connected task IDs, rules, prize pool, banner URL, and schedule parameters.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2756,50 +2809,377 @@ export const swaggerDocument = {
                 type: 'object',
                 required: ['title'],
                 properties: {
-                  title: { type: 'string', example: 'Grand Championship 2026' },
-                  description: { type: 'string' },
-                  rules: { type: 'string' },
-                  guidelines: { type: 'string' },
-                  durationDays: { type: 'number', example: 14 },
-                  prizePool: { type: 'number', example: 50000 },
-                  entryFee: { type: 'number', example: 499 },
-                  entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Cash' },
-                  tasks: { type: 'array', items: { type: 'string' } },
-                  categories: { type: 'array', items: { type: 'string' } },
-                  bannerUrl: { type: 'string' }
+                  contestId: { type: 'string', example: 'GNC-2026-98124', description: 'Unique custom ID (auto-generated if omitted)' },
+                  title: { type: 'string', example: 'Grand Championship Season 1', description: 'Contest title' },
+                  description: { type: 'string', example: 'Configure contest rules, guidelines, connected tasks & prize pool' },
+                  rules: { type: 'string', example: '1. Complete all assigned task challenges before deadline.' },
+                  guidelines: { type: 'string', example: '1. Ensure accurate file format and size.' },
+                  durationDays: { type: 'number', example: 14, default: 14 },
+                  prizePool: { type: 'number', example: 100000, default: 0 },
+                  entryFee: { type: 'number', example: 499, default: 0 },
+                  entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Cash', default: 'Cash' },
+                  isFree: { type: 'boolean', example: false, default: false },
+                  entryFeeCoins: { type: 'number', example: 0, default: 0 },
+                  coinsReward: { type: 'number', example: 0, default: 0 },
+                  tasks: { type: 'array', items: { type: 'string' }, example: ['66bc91f24d9e987654321task'], description: 'Connected Task ObjectIDs' },
+                  bannerUrl: { type: 'string', example: '/uploads/grand-contests/banner_1723630000.png' },
+                  imageUrl: { type: 'string', example: '/uploads/grand-contests/banner_1723630000.png' },
+                  videoUrl: { type: 'string', example: '' },
+                  fileAttachmentUrl: { type: 'string', example: '' },
+                  categories: { type: 'array', items: { type: 'string' }, example: ['Technology & Coding'] },
+                  sponsors: { type: 'array', items: { type: 'string' }, example: ['Haka Sponsor'] },
+                  startDate: { type: 'string', format: 'date-time', example: '2026-09-02T00:00:00.000Z' },
+                  endDate: { type: 'string', format: 'date-time', example: '2026-09-16T00:00:00.000Z' },
+                  status: { 
+                    type: 'string', 
+                    enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Registration Closed', 'Live', 'Completed', 'Maintenance', 'Cancelled'],
+                    example: 'Registration Open',
+                    default: 'Registration Open'
+                  }
                 }
               }
             }
           }
         },
-        responses: { 201: { description: 'Grand Contest created.' } }
+        responses: {
+          201: {
+            description: 'Grand Contest created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest created successfully' },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
+        }
       }
     },
-    '/api/admin/grand-contests/{id}': {
+    '/api/grand-contests/{id}': {
       get: {
         tags: ['12. Grand Contest Management'],
         summary: 'Get Grand Contest Details by ID',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Grand Contest details object.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, description: 'MongoDB ObjectId or custom contestId', schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: {
+            description: 'Grand Contest details object.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          },
+          404: { description: 'Grand Contest not found.' }
+        }
       },
       put: {
         tags: ['12. Grand Contest Management'],
         summary: 'Update Grand Contest Details',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        parameters: [{ name: 'id', in: 'path', required: true, description: 'MongoDB ObjectId or custom contestId', schema: { type: 'string', example: 'GNC-2026-98124' } }],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { type: 'object' } } }
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', example: 'Updated Grand Championship' },
+                  description: { type: 'string' },
+                  rules: { type: 'string' },
+                  guidelines: { type: 'string' },
+                  prizePool: { type: 'number', example: 150000 },
+                  entryFee: { type: 'number', example: 499 },
+                  tasks: { type: 'array', items: { type: 'string' } },
+                  bannerUrl: { type: 'string' },
+                  status: { type: 'string', example: 'Active' }
+                }
+              }
+            }
+          }
         },
-        responses: { 200: { description: 'Grand Contest updated.' } }
+        responses: {
+          200: {
+            description: 'Grand Contest updated successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest updated successfully' },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       delete: {
         tags: ['12. Grand Contest Management'],
         summary: 'Delete Grand Contest',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Grand Contest deleted.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: {
+            description: 'Grand Contest deleted.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest deleted successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/duplicate': {
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Duplicate Grand Contest',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          201: {
+            description: 'Grand Contest duplicated as copy.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest duplicated successfully' },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/grand-contests': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'List All Grand Contests (Admin)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of grand contests.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        contests: { type: 'array', items: { $ref: '#/components/schemas/GrandContestResponse' } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Create New Grand Contest (Admin Add Grand Contest)',
+        description: 'Creates a new Grand Contest record with connected tasks, rules, prize pool, banner URL, and schedule parameters.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title'],
+                properties: {
+                  contestId: { type: 'string', example: 'GNC-2026-98124' },
+                  title: { type: 'string', example: 'Grand Championship Season 1' },
+                  description: { type: 'string', example: 'Configure contest rules, guidelines, connected tasks & prize pool' },
+                  rules: { type: 'string', example: '1. Complete all assigned task challenges before deadline.' },
+                  guidelines: { type: 'string', example: '1. Ensure accurate file format and size.' },
+                  durationDays: { type: 'number', example: 14 },
+                  prizePool: { type: 'number', example: 100000 },
+                  entryFee: { type: 'number', example: 499 },
+                  entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Cash' },
+                  isFree: { type: 'boolean', example: false },
+                  entryFeeCoins: { type: 'number', example: 0 },
+                  coinsReward: { type: 'number', example: 0 },
+                  tasks: { type: 'array', items: { type: 'string' }, example: ['66bc91f24d9e987654321task'] },
+                  bannerUrl: { type: 'string', example: '/uploads/grand-contests/banner_1723630000.png' },
+                  imageUrl: { type: 'string', example: '/uploads/grand-contests/banner_1723630000.png' },
+                  videoUrl: { type: 'string', example: '' },
+                  fileAttachmentUrl: { type: 'string', example: '' },
+                  categories: { type: 'array', items: { type: 'string' }, example: ['Technology'] },
+                  sponsors: { type: 'array', items: { type: 'string' }, example: ['Haka Sponsor'] },
+                  startDate: { type: 'string', format: 'date-time', example: '2026-09-02T00:00:00.000Z' },
+                  endDate: { type: 'string', format: 'date-time', example: '2026-09-16T00:00:00.000Z' },
+                  status: { 
+                    type: 'string', 
+                    enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Registration Closed', 'Live', 'Completed', 'Maintenance', 'Cancelled'],
+                    example: 'Registration Open'
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Grand Contest created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest created successfully' },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/grand-contests/{id}': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Get Grand Contest Details by ID (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: {
+            description: 'Grand Contest details object.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Update Grand Contest Details (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', example: 'Updated Grand Championship' },
+                  description: { type: 'string' },
+                  rules: { type: 'string' },
+                  guidelines: { type: 'string' },
+                  prizePool: { type: 'number', example: 150000 },
+                  entryFee: { type: 'number', example: 499 },
+                  tasks: { type: 'array', items: { type: 'string' } },
+                  bannerUrl: { type: 'string' },
+                  status: { type: 'string', example: 'Active' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Grand Contest updated successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest updated successfully' },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      delete: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Delete Grand Contest (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: {
+            description: 'Grand Contest deleted successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest deleted successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/grand-contests/{id}/duplicate': {
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Duplicate Grand Contest (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          201: {
+            description: 'Grand Contest duplicated as copy.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Grand Contest duplicated successfully' },
+                    data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 
-export const TimePicker12h = ({ value, onChange, label }) => {
+export const TimePicker12h = ({ value, onChange, label, disabled = false }) => {
   // Parse initial 12h string value (e.g. "09:00 AM" or "09:00")
   const parseValue = (valStr) => {
     if (!valStr) return { hour: '09', minute: '00', period: 'AM' };
@@ -44,6 +44,7 @@ export const TimePicker12h = ({ value, onChange, label }) => {
   }, [value]);
 
   const updateFormattedTime = (newH, newM, newP) => {
+    if (disabled) return;
     const formatted = `${newH}:${newM} ${newP}`;
     onChange(formatted);
   };
@@ -61,6 +62,7 @@ export const TimePicker12h = ({ value, onChange, label }) => {
   };
 
   const togglePeriod = (newP) => {
+    if (disabled) return;
     setPeriod(newP);
     updateFormattedTime(hour, minute, newP);
   };
@@ -69,59 +71,63 @@ export const TimePicker12h = ({ value, onChange, label }) => {
   const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55', '59'];
 
   return (
-    <div className="space-y-1 text-left">
-      {label && <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">{label}</label>}
-      <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 p-1.5 rounded-xl text-xs">
-        <Clock className="w-4 h-4 text-amber-500 ml-1.5 shrink-0" />
+    <div className="space-y-1.5 text-left">
+      {label && <label className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">{label}</label>}
+      <div className={`flex items-center gap-2 bg-slate-900/90 dark:bg-[#0f172a]/95 backdrop-blur-md border ${disabled ? 'opacity-50 cursor-not-allowed border-slate-800' : 'border-slate-800 hover:border-emerald-500/50 focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20'} p-2 rounded-xl text-xs transition-all duration-200`}>
+        <Clock className="w-4 h-4 text-emerald-400 ml-1 shrink-0" />
         
         {/* Hour Select */}
         <select
+          disabled={disabled}
           value={hour}
           onChange={handleHourChange}
-          className="bg-transparent font-mono font-bold text-slate-900 dark:text-white text-xs focus:outline-none cursor-pointer py-1"
+          className="bg-slate-950/80 border border-slate-800/80 rounded-lg px-2 py-1 font-mono font-bold text-white text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
         >
           {HOURS.map(h => (
-            <option key={h} value={h} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+            <option key={h} value={h} className="bg-slate-900 text-white">
               {h}
             </option>
           ))}
         </select>
 
-        <span className="font-bold text-slate-400 dark:text-slate-500 font-mono">:</span>
+        <span className="font-bold text-emerald-400 font-mono">:</span>
 
         {/* Minute Select */}
         <select
+          disabled={disabled}
           value={minute}
           onChange={handleMinuteChange}
-          className="bg-transparent font-mono font-bold text-slate-900 dark:text-white text-xs focus:outline-none cursor-pointer py-1"
+          className="bg-slate-950/80 border border-slate-800/80 rounded-lg px-2 py-1 font-mono font-bold text-white text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
         >
           {MINUTES.map(m => (
-            <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+            <option key={m} value={m} className="bg-slate-900 text-white">
               {m}
             </option>
           ))}
         </select>
 
         {/* AM / PM Toggle Pills */}
-        <div className="flex items-center gap-0.5 bg-slate-200/60 dark:bg-white/10 p-0.5 rounded-lg ml-auto">
+        <div className="flex items-center gap-0.5 bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/80 ml-auto">
           <button
             type="button"
+            disabled={disabled}
             onClick={() => togglePeriod('AM')}
-            className={`px-2 py-0.5 rounded text-[10px] font-extrabold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md text-[10px] font-black transition-all duration-150 cursor-pointer ${
               period === 'AM'
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             AM
           </button>
           <button
             type="button"
+            disabled={disabled}
             onClick={() => togglePeriod('PM')}
-            className={`px-2 py-0.5 rounded text-[10px] font-extrabold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md text-[10px] font-black transition-all duration-150 cursor-pointer ${
               period === 'PM'
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             PM

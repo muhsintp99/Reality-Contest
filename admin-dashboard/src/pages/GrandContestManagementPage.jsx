@@ -108,7 +108,7 @@ export const GrandContestManagementPage = () => {
             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
-            onClick={() => navigate('/admin/grand-contests/wizard')}
+            onClick={() => navigate('/admin-dashboard/grand-contests/wizard')}
             className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-emerald-500/20"
           >
             <Plus className="w-5 h-5" />
@@ -180,7 +180,7 @@ export const GrandContestManagementPage = () => {
           <h3 className="text-white font-bold text-lg mb-1">No Grand Contests Found</h3>
           <p className="text-slate-400 text-sm mb-4">Click below to create your first Grand Contest connected with tasks.</p>
           <button
-            onClick={() => navigate('/admin/grand-contests/wizard')}
+            onClick={() => navigate('/admin-dashboard/grand-contests/wizard')}
             className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition"
           >
             Create Grand Contest
@@ -244,7 +244,7 @@ export const GrandContestManagementPage = () => {
                   </button>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => navigate(`/admin/grand-contests/wizard?edit=${contest._id || contest.contestId}`)}
+                      onClick={() => navigate(`/admin-dashboard/grand-contests/wizard?edit=${contest._id || contest.contestId}`)}
                       className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
                       title="Edit Grand Contest"
                     >

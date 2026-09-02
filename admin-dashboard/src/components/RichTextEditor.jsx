@@ -8,7 +8,7 @@ export const RichTextEditor = ({
   label = 'Contest Rules & Guidelines',
   value = '',
   onChange,
-  placeholder = 'Enter contest rules, negative marking guidelines, disqualification policies...',
+  placeholder = 'Enter rules, negative marking guidelines, policies...',
   rows = 4
 }) => {
   const textareaRef = useRef(null);
@@ -37,7 +37,6 @@ export const RichTextEditor = ({
 
     const start = textarea.selectionStart;
     const beforeCursor = value.substring(0, start);
-    const afterCursor = value.substring(start);
     const lastNewline = beforeCursor.lastIndexOf('\n');
 
     let newValue;
@@ -52,7 +51,7 @@ export const RichTextEditor = ({
   };
 
   const applyTemplate = () => {
-    const template = `1. Complete all quiz stages within the countdown timer limit.\n2. Negative marking -2 points applied for each wrong attempt.\n3. Minimum 75% qualifying score required to advance.\n4. Anti-cheat system: Tab switching will trigger immediate disqualification.\n5. Jury decision is final for all leaderboard payouts.`;
+    const template = `1. Complete all quiz stages within the countdown timer limit.\n2. Verify proof of submission files before submitting.\n3. Anti-cheat rule: Exit or tab switching results in disqualification.\n4. Decisions made by contest management are final.`;
     onChange(template);
   };
 
@@ -64,29 +63,29 @@ export const RichTextEditor = ({
     <div className="space-y-1.5 text-left">
       {label && (
         <div className="flex justify-between items-center mb-1">
-          <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             {label}
           </label>
           <button
             type="button"
             onClick={applyTemplate}
-            className="text-[10px] text-brandPrimary hover:text-brandPrimary/80 font-bold flex items-center gap-1 transition-colors"
+            className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 transition-colors cursor-pointer"
           >
-            <Sparkles className="w-3 h-3 text-amber-500" /> Insert Rules Template
+            <Sparkles className="w-3 h-3 text-amber-400" /> Insert Template
           </button>
         </div>
       )}
 
-      {/* Editor Main Container */}
-      <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900/80 shadow-sm transition-all focus-within:border-brandPrimary focus-within:ring-1 focus-within:ring-brandPrimary/30">
+      {/* Editor Container */}
+      <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-900/80 backdrop-blur-md shadow-lg transition-all focus-within:border-emerald-500/80 focus-within:ring-2 focus-within:ring-emerald-500/20">
         {/* Formatting Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-1 p-2 bg-slate-100 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300">
+        <div className="flex flex-wrap items-center justify-between gap-1 p-2 bg-slate-950/80 border-b border-slate-800 text-slate-300">
           <div className="flex items-center gap-1 flex-wrap">
             <button
               type="button"
               onClick={() => insertFormatting('**', '**')}
               title="Bold"
-              className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-700 dark:text-slate-200"
+              className="p-1.5 hover:bg-slate-800 hover:text-white rounded-lg transition-colors cursor-pointer"
             >
               <Bold className="w-3.5 h-3.5" />
             </button>
@@ -94,7 +93,7 @@ export const RichTextEditor = ({
               type="button"
               onClick={() => insertFormatting('*', '*')}
               title="Italic"
-              className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-700 dark:text-slate-200"
+              className="p-1.5 hover:bg-slate-800 hover:text-white rounded-lg transition-colors cursor-pointer"
             >
               <Italic className="w-3.5 h-3.5" />
             </button>
@@ -102,18 +101,18 @@ export const RichTextEditor = ({
               type="button"
               onClick={() => insertPrefixAtLineStart('### ')}
               title="Heading"
-              className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-700 dark:text-slate-200"
+              className="p-1.5 hover:bg-slate-800 hover:text-white rounded-lg transition-colors cursor-pointer"
             >
               <Heading className="w-3.5 h-3.5" />
             </button>
 
-            <div className="w-[1px] h-4 bg-slate-300 dark:bg-white/10 mx-1" />
+            <div className="w-[1px] h-4 bg-slate-800 mx-1" />
 
             <button
               type="button"
               onClick={() => insertPrefixAtLineStart('• ')}
               title="Bullet List"
-              className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-700 dark:text-slate-200"
+              className="p-1.5 hover:bg-slate-800 hover:text-white rounded-lg transition-colors cursor-pointer"
             >
               <List className="w-3.5 h-3.5" />
             </button>
@@ -121,7 +120,7 @@ export const RichTextEditor = ({
               type="button"
               onClick={() => insertPrefixAtLineStart('1. ')}
               title="Numbered List"
-              className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-700 dark:text-slate-200"
+              className="p-1.5 hover:bg-slate-800 hover:text-white rounded-lg transition-colors cursor-pointer"
             >
               <ListOrdered className="w-3.5 h-3.5" />
             </button>
@@ -129,7 +128,7 @@ export const RichTextEditor = ({
               type="button"
               onClick={() => insertPrefixAtLineStart('✓ ')}
               title="Check Rule"
-              className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-slate-700 dark:text-slate-200"
+              className="p-1.5 hover:bg-slate-800 hover:text-white rounded-lg transition-colors cursor-pointer"
             >
               <CheckSquare className="w-3.5 h-3.5" />
             </button>
@@ -137,7 +136,7 @@ export const RichTextEditor = ({
               type="button"
               onClick={() => insertPrefixAtLineStart('⚠️ ')}
               title="Warning Note"
-              className="p-1.5 hover:bg-slate-200 dark:hover:bg-white/10 rounded text-amber-500"
+              className="p-1.5 hover:bg-slate-800 text-amber-400 rounded-lg transition-colors cursor-pointer"
             >
               <AlertCircle className="w-3.5 h-3.5" />
             </button>
@@ -147,7 +146,7 @@ export const RichTextEditor = ({
             type="button"
             onClick={clearFormatting}
             title="Clear Text"
-            className="p-1.5 hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 rounded transition-colors text-[10px] flex items-center gap-1 font-semibold"
+            className="p-1.5 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 rounded-lg transition-colors text-[10px] flex items-center gap-1 font-semibold cursor-pointer"
           >
             <RotateCcw className="w-3 h-3" /> Clear
           </button>
@@ -160,13 +159,15 @@ export const RichTextEditor = ({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="w-full p-3 bg-transparent text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none resize-y font-mono leading-relaxed"
+          className="w-full p-3.5 bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none resize-y font-mono leading-relaxed"
         />
 
         {/* Bottom Status bar */}
-        <div className="flex justify-between items-center px-3 py-1 bg-slate-100/50 dark:bg-white/5 text-[10px] text-slate-400 border-t border-slate-200/50 dark:border-white/5">
-          <span className="flex items-center gap-1"><FileText className="w-3 h-3 text-brandPrimary" /> Formatting supported (Markdown / Plaintext)</span>
-          <span>{value.length} Characters</span>
+        <div className="flex justify-between items-center px-3.5 py-1.5 bg-slate-950/60 text-[10px] text-slate-400 border-t border-slate-800/80">
+          <span className="flex items-center gap-1.5">
+            <FileText className="w-3 h-3 text-emerald-400" /> Supports Markdown / Plaintext
+          </span>
+          <span className="font-mono">{value.length} Characters</span>
         </div>
       </div>
     </div>

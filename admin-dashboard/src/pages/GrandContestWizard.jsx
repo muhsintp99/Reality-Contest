@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Trophy, Coins, Calendar, ShieldAlert, Save, ArrowLeft, Image, CheckCircle2, FileText, Layers, Tag, RefreshCw, Clock, Sparkles } from 'lucide-react';
+import { Trophy, Calendar, Save, ArrowLeft, Layers, FileText, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
 import { MultiSelect } from '../components/MultiSelect';
 import { CustomSelect } from '../components/CustomSelect';
 import { RichTextEditor } from '../components/RichTextEditor';
-import { FileUploadPicker } from '../components/FileUploadPicker';
+import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const getLocalDateString = (date) => {
@@ -31,7 +31,6 @@ export const GrandContestWizard = () => {
   const [availableTasks, setAvailableTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [bannerFile, setBannerFile] = useState(null);
 
   const initialCustomId = useMemo(() => `GNC-${Math.floor(100000 + Math.random() * 900000)}`, []);
 
@@ -46,7 +45,7 @@ export const GrandContestWizard = () => {
         if (res?.data?.success) {
           const raw = res.data.data;
           const list = Array.isArray(raw?.tasks) ? raw.tasks : Array.isArray(raw) ? raw : [];
-          setAvailableTasks(list.map((t) => ({ value: t._id || t.id, label: `${t.title} (${t.taskType || 'Task'})` })));
+          setAvailableTasks(list.map((t) => ({ value: t._id || t.id, label: `${t.title || t.name || 'Task'} (${t.taskType || 'Task'})` })));
         }
       } catch (err) {
         console.error('Error loading tasks:', err);
@@ -80,18 +79,7 @@ export const GrandContestWizard = () => {
     onSubmit: async (values) => {
       setSubmitting(true);
       try {
-        let finalBannerUrl = values.bannerUrl;
-        if (bannerFile) {
-          const formData = new FormData();
-          formData.append('file', bannerFile);
-          const uploadRes = await axios.post('/api/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            withCredentials: true
-          }).catch(() => null);
-          if (uploadRes?.data?.url) {
-            finalBannerUrl = uploadRes.data.url;
-          }
-        }
+        const finalBannerUrl = await uploadPendingFile(values.bannerUrl, 'grand-contests');
 
         const payload = {
           contestId: values.customContestId,
@@ -101,11 +89,12 @@ export const GrandContestWizard = () => {
           guidelines: values.guidelines,
           durationDays: Number(values.durationDays) || 14,
           prizePool: Number(values.prizePool) || 0,
-          entryFee: Number(values.entryFee) || 0,
+          entryFee: values.entryFeeType === 'Free' ? 0 : (Number(values.entryFee) || 0),
           entryFeeType: values.entryFeeType,
           isFree: values.entryFeeType === 'Free' || values.isFree,
           tasks: values.selectedTasks,
           bannerUrl: finalBannerUrl,
+          imageUrl: finalBannerUrl,
           status: values.status,
           startDate: new Date(values.startDate),
           endDate: new Date(values.endDate)
@@ -124,7 +113,7 @@ export const GrandContestWizard = () => {
           }
           showSnackbar('Grand Contest created successfully!', 'success');
         }
-        navigate('/admin/grand-contests');
+        navigate('/admin-dashboard/grand-contests');
       } catch (err) {
         showSnackbar(err.response?.data?.message || 'Failed to save Grand Contest', 'error');
       } finally {
@@ -154,10 +143,10 @@ export const GrandContestWizard = () => {
             durationDays: String(c.durationDays || 14),
             prizePool: String(c.prizePool || 0),
             entryFee: String(c.entryFee || 0),
-            entryFeeType: c.entryFeeType || 'Cash',
+            entryFeeType: c.entryFeeType || (c.isFree ? 'Free' : 'Cash'),
             isFree: Boolean(c.isFree),
-            selectedTasks: Array.isArray(c.tasks) ? c.tasks.map((t) => (typeof t === 'object' ? t._id : t)) : [],
-            bannerUrl: c.bannerUrl || '',
+            selectedTasks: Array.isArray(c.tasks) ? c.tasks.map((t) => (typeof t === 'object' ? t._id || t.id : t)) : [],
+            bannerUrl: c.bannerUrl || c.imageUrl || '',
             status: c.status || 'Registration Open',
             startDate: getLocalDateString(c.startDate || new Date()),
             endDate: getLocalDateString(c.endDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000))
@@ -183,14 +172,35 @@ export const GrandContestWizard = () => {
     }
   };
 
+  const handleStartDateChange = (e) => {
+    const val = e.target.value;
+    formik.setFieldValue('startDate', val);
+    const days = Number(formik.values.durationDays) || 14;
+    if (val) {
+      const start = new Date(val);
+      const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+      formik.setFieldValue('endDate', getLocalDateString(end));
+    }
+  };
+
+  const handleEntryFeeTypeChange = (val) => {
+    formik.setFieldValue('entryFeeType', val);
+    if (val === 'Free') {
+      formik.setFieldValue('isFree', true);
+      formik.setFieldValue('entryFee', '0');
+    } else {
+      formik.setFieldValue('isFree', false);
+    }
+  };
+
   return (
     <div className="space-y-6 p-6 max-w-5xl mx-auto">
       {/* Top Header */}
       <div className="flex items-center justify-between bg-slate-900/80 p-5 rounded-2xl border border-slate-800 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/admin/grand-contests')}
-            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition"
+            onClick={() => navigate('/admin-dashboard/grand-contests')}
+            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -202,7 +212,7 @@ export const GrandContestWizard = () => {
         <button
           onClick={formik.handleSubmit}
           disabled={submitting || loading}
-          className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-emerald-500/20"
+          className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-emerald-500/20 cursor-pointer"
         >
           <Save className="w-4 h-4" />
           {submitting ? 'Saving...' : editId ? 'Update Contest' : 'Publish Grand Contest'}
@@ -261,6 +271,7 @@ export const GrandContestWizard = () => {
                   ]}
                   value={formik.values.status}
                   onChange={(val) => formik.setFieldValue('status', val)}
+                  className="w-full"
                 />
               </div>
               <div>
@@ -272,7 +283,8 @@ export const GrandContestWizard = () => {
                     { value: 'Cash', label: 'Cash (₹)' }
                   ]}
                   value={formik.values.entryFeeType}
-                  onChange={(val) => formik.setFieldValue('entryFeeType', val)}
+                  onChange={handleEntryFeeTypeChange}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -353,13 +365,14 @@ export const GrandContestWizard = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Entry Fee (₹)</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Entry Fee ({formik.values.entryFeeType === 'Coins' ? 'Coins' : '₹'})</label>
                 <input
                   type="number"
                   name="entryFee"
+                  disabled={formik.values.entryFeeType === 'Free'}
                   value={formik.values.entryFee}
                   onChange={formik.handleChange}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -378,7 +391,7 @@ export const GrandContestWizard = () => {
                   type="date"
                   name="startDate"
                   value={formik.values.startDate}
-                  onChange={formik.handleChange}
+                  onChange={handleStartDateChange}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -395,10 +408,12 @@ export const GrandContestWizard = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Banner Image Upload</label>
               <FileUploadPicker
-                onFileSelected={(file) => setBannerFile(file)}
-                existingUrl={formik.values.bannerUrl}
+                label="Banner Image Upload"
+                type="image"
+                folder="grand-contests"
+                value={formik.values.bannerUrl}
+                onChange={(val) => formik.setFieldValue('bannerUrl', val)}
               />
             </div>
           </div>

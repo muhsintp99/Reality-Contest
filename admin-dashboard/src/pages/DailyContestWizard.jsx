@@ -340,27 +340,16 @@ export const DailyContestWizard = () => {
                 }}
                 placeholder="Search & Select Multiple Categories..."
               />
-            <div>
-              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Contest Rules</label>
-              <textarea
-                name="rules"
-                rows={3}
-                value={formik.values.rules}
-                onChange={formik.handleChange}
-                placeholder="Enter rules for this daily contest..."
-                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
-              />
             </div>
 
             <div>
-              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Contest Guidelines & Terms</label>
-              <textarea
-                name="guidelines"
-                rows={3}
+              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">PARTICIPATION GUIDELINES & TERMS</label>
+              <RichTextEditor
+                label=""
                 value={formik.values.guidelines}
-                onChange={formik.handleChange}
+                onChange={(val) => formik.setFieldValue('guidelines', val)}
                 placeholder="Enter guidelines for participants..."
-                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
+                rows={3}
               />
             </div>
           </div>

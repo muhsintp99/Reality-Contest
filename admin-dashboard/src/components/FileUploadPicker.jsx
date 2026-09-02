@@ -15,7 +15,7 @@ export const FileUploadPicker = ({
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       processFile(file);
     }
@@ -67,36 +67,43 @@ export const FileUploadPicker = ({
 
   return (
     <div className="space-y-1.5 text-left">
-      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>
+      {label && (
+        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>
+      )}
       
       {/* Active Preview */}
       {value ? (
-        <div className="relative rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden bg-slate-50 dark:bg-slate-900/60 p-3 group">
+        <div className="relative rounded-2xl border border-slate-800 overflow-hidden bg-slate-900/80 backdrop-blur-md p-3 group transition-all duration-200 hover:border-slate-700">
           {type === 'image' && (
-            <div className="relative">
-              <img src={value} alt="Preview" className="w-full h-36 object-cover rounded-xl border border-slate-200 dark:border-white/10" />
+            <div className="relative overflow-hidden rounded-xl bg-slate-950 border border-slate-800/80">
+              <img src={value} alt="Preview" className="w-full h-40 object-cover rounded-xl transition-transform duration-300 group-hover:scale-102" />
+              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                <span className="text-xs text-white font-bold bg-slate-900/80 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
+                  Uploaded Image
+                </span>
+              </div>
             </div>
           )}
 
           {type === 'video' && (
-            <video src={value} controls className="w-full h-36 rounded-xl bg-black" />
+            <video src={value} controls className="w-full h-40 rounded-xl bg-black border border-slate-800" />
           )}
 
           {type === 'file' && (
-            <div className="flex items-center gap-3 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-              <FileText className="w-8 h-8 text-indigo-500 shrink-0" />
+            <div className="flex items-center gap-3.5 p-3.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+              <FileText className="w-8 h-8 text-emerald-400 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-800 dark:text-white truncate">{fileName || 'Uploaded Document'}</p>
-                <span className="text-[10px] text-emerald-500 font-semibold flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" /> Saved in public/uploads/{folder}/
+                <p className="text-xs font-bold text-white truncate">{fileName || 'Uploaded Document'}</p>
+                <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                  <CheckCircle className="w-3 h-3" /> Saved to uploads/{folder}/
                 </span>
               </div>
             </div>
           )}
 
           {isUploading && (
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center text-white text-xs gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" /> Uploading to public/uploads/{folder}/...
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center text-white text-xs gap-2.5 z-10">
+              <Loader2 className="w-5 h-5 animate-spin text-emerald-400" /> Uploading media...
             </div>
           )}
 
@@ -104,7 +111,7 @@ export const FileUploadPicker = ({
           <button
             type="button"
             onClick={clearFile}
-            className="absolute top-4 right-4 p-1.5 bg-black/60 hover:bg-rose-600 text-white rounded-full transition-all shadow-md cursor-pointer z-20"
+            className="absolute top-4 right-4 p-1.5 bg-slate-950/80 hover:bg-rose-600 text-white rounded-full transition-all duration-150 shadow-lg border border-white/10 cursor-pointer z-20"
             title="Remove File"
           >
             <X className="w-4 h-4" />
@@ -116,10 +123,10 @@ export const FileUploadPicker = ({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
+          className={`relative border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all duration-200 ${
             isDragging 
-              ? 'border-brandPrimary bg-brandPrimary/10' 
-              : 'border-slate-300 dark:border-white/15 bg-slate-50/50 dark:bg-slate-900/30 hover:border-brandPrimary/60'
+              ? 'border-emerald-500 bg-emerald-500/10 ring-4 ring-emerald-500/10' 
+              : 'border-slate-800 bg-slate-900/40 hover:border-emerald-500/50 hover:bg-slate-900/60'
           }`}
         >
           <input
@@ -128,24 +135,26 @@ export const FileUploadPicker = ({
             onChange={handleFileChange}
             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
           />
-          <div className="flex flex-col items-center gap-1.5 py-2">
-            <div className="p-2.5 bg-brandPrimary/10 rounded-xl text-brandPrimary">
+          <div className="flex flex-col items-center gap-2 py-2">
+            <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400 border border-emerald-500/20 shadow-sm transition-transform duration-200 group-hover:scale-110">
               {isUploading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <>
-                  {type === 'image' && <ImageIcon className="w-5 h-5" />}
-                  {type === 'video' && <Video className="w-5 h-5" />}
-                  {type === 'file' && <Upload className="w-5 h-5" />}
+                  {type === 'image' && <ImageIcon className="w-6 h-6" />}
+                  {type === 'video' && <Video className="w-6 h-6" />}
+                  {type === 'file' && <Upload className="w-6 h-6" />}
                 </>
               )}
             </div>
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              {isUploading ? `Uploading to public/uploads/${folder}/...` : <>Drag & drop or <span className="text-brandPrimary underline">Browse File</span></>}
-            </p>
-            <p className="text-[10px] text-slate-400">
-              Saves to <code className="font-mono text-amber-500">public/uploads/{folder}/</code>
-            </p>
+            <div>
+              <p className="text-xs font-bold text-white">
+                {isUploading ? `Uploading file to uploads/${folder}/...` : <>Drag & drop file or <span className="text-emerald-400 underline">Browse File</span></>}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Saved into <code className="font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">public/uploads/{folder}/</code>
+              </p>
+            </div>
           </div>
         </div>
       )}
