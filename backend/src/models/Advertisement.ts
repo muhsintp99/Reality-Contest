@@ -7,6 +7,7 @@ export interface IAdvertisement extends Document {
   sponsorLogo: string;
   mediaUrl: string;
   imageUrl: string;
+  bannerUrl: string;
   videoUrl: string;
   mediaType: string;
   description: string;
@@ -37,6 +38,7 @@ const AdvertisementSchema: Schema = new Schema(
     sponsorLogo: { type: String, default: '' },
     mediaUrl: { type: String, default: '' },
     imageUrl: { type: String, default: '' },
+    bannerUrl: { type: String, default: '' },
     videoUrl: { type: String, default: '' },
     mediaType: { type: String, default: 'Image' },
     description: { type: String, default: '' },

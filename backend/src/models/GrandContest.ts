@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
-export type ContestStatus = 
+export type GrandContestStatus = 
   | 'Draft' 
   | 'Registration Open' 
   | 'Upcoming' 
@@ -14,7 +14,7 @@ export type ContestStatus =
 
 export type EntryFeeType = 'Free' | 'Coins' | 'Cash';
 
-export interface IContest extends Document {
+export interface IGrandContest extends Document {
   contestId: string;
   title: string;
   bannerUrl?: string;
@@ -36,8 +36,8 @@ export interface IContest extends Document {
   coinsReward: number;
   timerLimit?: number;
   difficulty?: string;
-  questionsCount?: number;
-  questions?: mongoose.Types.ObjectId[];
+  tasksCount?: number;
+  tasks?: mongoose.Types.ObjectId[];
   registrationStart: Date;
   registrationEnd: Date;
   startDate: Date;
@@ -45,12 +45,12 @@ export interface IContest extends Document {
   maxParticipants: number;
   categories: string[];
   sponsors?: string[];
-  status: ContestStatus;
+  status: GrandContestStatus;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const contestSchema = new Schema<IContest>(
+const grandContestSchema = new Schema<IGrandContest>(
   {
     contestId: { type: String, required: true, unique: true, index: true },
     title: { type: String, required: true, trim: true },
@@ -73,8 +73,8 @@ const contestSchema = new Schema<IContest>(
     coinsReward: { type: Number, default: 0 },
     timerLimit: { type: Number, default: 30 },
     difficulty: { type: String, enum: ['Easy', 'Medium', 'Hard', 'Expert'], default: 'Medium' },
-    questionsCount: { type: Number, default: 0 },
-    questions: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+    tasksCount: { type: Number, default: 0 },
+    tasks: [{ type: Schema.Types.ObjectId, ref: 'Task' }],
     registrationStart: { type: Date, default: Date.now },
     registrationEnd: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
     startDate: { type: Date, default: Date.now },
@@ -105,7 +105,7 @@ const contestSchema = new Schema<IContest>(
   }
 );
 
-contestSchema.index({ status: 1, startDate: 1 });
+grandContestSchema.index({ status: 1, startDate: 1 });
 
-export const Contest: Model<IContest> = mongoose.models.Contest || mongoose.model<IContest>('Contest', contestSchema);
-export default Contest;
+export const GrandContest: Model<IGrandContest> = mongoose.models.GrandContest || mongoose.model<IGrandContest>('GrandContest', grandContestSchema);
+export default GrandContest;

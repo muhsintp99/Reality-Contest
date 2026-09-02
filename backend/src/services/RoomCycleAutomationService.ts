@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import Cycle from '../models/Cycle';
-import RoomTask from '../models/RoomTask';
 import RoomSubmission from '../models/RoomSubmission';
 import CycleLog from '../models/CycleLog';
 import { biWeeklyRoomCycleService } from './BiWeeklyRoomCycleService';
@@ -68,19 +67,12 @@ export class RoomCycleAutomationService {
         await biWeeklyRoomCycleService.recalculateLeaderboard(activeCycle._id.toString());
         await biWeeklyRoomCycleService.distributeRewards();
       }
-
-      // 2. Auto-close overdue tasks
-      await RoomTask.updateMany(
-        { status: 'Active', deadline: { $lte: now } },
-        { status: 'Closed' }
-      );
     } catch (err: any) {
       logger.error('[RoomCycleAutomationService] Error during automated cycle check:', err.message);
     }
   }
 
   private async autoLockSubmissions(cycleId: string) {
-    await RoomTask.updateMany({ cycleId, status: 'Active' }, { status: 'Closed' });
     await CycleLog.create({
       eventType: 'SUBMISSION_LOCK',
       cycleId: cycleId as any,

@@ -230,18 +230,33 @@ export const DailyContestDetailsPage = () => {
         </div>
       </div>
 
-      {/* Overview & Rules */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Overview, Rules & Guidelines */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-2">
           <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Description</h3>
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
             {contest.description || 'Automated 24-hour daily quiz showdown arena.'}
           </p>
+          {contest.durationDays && (
+            <div className="pt-2">
+              <span className="px-2.5 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold text-[11px] rounded-lg border border-indigo-500/20">
+                ⏳ Duration: {contest.durationDays} Days
+              </span>
+            </div>
+          )}
         </div>
+
         <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-2">
-          <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Rules & Instructions</h3>
+          <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Contest Rules 📜</h3>
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
             {contest.rules || 'No specific rules configured.'}
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-2">
+          <h3 className="text-xs font-extrabold uppercase text-slate-400 tracking-wider">Guidelines & Instructions 📋</h3>
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+            {contest.guidelines || 'No additional guidelines configured.'}
           </p>
         </div>
       </div>

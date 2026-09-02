@@ -70,7 +70,9 @@ export const DailyContestWizard = () => {
       category: '',
       selectedCategories: [],
       description: '',
-      rules: '',
+      rules: '1. Complete all quiz questions before timer expires.\n2. Each correct answer awards points.\n3. Top rankers earn Coins daily.',
+      guidelines: '1. Single attempt per participant per 24 hours.\n2. Do not exit app during quiz countdown.',
+      durationDays: '1',
       prize: '',
       fee: '0',
       entryFeeType: 'Free',
@@ -132,6 +134,8 @@ export const DailyContestWizard = () => {
         difficulty: values.difficulty,
         description: values.description,
         rules: values.rules,
+        guidelines: values.guidelines,
+        durationDays: Number(values.durationDays) || 1,
         imageUrl: uploadedImageUrl,
         videoUrl: uploadedVideoUrl,
         fileAttachmentUrl: uploadedFileAttachmentUrl,
@@ -335,6 +339,28 @@ export const DailyContestWizard = () => {
                   }
                 }}
                 placeholder="Search & Select Multiple Categories..."
+              />
+            <div>
+              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Contest Rules</label>
+              <textarea
+                name="rules"
+                rows={3}
+                value={formik.values.rules}
+                onChange={formik.handleChange}
+                placeholder="Enter rules for this daily contest..."
+                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Contest Guidelines & Terms</label>
+              <textarea
+                name="guidelines"
+                rows={3}
+                value={formik.values.guidelines}
+                onChange={formik.handleChange}
+                placeholder="Enter guidelines for participants..."
+                className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
               />
             </div>
           </div>

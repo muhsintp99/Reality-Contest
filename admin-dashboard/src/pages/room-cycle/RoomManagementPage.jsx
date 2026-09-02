@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Layers, Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, ShieldCheck, Award, Calendar, Grid, List
+  Layers, Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, ShieldCheck, Award, Calendar, Grid, List, Trophy, TrendingUp, BarChart3, CheckCircle2, Target, Crown, Medal
 } from 'lucide-react';
 import axios from 'axios';
 import { setRooms, setActiveRoom, setLoading } from '../../store/roomCycleSlice';
 import { useAlert } from '../../context/AlertContext';
 import { RightDrawer } from '../../components/RightDrawer';
 import { CustomSelect } from '../../components/CustomSelect';
+import { MultiSelect } from '../../components/MultiSelect';
 
 export const RoomManagementPage = () => {
   const dispatch = useDispatch();
@@ -27,19 +28,26 @@ export const RoomManagementPage = () => {
   const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState(false);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [viewingRoom, setViewingRoom] = useState(null);
+  const [detailsTab, setDetailsTab] = useState('overview'); // 'overview' | 'analytics' | 'leaderboard' | 'members'
+  const [roomAnalytics, setRoomAnalytics] = useState(null);
 
   // Form states
   const [roomFormData, setRoomFormData] = useState({
     name: '',
     description: '',
+    rules: '',
+    guidelines: '',
+    durationDays: 14,
     maxMembers: 50,
     currentCycle: 1,
+    cycleIds: [],
     roomImage: '',
     status: 'Active',
     autoAssignment: true
   });
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [imageInputMode, setImageInputMode] = useState('upload'); // 'upload' | 'url'
+  const [availableCycles, setAvailableCycles] = useState([]);
 
   // Member assignment state
   const [assignUserIds, setAssignUserIds] = useState('');
@@ -63,8 +71,22 @@ export const RoomManagementPage = () => {
     }
   };
 
+  const fetchCycles = async () => {
+    try {
+      const res = await axios.get('/api/admin/room-cycle/cycles');
+      if (res.data?.success) {
+        const raw = res.data.data;
+        const list = Array.isArray(raw?.cycles) ? raw.cycles : Array.isArray(raw) ? raw : [];
+        setAvailableCycles(list);
+      }
+    } catch (err) {
+      console.error('Error fetching cycles:', err);
+    }
+  };
+
   useEffect(() => {
     fetchRooms();
+    fetchCycles();
   }, [search, statusFilter, page]);
 
   const handleImageFileUpload = (e) => {
@@ -155,10 +177,15 @@ export const RoomManagementPage = () => {
 
   const openViewDetails = async (room) => {
     setViewingRoom(room);
+    setDetailsTab('overview');
+    setRoomAnalytics(room.analytics || null);
     try {
       const res = await axios.get(`/api/admin/room-cycle/rooms/${room._id}`);
       if (res.data?.success) {
         dispatch(setActiveRoom(res.data.data));
+        if (res.data.data.analytics) {
+          setRoomAnalytics(res.data.data.analytics);
+        }
       }
     } catch (err) {
       dispatch(setActiveRoom({ room, members: [] }));
@@ -215,7 +242,7 @@ export const RoomManagementPage = () => {
           <button
             onClick={() => {
               setDrawerMode('create');
-              setRoomFormData({ name: '', description: '', maxMembers: 50, currentCycle: 1, roomImage: '', status: 'Active', autoAssignment: true });
+              setRoomFormData({ name: '', description: '', rules: '', guidelines: '', durationDays: 14, maxMembers: 50, currentCycle: 1, cycleIds: [], roomImage: '', status: 'Active', autoAssignment: true });
               setIsRoomDrawerOpen(true);
             }}
             className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow-indigo-500/20"
@@ -341,6 +368,29 @@ export const RoomManagementPage = () => {
                   {room.description || 'No description provided.'}
                 </p>
 
+                {/* Leaderboard Banner & Top Scorer */}
+                <div className="bg-gradient-to-r from-amber-500/10 via-brandPrimary/10 to-indigo-500/10 p-2.5 rounded-xl border border-amber-500/20 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                    <div>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold block uppercase">Rank #{room.rank || '-'}</span>
+                      <span className="font-extrabold text-slate-800 dark:text-white">
+                        {(room.totalPoints || 0).toLocaleString()} pts
+                      </span>
+                    </div>
+                  </div>
+                  {room.topMember && (
+                    <div className="text-right">
+                      <span className="text-[9px] text-slate-400 font-bold block uppercase flex items-center gap-1 justify-end">
+                        <Crown className="w-3 h-3 text-amber-400" /> Top Scorer
+                      </span>
+                      <span className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[100px] block">
+                        {room.topMember.name} ({room.topMember.points}p)
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 {/* Capacity & Cycle Pill Metrics */}
                 <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 text-xs">
                   <div>
@@ -356,6 +406,40 @@ export const RoomManagementPage = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Analytics Metrics Box */}
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 space-y-1.5 text-xs">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase">
+                    <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-indigo-500" /> Analytics</span>
+                    <span className="text-emerald-600 dark:text-emerald-400">{room.analytics?.completionRate || 0}% Approved</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(100, room.analytics?.completionRate || 0)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    <span>Submissions: <strong className="text-slate-800 dark:text-white">{room.analytics?.totalSubmissions || 0}</strong></span>
+                    <span>Tasks: <strong className="text-brandPrimary">{room.analytics?.activeTasksCount || 0}</strong></span>
+                  </div>
+                </div>
+
+                {/* Connected Cycles Badges */}
+                {room.cycleIds && room.cycleIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1 items-center pt-1">
+                    <span className="text-[10px] font-bold text-slate-400 mr-1">Cycles:</span>
+                    {room.cycleIds.map((c) => {
+                      const cNum = typeof c === 'object' ? c.cycleNumber : '';
+                      const cTitle = typeof c === 'object' ? c.title : c;
+                      return (
+                        <span key={typeof c === 'object' ? c._id : c} className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-md border border-indigo-500/20">
+                          #{cNum || 'Cycle'} {cTitle}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons Desk Row */}
@@ -382,8 +466,12 @@ export const RoomManagementPage = () => {
                       setRoomFormData({
                         name: room.name,
                         description: room.description || '',
-                        maxMembers: room.maxMembers,
+                        rules: room.rules || '',
+                        guidelines: room.guidelines || '',
+                        durationDays: room.durationDays || 14,
+                        maxMembers: room.maxMembers || 50,
                         currentCycle: room.currentCycle || 1,
+                        cycleIds: room.cycleIds ? room.cycleIds.map((c) => (typeof c === 'object' ? c._id : c)) : [],
                         roomImage: room.roomImage || '',
                         status: room.status,
                         autoAssignment: room.autoAssignment
@@ -414,13 +502,14 @@ export const RoomManagementPage = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="p-4">Room Image</th>
-                  <th className="p-4">Room Name</th>
+                  <th className="p-4">Room</th>
                   <th className="p-4">Code</th>
-                  <th className="p-4">Description</th>
-                  <th className="p-4">Max Members</th>
-                  <th className="p-4">Current Members</th>
-                  <th className="p-4">Current Cycle</th>
+                  <th className="p-4">Leaderboard Rank</th>
+                  <th className="p-4">Total Points</th>
+                  <th className="p-4">Top Scorer</th>
+                  <th className="p-4">Members</th>
+                  <th className="p-4">Cycle</th>
+                  <th className="p-4">Analytics (Submissions / Approval)</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
@@ -428,7 +517,7 @@ export const RoomManagementPage = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-sm">
                 {rooms.map((room) => (
                   <tr key={room._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors">
-                    <td className="p-4">
+                    <td className="p-4 flex items-center gap-3">
                       {room.roomImage ? (
                         <img src={room.roomImage} alt={room.name} className="w-10 h-10 rounded-xl object-cover border" />
                       ) : (
@@ -436,17 +525,38 @@ export const RoomManagementPage = () => {
                           {room.code ? room.code.slice(0, 3) : 'RM'}
                         </div>
                       )}
+                      <span className="font-bold text-slate-900 dark:text-white">{room.name}</span>
                     </td>
-                    <td className="p-4 font-bold text-slate-900 dark:text-white">{room.name}</td>
                     <td className="p-4">
                       <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold rounded">
                         {room.code}
                       </span>
                     </td>
-                    <td className="p-4 text-xs text-slate-500 max-w-xs truncate">{room.description || '—'}</td>
-                    <td className="p-4 font-semibold">{room.maxMembers}</td>
-                    <td className="p-4 font-semibold">{room.membersCount || 0}</td>
+                    <td className="p-4">
+                      <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-xs rounded-lg border border-amber-500/20 inline-flex items-center gap-1">
+                        <Trophy className="w-3.5 h-3.5" /> Rank #{room.rank || '-'}
+                      </span>
+                    </td>
+                    <td className="p-4 font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {(room.totalPoints || 0).toLocaleString()} pts
+                    </td>
+                    <td className="p-4 text-xs font-semibold">
+                      {room.topMember ? (
+                        <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                          <Crown className="w-3.5 h-3.5 text-amber-500" /> {room.topMember.name} ({room.topMember.points}p)
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td className="p-4 font-semibold">{room.membersCount || 0} / {room.maxMembers}</td>
                     <td className="p-4 font-bold text-brandPrimary">Cycle {room.currentCycle || 1}</td>
+                    <td className="p-4 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">{room.analytics?.totalSubmissions || 0} subs</span>
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold rounded-md">
+                          {room.analytics?.completionRate || 0}% rate
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-4">
                       <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold text-xs rounded-full">
                         {room.status}
@@ -467,8 +577,12 @@ export const RoomManagementPage = () => {
                             setRoomFormData({
                               name: room.name,
                               description: room.description || '',
-                              maxMembers: room.maxMembers,
+                              rules: room.rules || '',
+                              guidelines: room.guidelines || '',
+                              durationDays: room.durationDays || 14,
+                              maxMembers: room.maxMembers || 50,
                               currentCycle: room.currentCycle || 1,
+                              cycleIds: room.cycleIds ? room.cycleIds.map((c) => (typeof c === 'object' ? c._id : c)) : [],
                               roomImage: room.roomImage || '',
                               status: room.status,
                               autoAssignment: room.autoAssignment
@@ -499,7 +613,8 @@ export const RoomManagementPage = () => {
         title={viewingRoom ? `Room Details: ${viewingRoom.name}` : 'Room Details'}
       >
         {viewingRoom && (
-          <div className="space-y-6">
+          <div className="space-y-5">
+            {/* Header Banner */}
             <div className="flex items-center gap-4 p-4 bg-[#E2F1D5]/60 dark:bg-slate-900/80 rounded-2xl border border-[#C4E2A8]/80 dark:border-slate-800">
               {viewingRoom.roomImage ? (
                 <img src={viewingRoom.roomImage} alt={viewingRoom.name} className="w-16 h-16 rounded-2xl object-cover border shadow-sm" />
@@ -510,56 +625,220 @@ export const RoomManagementPage = () => {
               )}
               <div>
                 <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">{viewingRoom.name}</h3>
-                <span className="inline-block px-2.5 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold text-xs rounded-md mt-1">
-                  Code: {viewingRoom.code}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500 font-medium block">Current Cycle</span>
-                <span className="font-bold text-slate-900 dark:text-white text-sm">Cycle {viewingRoom.currentCycle || 1}</span>
-              </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500 font-medium block">Member Capacity</span>
-                <span className="font-bold text-slate-900 dark:text-white text-sm">{viewingRoom.membersCount || 0} / {viewingRoom.maxMembers}</span>
-              </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500 font-medium block">Accumulated Points</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{(viewingRoom.totalPoints || 0).toLocaleString()} pts</span>
-              </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500 font-medium block">Leaderboard Rank</span>
-                <span className="font-bold text-slate-900 dark:text-white text-sm">#{viewingRoom.rank || '-'}</span>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Description</h4>
-              <p className="text-sm text-slate-700 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                {viewingRoom.description || 'No description provided.'}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Assigned Room Members ({roomMembers.length})</h4>
-              {roomMembers.length === 0 ? (
-                <p className="text-xs text-slate-500 p-4 text-center bg-slate-50 dark:bg-slate-900/60 rounded-xl">No members currently assigned to this room.</p>
-              ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {roomMembers.map((m) => (
-                    <div key={m._id} className="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl flex items-center justify-between border border-slate-100 dark:border-slate-800 text-xs">
-                      <div>
-                        <span className="font-bold text-slate-900 dark:text-white">{m.userId?.name || 'Member'}</span>
-                        <p className="text-[11px] text-slate-500">{m.userId?.email}</p>
-                      </div>
-                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{m.accumulatedPoints || 0} pts</span>
-                    </div>
-                  ))}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="px-2.5 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold text-xs rounded-md">
+                    Code: {viewingRoom.code}
+                  </span>
+                  <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-600 font-bold text-xs rounded-md flex items-center gap-1 border border-amber-500/20">
+                    <Trophy className="w-3 h-3 text-amber-500" /> Rank #{viewingRoom.rank || '-'}
+                  </span>
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* Drawer Tab Navigation */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+              <button
+                onClick={() => setDetailsTab('overview')}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  detailsTab === 'overview' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" /> Overview
+              </button>
+              <button
+                onClick={() => setDetailsTab('analytics')}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  detailsTab === 'analytics' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" /> Analytics
+              </button>
+              <button
+                onClick={() => setDetailsTab('leaderboard')}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  detailsTab === 'leaderboard' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5" /> Leaderboard
+              </button>
+              <button
+                onClick={() => setDetailsTab('members')}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  detailsTab === 'members' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" /> Members ({roomMembers.length})
+              </button>
+            </div>
+
+            {/* TAB CONTENT */}
+
+            {/* 1. OVERVIEW TAB */}
+            {detailsTab === 'overview' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-500 font-medium block">Current Cycle</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">Cycle {viewingRoom.currentCycle || 1}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-500 font-medium block">Member Capacity</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">{viewingRoom.membersCount || 0} / {viewingRoom.maxMembers}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-500 font-medium block">Duration (Days)</span>
+                    <span className="font-bold text-indigo-500 text-sm">⏳ {viewingRoom.durationDays || 14} Days</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-500 font-medium block">Total Accumulated Points</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{(viewingRoom.totalPoints || 0).toLocaleString()} pts</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-500 font-medium block">Leaderboard Rank</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">#{viewingRoom.rank || '-'}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Description</h4>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    {viewingRoom.description || 'No description provided.'}
+                  </p>
+                </div>
+
+                {viewingRoom.rules && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Room Rules 📜</h4>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 whitespace-pre-line">
+                      {viewingRoom.rules}
+                    </p>
+                  </div>
+                )}
+
+                {viewingRoom.guidelines && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Guidelines & Terms 📋</h4>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 whitespace-pre-line">
+                      {viewingRoom.guidelines}
+                    </p>
+                  </div>
+                )}
+
+                {viewingRoom.cycleIds && viewingRoom.cycleIds.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Connected Cycles ({viewingRoom.cycleIds.length})</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {viewingRoom.cycleIds.map((c) => (
+                        <div key={typeof c === 'object' ? c._id : c} className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                            #{typeof c === 'object' ? c.cycleNumber : 'Cycle'} {typeof c === 'object' ? c.title : c}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 2. ANALYTICS TAB */}
+            {detailsTab === 'analytics' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold block uppercase text-[10px]">Total Submissions</span>
+                    <span className="font-black text-slate-900 dark:text-white text-lg">{roomAnalytics?.totalSubmissions || 0}</span>
+                  </div>
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold block uppercase text-[10px]">Approved Submissions</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg">{roomAnalytics?.approvedSubmissions || 0}</span>
+                  </div>
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                    <span className="text-rose-600 dark:text-rose-400 font-bold block uppercase text-[10px]">Rejected Submissions</span>
+                    <span className="font-black text-rose-600 dark:text-rose-400 text-lg">{roomAnalytics?.rejectedSubmissions || 0}</span>
+                  </div>
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <span className="text-amber-600 dark:text-amber-400 font-bold block uppercase text-[10px]">Pending Review</span>
+                    <span className="font-black text-amber-600 dark:text-amber-400 text-lg">{roomAnalytics?.pendingSubmissions || 0}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2">
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="text-slate-700 dark:text-slate-200">Room Task Approval Rate</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 text-sm font-extrabold">{roomAnalytics?.completionRate || 0}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(100, roomAnalytics?.completionRate || 0)}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400">Calculated from total verified submissions vs. total submitted tasks in this room.</p>
+                </div>
+
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs">
+                  <span className="font-semibold text-slate-600 dark:text-slate-300">Active Tasks targeting this room</span>
+                  <span className="font-extrabold text-brandPrimary text-sm">{roomAnalytics?.activeTasksCount || 0} active tasks</span>
+                </div>
+              </div>
+            )}
+
+            {/* 3. LEADERBOARD TAB */}
+            {detailsTab === 'leaderboard' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Room Leaderboard Standings</h4>
+                  <span className="text-[11px] font-bold text-amber-500">Ranked by points</span>
+                </div>
+                {roomMembers.length === 0 ? (
+                  <p className="text-xs text-slate-500 p-4 text-center bg-slate-50 dark:bg-slate-900/60 rounded-xl">No leaderboard records found for this room.</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {roomMembers.map((m, idx) => (
+                      <div key={m._id} className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl flex items-center justify-between border border-slate-100 dark:border-slate-800 text-xs">
+                        <div className="flex items-center gap-3">
+                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-sm ${
+                            idx === 0 ? 'bg-amber-400 text-slate-900' : idx === 1 ? 'bg-slate-300 text-slate-900' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`}>
+                            {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
+                          </span>
+                          <div>
+                            <span className="font-bold text-slate-900 dark:text-white block">{m.userId?.name || 'Member'}</span>
+                            <span className="text-[11px] text-slate-400">{m.completedTasksCount || 0} tasks completed</span>
+                          </div>
+                        </div>
+                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{(m.accumulatedPoints || 0).toLocaleString()} pts</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 4. MEMBERS TAB */}
+            {detailsTab === 'members' && (
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Assigned Room Members ({roomMembers.length})</h4>
+                {roomMembers.length === 0 ? (
+                  <p className="text-xs text-slate-500 p-4 text-center bg-slate-50 dark:bg-slate-900/60 rounded-xl">No members currently assigned to this room.</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {roomMembers.map((m) => (
+                      <div key={m._id} className="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl flex items-center justify-between border border-slate-100 dark:border-slate-800 text-xs">
+                        <div>
+                          <span className="font-bold text-slate-900 dark:text-white">{m.userId?.name || 'Member'}</span>
+                          <p className="text-[11px] text-slate-500">{m.userId?.email}</p>
+                        </div>
+                        <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{m.accumulatedPoints || 0} pts</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
               <button
@@ -663,25 +942,25 @@ export const RoomManagementPage = () => {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Members</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Members 👥</label>
               <input
                 type="number"
                 min={1}
-                max={100}
+                max={500}
                 value={roomFormData.maxMembers}
                 onChange={(e) => setRoomFormData({ ...roomFormData, maxMembers: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Current Cycle</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Duration (Days) ⏳</label>
               <input
                 type="number"
                 min={1}
-                max={10}
-                value={roomFormData.currentCycle}
-                onChange={(e) => setRoomFormData({ ...roomFormData, currentCycle: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+                max={365}
+                value={roomFormData.durationDays || 14}
+                onChange={(e) => setRoomFormData({ ...roomFormData, durationDays: Number(e.target.value) })}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-indigo-500 font-bold"
               />
             </div>
             <div>
@@ -695,6 +974,48 @@ export const RoomManagementPage = () => {
                 <option value="Inactive">Inactive</option>
                 <option value="Archived">Archived</option>
               </select>
+            </div>
+          </div>
+
+          {/* Search & Select Multiple Cycles Component */}
+          <div className="pt-2">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Connect Cycles (Search & Multi-Select)
+            </label>
+            <p className="text-[11px] text-slate-400 mb-2">Search and select one or more cycles to associate with this room.</p>
+            <MultiSelect
+              options={availableCycles.map((cyc) => ({
+                value: cyc._id,
+                label: `Cycle #${cyc.cycleNumber} - ${cyc.title}`
+              }))}
+              selected={roomFormData.cycleIds}
+              onChange={(val) => setRoomFormData({ ...roomFormData, cycleIds: val })}
+              placeholder="Search & Select Competition Cycles..."
+            />
+          </div>
+
+          {/* Contest Rules & Guidelines Section */}
+          <div className="space-y-3 pt-2">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Room Contest Rules 📜</label>
+              <textarea
+                rows={3}
+                value={roomFormData.rules}
+                onChange={(e) => setRoomFormData({ ...roomFormData, rules: e.target.value })}
+                placeholder="Enter specific room rules and scoring guidelines..."
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Participation Guidelines & Terms 📋</label>
+              <textarea
+                rows={3}
+                value={roomFormData.guidelines}
+                onChange={(e) => setRoomFormData({ ...roomFormData, guidelines: e.target.value })}
+                placeholder="Enter guidelines for members in this room..."
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
+              />
             </div>
           </div>
           <div className="flex items-center gap-2 pt-2">

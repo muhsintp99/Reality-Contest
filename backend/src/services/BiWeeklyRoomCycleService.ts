@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import Room, { IRoom } from '../models/Room';
 import Cycle, { ICycle } from '../models/Cycle';
-import RoomTask, { IRoomTask } from '../models/RoomTask';
 import RoomSubmission, { IRoomSubmission } from '../models/RoomSubmission';
 import RoomLeaderboard, { IRoomLeaderboard } from '../models/RoomLeaderboard';
 import RoomReward, { IRoomReward } from '../models/RoomReward';
@@ -12,6 +11,7 @@ import User from '../models/User';
 import Wallet from '../models/Transaction';
 import { socketService } from './SocketService';
 import { logger } from '../core/logger';
+import { saveBase64File } from '../controllers/UploadController';
 
 export class BiWeeklyRoomCycleService {
   // ================= ROOM MANAGEMENT =================
@@ -19,15 +19,29 @@ export class BiWeeklyRoomCycleService {
     const count = await Room.countDocuments();
     const code = `RM-${String(count + 1).padStart(3, '0')}`;
 
+    const roomImage = data.roomImage ? saveBase64File(data.roomImage, 'room', 'image') : '';
+    const cycleIds = Array.isArray(data.cycleIds) ? data.cycleIds : [];
+
     const room = await Room.create({
       code,
       name: data.name,
       description: data.description || '',
+      rules: data.rules || '',
+      guidelines: data.guidelines || '',
+      durationDays: Number(data.durationDays) || 14,
       maxMembers: data.maxMembers || 50,
-      roomImage: data.roomImage || '',
+      cycleIds,
+      roomImage,
       status: data.status || 'Active',
       autoAssignment: data.autoAssignment !== undefined ? data.autoAssignment : true
     });
+
+    if (cycleIds.length > 0) {
+      await Cycle.updateMany(
+        { _id: { $in: cycleIds } },
+        { roomId: room._id }
+      ).catch(() => null);
+    }
 
     await CycleLog.create({
       eventType: 'AUTO_ASSIGNMENT',
@@ -56,14 +70,55 @@ export class BiWeeklyRoomCycleService {
 
     const skip = (Number(page) - 1) * Number(limit);
     const rooms = await Room.find(filter)
+      .populate('cycleIds', 'cycleNumber title status startDate endDate')
       .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
       .skip(skip)
       .limit(Number(limit));
 
+    const roomList = [];
+    for (const rm of rooms) {
+      if (rm.roomImage && rm.roomImage.startsWith('data:')) {
+        const savedUrl = saveBase64File(rm.roomImage, 'room', 'image');
+        rm.roomImage = savedUrl;
+        await Room.findByIdAndUpdate(rm._id, { roomImage: savedUrl }).catch(() => null);
+      }
+
+      // Top Scorer / Leaderboard highlight
+      const topMemberObj = await RoomMember.findOne({ roomId: rm._id, status: 'Active' })
+        .populate('userId', 'name avatar email')
+        .sort({ accumulatedPoints: -1 });
+
+      const topMember = topMemberObj && (topMemberObj.userId as any) ? {
+        name: (topMemberObj.userId as any).name || 'User',
+        avatar: (topMemberObj.userId as any).avatar || '',
+        points: topMemberObj.accumulatedPoints || 0
+      } : null;
+
+      // Submissions Analytics
+      const totalSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id });
+      const approvedSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id, status: 'Approved' });
+      const rejectedSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id, status: 'Rejected' });
+      const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
+
+      const activeTasksCount = 0;
+
+      const rmObj = rm.toObject();
+      (rmObj as any).topMember = topMember;
+      (rmObj as any).analytics = {
+        totalSubmissions,
+        approvedSubmissions,
+        rejectedSubmissions,
+        completionRate,
+        activeTasksCount
+      };
+
+      roomList.push(rmObj);
+    }
+
     const total = await Room.countDocuments(filter);
 
     return {
-      rooms,
+      rooms: roomList,
       pagination: {
         total,
         page: Number(page),
@@ -74,19 +129,57 @@ export class BiWeeklyRoomCycleService {
   }
 
   async getRoomById(roomId: string) {
-    const room = await Room.findById(roomId);
+    const room = await Room.findById(roomId).populate('cycleIds', 'cycleNumber title status startDate endDate');
     if (!room) throw new Error('Room not found');
 
     const members = await RoomMember.find({ roomId, status: 'Active' })
       .populate('userId', 'name email avatar phone')
       .sort({ accumulatedPoints: -1 });
 
-    return { room, members };
+    const totalSubmissions = await RoomSubmission.countDocuments({ roomId });
+    const approvedSubmissions = await RoomSubmission.countDocuments({ roomId, status: 'Approved' });
+    const rejectedSubmissions = await RoomSubmission.countDocuments({ roomId, status: 'Rejected' });
+    const pendingSubmissions = await RoomSubmission.countDocuments({ roomId, status: 'Pending' });
+    const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
+
+    const activeTasksCount = 0;
+
+    const analytics = {
+      totalSubmissions,
+      approvedSubmissions,
+      rejectedSubmissions,
+      pendingSubmissions,
+      completionRate,
+      activeTasksCount
+    };
+
+    return { room, members, analytics };
   }
 
   async updateRoom(roomId: string, data: Partial<IRoom>) {
-    const room = await Room.findByIdAndUpdate(roomId, data, { new: true });
+    const updateData = { ...data };
+    if (updateData.roomImage) {
+      updateData.roomImage = saveBase64File(updateData.roomImage, 'room', 'image');
+    }
+
+    const room = await Room.findByIdAndUpdate(roomId, updateData, { new: true }).populate(
+      'cycleIds',
+      'cycleNumber title status startDate endDate'
+    );
     if (!room) throw new Error('Room not found');
+
+    if (data.cycleIds && Array.isArray(data.cycleIds)) {
+      const newCycleIds = data.cycleIds.map((id: any) => id.toString());
+      await Cycle.updateMany(
+        { _id: { $in: newCycleIds } },
+        { roomId: roomId }
+      ).catch(() => null);
+      await Cycle.updateMany(
+        { roomId: roomId, _id: { $nin: newCycleIds } },
+        { $unset: { roomId: 1 } }
+      ).catch(() => null);
+    }
+
     return room;
   }
 
@@ -197,38 +290,29 @@ export class BiWeeklyRoomCycleService {
   }
 
   // ================= CYCLE MANAGEMENT =================
-  async initTenCycles() {
-    const existing = await Cycle.countDocuments();
-    if (existing > 0) return await Cycle.find().sort({ cycleNumber: 1 });
-
-    const cycles: any[] = [];
-    const now = new Date();
-
-    for (let i = 1; i <= 10; i++) {
-      const startDate = new Date(now.getTime() + (i - 1) * 3 * 24 * 60 * 60 * 1000);
-      const endDate = new Date(startDate.getTime() + 3 * 24 * 60 * 60 * 1000);
-
-      cycles.push({
-        cycleNumber: i,
-        title: `Cycle ${i}: 3-Day Challenge`,
-        description: `Bi-Weekly Room Cycle Phase ${i}`,
-        startDate,
-        endDate,
-        status: (i === 1 ? 'Active' : 'Upcoming') as 'Active' | 'Upcoming',
-        autoStart: true,
-        autoEnd: true,
-        completionPercentage: 0
-      });
-    }
-
-    const created = await Cycle.insertMany(cycles);
-    return created;
-  }
-
   async getCycles(): Promise<any[]> {
-    let cycles: any[] = await Cycle.find().sort({ cycleNumber: 1 });
-    if (!cycles.length) {
-      cycles = await this.initTenCycles();
+    const cycles: any[] = await Cycle.find().sort({ cycleNumber: 1 });
+    for (const cycle of cycles) {
+      let updated = false;
+      if (cycle.coverImage && cycle.coverImage.startsWith('data:')) {
+        cycle.coverImage = saveBase64File(cycle.coverImage, 'cycle', 'cover');
+        updated = true;
+      }
+      if (cycle.promoVideoUrl && cycle.promoVideoUrl.startsWith('data:')) {
+        cycle.promoVideoUrl = saveBase64File(cycle.promoVideoUrl, 'cycle', 'video');
+        updated = true;
+      }
+      if (cycle.rulesPdfUrl && cycle.rulesPdfUrl.startsWith('data:')) {
+        cycle.rulesPdfUrl = saveBase64File(cycle.rulesPdfUrl, 'cycle', 'pdf');
+        updated = true;
+      }
+      if (updated) {
+        await Cycle.findByIdAndUpdate(cycle._id, {
+          coverImage: cycle.coverImage,
+          promoVideoUrl: cycle.promoVideoUrl,
+          rulesPdfUrl: cycle.rulesPdfUrl
+        }).catch(() => null);
+      }
     }
     return cycles;
   }
@@ -250,64 +334,78 @@ export class BiWeeklyRoomCycleService {
     return cycle;
   }
 
-  async updateCycle(cycleId: string, data: Partial<ICycle>) {
-    const cycle = await Cycle.findByIdAndUpdate(cycleId, data, { new: true });
+  async createCycle(data: any) {
+    const count = await Cycle.countDocuments();
+    const cycleNumber = Number(data.cycleNumber) || count + 1;
+    const coverImage = data.coverImage ? saveBase64File(data.coverImage, 'cycle', 'cover') : '';
+    const promoVideoUrl = data.promoVideoUrl ? saveBase64File(data.promoVideoUrl, 'cycle', 'video') : '';
+    const rulesPdfUrl = data.rulesPdfUrl ? saveBase64File(data.rulesPdfUrl, 'cycle', 'pdf') : '';
+
+    const cycle = await Cycle.create({
+      cycleNumber,
+      title: data.title,
+      description: data.description || '',
+      rules: data.rules || '',
+      guidelines: data.guidelines || '',
+      durationDays: Number(data.durationDays) || 14,
+      prizePoolCoins: Number(data.prizePoolCoins) || 0,
+      timerMinutes: Number(data.timerMinutes) || 60,
+      maxSeats: Number(data.maxSeats) || 100,
+      coverImage,
+      promoVideoUrl,
+      rulesPdfUrl,
+      roomId: data.roomId && mongoose.Types.ObjectId.isValid(data.roomId) ? data.roomId : undefined,
+      taskIds: Array.isArray(data.taskIds) ? data.taskIds : [],
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      endDate: data.endDate ? new Date(data.endDate) : undefined,
+      status: data.status || 'Draft'
+    });
+    return cycle;
+  }
+
+  async updateCycle(cycleId: string, data: Partial<ICycle> | any) {
+    if (!mongoose.Types.ObjectId.isValid(cycleId)) {
+      return { _id: cycleId, ...data };
+    }
+    const updateData = { ...data };
+    if (updateData.coverImage) {
+      updateData.coverImage = saveBase64File(updateData.coverImage, 'cycle', 'cover');
+    }
+    if (updateData.promoVideoUrl) {
+      updateData.promoVideoUrl = saveBase64File(updateData.promoVideoUrl, 'cycle', 'video');
+    }
+    if (updateData.rulesPdfUrl) {
+      updateData.rulesPdfUrl = saveBase64File(updateData.rulesPdfUrl, 'cycle', 'pdf');
+    }
+    const cycle = await Cycle.findByIdAndUpdate(cycleId, updateData, { new: true });
     if (!cycle) throw new Error('Cycle not found');
     return cycle;
   }
 
-  // ================= TASK MANAGEMENT =================
+  async deleteCycle(cycleId: string) {
+    if (!mongoose.Types.ObjectId.isValid(cycleId)) {
+      return { success: true, id: cycleId };
+    }
+    const cycle = await Cycle.findByIdAndDelete(cycleId);
+    if (!cycle) throw new Error('Cycle not found');
+    return cycle;
+  }
+
+  // ================= TASK MANAGEMENT (REMOVED) =================
   async createTask(data: any) {
-    const task = await RoomTask.create(data);
-    await Cycle.findByIdAndUpdate(task.cycleId, { $inc: { totalTasks: 1 } });
-    return task;
+    return { success: true, message: 'Task management removed.' };
   }
 
   async getTasks(query: any) {
-    const { cycleId, taskType, status, search, page = 1, limit = 10 } = query;
-    const filter: any = {};
-
-    if (cycleId && cycleId !== 'All') filter.cycleId = cycleId;
-    if (taskType && taskType !== 'All') filter.taskType = taskType;
-    if (status && status !== 'All') filter.status = status;
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-    const tasks = await RoomTask.find(filter)
-      .populate('cycleId', 'cycleNumber title status')
-      .sort({ createdDate: -1 })
-      .skip(skip)
-      .limit(Number(limit));
-
-    const total = await RoomTask.countDocuments(filter);
-
-    return {
-      tasks,
-      pagination: {
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        totalPages: Math.ceil(total / Number(limit))
-      }
-    };
+    return { tasks: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } };
   }
 
   async updateTask(taskId: string, data: any) {
-    const task = await RoomTask.findByIdAndUpdate(taskId, data, { new: true });
-    if (!task) throw new Error('Task not found');
-    return task;
+    return { _id: taskId, ...data };
   }
 
   async deleteTask(taskId: string) {
-    const task = await RoomTask.findByIdAndDelete(taskId);
-    if (!task) throw new Error('Task not found');
-    await Cycle.findByIdAndUpdate(task.cycleId, { $inc: { totalTasks: -1 } });
-    return task;
+    return { success: true, id: taskId };
   }
 
   // ================= SUBMISSION MANAGEMENT =================
@@ -315,15 +413,14 @@ export class BiWeeklyRoomCycleService {
     const { cycleId, roomId, taskId, status, search, page = 1, limit = 10 } = query;
     const filter: any = {};
 
-    if (cycleId && cycleId !== 'All') filter.cycleId = cycleId;
-    if (roomId && roomId !== 'All') filter.roomId = roomId;
-    if (taskId && taskId !== 'All') filter.taskId = taskId;
+    if (cycleId && cycleId !== 'All' && mongoose.Types.ObjectId.isValid(cycleId)) filter.cycleId = cycleId;
+    if (roomId && roomId !== 'All' && mongoose.Types.ObjectId.isValid(roomId)) filter.roomId = roomId;
+    if (taskId && taskId !== 'All' && mongoose.Types.ObjectId.isValid(taskId)) filter.taskId = taskId;
     if (status && status !== 'All') filter.status = status;
 
     const skip = (Number(page) - 1) * Number(limit);
 
     let submissions = await RoomSubmission.find(filter)
-      .populate('taskId', 'title taskType points bonusPoints penalty')
       .populate('cycleId', 'cycleNumber title')
       .populate('roomId', 'name code')
       .populate('userId', 'name email avatar')

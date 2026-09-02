@@ -3,7 +3,11 @@ import { z } from 'zod';
 export const createRoomSchema = z.object({
   name: z.string().min(2, 'Room name must be at least 2 characters'),
   description: z.string().optional(),
+  rules: z.string().optional(),
+  guidelines: z.string().optional(),
+  durationDays: z.number().min(1).optional(),
   maxMembers: z.number().min(1).default(50),
+  cycleIds: z.array(z.string()).optional(),
   roomImage: z.string().optional(),
   autoAssignment: z.boolean().default(true)
 });
@@ -11,7 +15,11 @@ export const createRoomSchema = z.object({
 export const updateRoomSchema = z.object({
   name: z.string().min(2).optional(),
   description: z.string().optional(),
+  rules: z.string().optional(),
+  guidelines: z.string().optional(),
+  durationDays: z.number().min(1).optional(),
   maxMembers: z.number().min(1).optional(),
+  cycleIds: z.array(z.string()).optional(),
   roomImage: z.string().optional(),
   status: z.enum(['Active', 'Inactive', 'Archived']).optional(),
   autoAssignment: z.boolean().optional()
@@ -33,44 +41,13 @@ export const createCycleSchema = z.object({
   cycleNumber: z.number().min(1).max(10),
   title: z.string().min(2),
   description: z.string().optional(),
+  rules: z.string().optional(),
+  guidelines: z.string().optional(),
+  durationDays: z.number().min(1).optional(),
   startDate: z.string().or(z.date()),
   endDate: z.string().or(z.date()),
   autoStart: z.boolean().optional().default(true),
   autoEnd: z.boolean().optional().default(true)
-});
-
-export const createTaskSchema = z.object({
-  title: z.string().min(2, 'Title required'),
-  description: z.string().min(2, 'Description required'),
-  instructions: z.string().optional(),
-  cycleId: z.string(),
-  targetRooms: z.array(z.string()).optional().default([]),
-  taskType: z.enum([
-    'Quiz',
-    'Image Upload',
-    'Video Upload',
-    'Document Upload',
-    'Creative Writing',
-    'AI Prompt',
-    'Survey',
-    'Puzzle',
-    'Logic Challenge',
-    'Daily Activity'
-  ]),
-  points: z.number().min(0),
-  bonusPoints: z.number().min(0).optional().default(0),
-  penalty: z.number().min(0).optional().default(0),
-  deadline: z.string().or(z.date()),
-  reviewType: z.enum(['Auto', 'Manual']).optional().default('Manual'),
-  visibility: z.enum(['Public', 'Room-Only']).optional().default('Public'),
-  allowDuplicateSubmission: z.boolean().optional().default(false),
-  fileLimits: z
-    .object({
-      maxSizeMB: z.number().default(10),
-      allowedTypes: z.array(z.string()).default(['image/png', 'image/jpeg', 'application/pdf']),
-      maxFiles: z.number().default(1)
-    })
-    .optional()
 });
 
 export const reviewSubmissionSchema = z.object({

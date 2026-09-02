@@ -4,38 +4,93 @@ export interface ICycle extends Document {
   cycleNumber: number;
   title: string;
   description?: string;
-  startDate: Date;
-  endDate: Date;
-  status: 'Upcoming' | 'Active' | 'Completed' | 'Archived';
-  autoStart: boolean;
-  autoEnd: boolean;
-  completionPercentage: number;
-  totalTasks: number;
-  completedTasks: number;
-  createdDate: Date;
-  updatedAt: Date;
+  rules?: string;
+  guidelines?: string;
+  durationDays?: number;
+  prizePoolCoins?: number;
+  timerMinutes?: number;
+  maxSeats?: number;
+  coverImage?: string;
+  promoVideoUrl?: string;
+  rulesPdfUrl?: string;
+  roomId?: mongoose.Types.ObjectId;
+  taskIds?: mongoose.Types.ObjectId[];
+  startDate?: Date;
+  endDate?: Date;
+  status: 'Draft' | 'Published' | 'Running' | 'Completed' | 'Upcoming' | 'Active' | 'Archived';
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-const CycleSchema: Schema = new Schema(
+const cycleSchema = new Schema<ICycle>(
   {
-    cycleNumber: { type: Number, required: true, unique: true, min: 1, max: 10, index: true },
-    title: { type: String, required: true, trim: true },
-    description: { type: String, default: '' },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-    status: { type: String, enum: ['Upcoming', 'Active', 'Completed', 'Archived'], default: 'Upcoming', index: true },
-    autoStart: { type: Boolean, default: true },
-    autoEnd: { type: Boolean, default: true },
-    completionPercentage: { type: Number, default: 0, min: 0, max: 100 },
-    totalTasks: { type: Number, default: 0 },
-    completedTasks: { type: Number, default: 0 },
-    createdDate: { type: Date, default: Date.now }
+    cycleNumber: {
+      type: Number,
+      required: true
+    },
+    title: {
+      type: String,
+      required: true
+    },
+    description: String,
+    rules: {
+      type: String,
+      default: ''
+    },
+    guidelines: {
+      type: String,
+      default: ''
+    },
+    durationDays: {
+      type: Number,
+      default: 14
+    },
+    prizePoolCoins: {
+      type: Number,
+      default: 0
+    },
+    timerMinutes: {
+      type: Number,
+      default: 60
+    },
+    maxSeats: {
+      type: Number,
+      default: 100
+    },
+    coverImage: {
+      type: String,
+      default: ''
+    },
+    promoVideoUrl: {
+      type: String,
+      default: ''
+    },
+    rulesPdfUrl: {
+      type: String,
+      default: ''
+    },
+    roomId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Room'
+    },
+    taskIds: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Task'
+      }
+    ],
+    startDate: Date,
+    endDate: Date,
+    status: {
+      type: String,
+      enum: ['Draft', 'Published', 'Running', 'Completed', 'Upcoming', 'Active', 'Archived'],
+      default: 'Draft'
+    }
   },
   {
     timestamps: true
   }
 );
 
-CycleSchema.index({ status: 1, cycleNumber: 1 });
-
-export default mongoose.model<ICycle>('Cycle', CycleSchema);
+export const Cycle = mongoose.models.Cycle || mongoose.model<ICycle>('Cycle', cycleSchema);
+export default Cycle;

@@ -18,6 +18,8 @@ export interface IDailyContest extends Document {
   files?: string[];
   description: string;
   rules?: string;
+  guidelines?: string;
+  durationDays?: number;
   prizePool: number; // In Coins 🪙
   entryFee: number;  // In Coins 🪙
   entryFeeType: EntryFeeType;
@@ -57,6 +59,8 @@ const dailyContestSchema = new Schema<IDailyContest>(
     files: [{ type: String }],
     description: { type: String, default: '' },
     rules: { type: String, default: '' },
+    guidelines: { type: String, default: '' },
+    durationDays: { type: Number, default: 1 },
     prizePool: { type: Number, default: 10000 },
     entryFee: { type: Number, default: 0 },
     entryFeeType: { type: String, enum: ['Free', 'Coins', 'Cash'], default: 'Free' },

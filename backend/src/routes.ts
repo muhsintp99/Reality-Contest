@@ -23,6 +23,7 @@ import { coinController } from './controllers/CoinController';
 import { rolePermissionController } from './controllers/RolePermissionController';
 import { mobileContestantController } from './controllers/MobileContestantController';
 import { biWeeklyRoomCycleController } from './controllers/BiWeeklyRoomCycleController';
+import { grandContestController } from './controllers/GrandContestController';
 
 // Import Middlewares
 import { authenticate, authorize, requireNotGuest } from './middleware/AuthMiddleware';
@@ -134,6 +135,23 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/contest/:id/join', authenticate, requireNotGuest, contestController.joinContest);
   router.get('/contests/:contestId/stages', authenticate, stageController.getStagesByContest);
   router.post('/contests/:contestId/stages', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), stageController.createStageForContest);
+
+  // Grand Contest routes (/admin/grand-contests & /grand-contests)
+  router.post('/grand-contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContest);
+  router.get('/grand-contests', authenticate, grandContestController.listGrandContests);
+  router.get('/grand-contests/:id', authenticate, grandContestController.getGrandContestDetail);
+  router.put('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.updateGrandContest);
+  router.delete('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.deleteGrandContest);
+  router.post('/grand-contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.duplicateGrandContest);
+  router.get('/grand-contests/:id/analytics', authenticate, grandContestController.getGrandContestAnalytics);
+
+  router.post('/admin/grand-contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContest);
+  router.get('/admin/grand-contests', authenticate, grandContestController.listGrandContests);
+  router.get('/admin/grand-contests/:id', authenticate, grandContestController.getGrandContestDetail);
+  router.put('/admin/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.updateGrandContest);
+  router.delete('/admin/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.deleteGrandContest);
+  router.post('/admin/grand-contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.duplicateGrandContest);
+  router.get('/admin/grand-contests/:id/analytics', authenticate, grandContestController.getGrandContestAnalytics);
 
   // Stage & Attempt routes
   router.post('/groups/:groupId/stages', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), stageController.createStage);
@@ -411,10 +429,18 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Cycle Management
   router.get('/admin/room-cycle/cycles', authenticate, biWeeklyRoomCycleController.getCycles);
+  router.post('/admin/room-cycle/cycles', authenticate, biWeeklyRoomCycleController.createCycle);
   router.put('/admin/room-cycle/cycles/:id/set-active', authenticate, biWeeklyRoomCycleController.setActiveCycle);
   router.put('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.updateCycle);
+  router.delete('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.deleteCycle);
 
-  // Task Management
+  // Task Management (/admin/tasks & /admin/room-cycle/tasks)
+  router.get('/admin/tasks', authenticate, biWeeklyRoomCycleController.getTasks);
+  router.get('/admin/tasks/:id', authenticate, biWeeklyRoomCycleController.getTasks);
+  router.post('/admin/tasks', authenticate, biWeeklyRoomCycleController.createTask);
+  router.put('/admin/tasks/:id', authenticate, biWeeklyRoomCycleController.updateTask);
+  router.delete('/admin/tasks/:id', authenticate, biWeeklyRoomCycleController.deleteTask);
+
   router.get('/admin/room-cycle/tasks', authenticate, biWeeklyRoomCycleController.getTasks);
   router.post('/admin/room-cycle/tasks', authenticate, biWeeklyRoomCycleController.createTask);
   router.put('/admin/room-cycle/tasks/:id', authenticate, biWeeklyRoomCycleController.updateTask);

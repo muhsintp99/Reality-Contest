@@ -222,14 +222,19 @@ export class UploadController {
 // Helper function to save a Base64 string directly to disk under target folder upon form save
 export const saveBase64File = (base64Data: string, folderName = 'general', customPrefix = 'file'): string => {
   if (!base64Data || typeof base64Data !== 'string') return base64Data || '';
-  if (!base64Data.startsWith('data:')) return base64Data;
+  if (!base64Data.trim().startsWith('data:')) return base64Data;
 
   try {
-    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) return base64Data;
+    const cleanData = base64Data.trim();
+    const commaIndex = cleanData.indexOf(',');
+    if (commaIndex === -1) return base64Data;
 
-    const mimeType = matches[1];
-    const buffer = Buffer.from(matches[2], 'base64');
+    const header = cleanData.substring(0, commaIndex);
+    const base64Str = cleanData.substring(commaIndex + 1).replace(/\s+/g, '');
+    const buffer = Buffer.from(base64Str, 'base64');
+
+    const mimeMatch = header.match(/data:(.*?);/);
+    const mimeType = mimeMatch ? mimeMatch[1].toLowerCase() : 'image/png';
 
     let ext = '.png';
     if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = '.jpg';
@@ -239,6 +244,9 @@ export const saveBase64File = (base64Data: string, folderName = 'general', custo
     else if (mimeType.includes('pdf')) ext = '.pdf';
     else if (mimeType.includes('mp4')) ext = '.mp4';
     else if (mimeType.includes('webm')) ext = '.webm';
+    else if (mimeType.includes('quicktime') || mimeType.includes('mov')) ext = '.mov';
+    else if (mimeType.includes('video')) ext = '.mp4';
+    else if (mimeType.includes('application')) ext = '.pdf';
 
     const folder = (folderName || 'general').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'general';
     const targetDir = path.join(baseUploadDir, folder);

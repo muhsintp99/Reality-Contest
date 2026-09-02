@@ -33,7 +33,8 @@ const ContestWizard = lazy(() => import('./pages/ContestWizard').then(m => ({ de
 const ContestantWizard = lazy(() => import('./pages/ContestantWizard').then(m => ({ default: m.ContestantWizard })));
 const KycDirectory = lazy(() => import('./pages/KycDirectory').then(m => ({ default: m.KycDirectory })));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage').then(m => ({ default: m.UserManagementPage })));
-const GrandContestManagement = lazy(() => import('./pages/GrandContestManagement').then(m => ({ default: m.GrandContestManagement })));
+const GrandContestManagement = lazy(() => import('./pages/GrandContestManagementPage').then(m => ({ default: m.GrandContestManagementPage })));
+const GrandContestWizard = lazy(() => import('./pages/GrandContestWizard').then(m => ({ default: m.GrandContestWizard })));
 const QuestionBankPage = lazy(() => import('./pages/QuestionBankPage').then(m => ({ default: m.QuestionBankPage })));
 const QuestionPoolPage = lazy(() => import('./pages/QuestionPoolPage').then(m => ({ default: m.QuestionPoolPage })));
 const QuestionBulkImportPage = lazy(() => import('./pages/QuestionBulkImportPage').then(m => ({ default: m.QuestionBulkImportPage })));
@@ -181,8 +182,8 @@ const AppContent = () => {
                 <Routes>
                   <Route path="dashboard" element={<DashboardHome onViewChange={(view) => navigate(`/admin-dashboard/${view}`)} selectedRole={selectedRole} />} />
                   {/* Bi-Weekly Room Cycle Module Routes */}
-                  <Route path="bi-weekly-room-cycle" element={<Navigate to="bi-weekly-room-cycle/dashboard" replace />} />
-                  <Route path="bi-weekly-room-cycle/dashboard" element={<RoomCycleDashboardPage />} />
+                  <Route path="bi-weekly-room-cycle" element={<Navigate to="bi-weekly-room-cycle/rooms" replace />} />
+                  <Route path="bi-weekly-room-cycle/dashboard" element={<Navigate to="/admin-dashboard/bi-weekly-room-cycle/rooms" replace />} />
                   <Route path="bi-weekly-room-cycle/rooms" element={<RoomManagementPage />} />
                   <Route path="bi-weekly-room-cycle/cycles" element={<CycleManagementPage />} />
                   <Route path="bi-weekly-room-cycle/tasks" element={<Navigate to="/admin-dashboard/tasks" replace />} />
@@ -202,6 +203,8 @@ const AppContent = () => {
                   <Route path="user-management/device-details" element={<DeviceDetailsPage />} />
                   <Route path="user-management/referral-details" element={<ReferralDetailsPage />} />
                   <Route path="grand-contest" element={<GrandContestManagement />} />
+                  <Route path="grand-contests" element={<GrandContestManagement />} />
+                  <Route path="grand-contests/wizard" element={<GrandContestWizard />} />
                   <Route path="question-bank" element={<Navigate to="question-bank/pool" replace />} />
                   <Route path="question-bank/pool" element={<QuestionPoolPage />} />
                   <Route path="question-bank/import" element={<QuestionBulkImportPage />} />

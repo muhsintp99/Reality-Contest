@@ -115,7 +115,6 @@ const ANALYTICS_SUBITEMS = [
 ];
 
 const ROOM_CYCLE_SUBITEMS = [
-  { id: 'bi-weekly-room-cycle/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'bi-weekly-room-cycle/rooms', label: 'Rooms', icon: Layers },
   { id: 'bi-weekly-room-cycle/cycles', label: 'Cycles', icon: Clock },
   { id: 'bi-weekly-room-cycle/submissions', label: 'Submissions', icon: FileText },
@@ -208,7 +207,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
     } else if (id === 'bi-weekly-room-cycle') {
       setIsRoomCycleOpen(!isRoomCycleOpen);
       if (!isRoomCycleOpen && !location.pathname.includes('/bi-weekly-room-cycle/')) {
-        navigate(`/admin-dashboard/bi-weekly-room-cycle/dashboard`);
+        navigate(`/admin-dashboard/bi-weekly-room-cycle/rooms`);
       }
     } else if (id === 'question-bank') {
 

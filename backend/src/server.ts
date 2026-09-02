@@ -85,30 +85,29 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-    // Static upload file serving (mount at /uploads, subfolders, and root fallback)
+    // Static upload file serving (mount at /uploads and /api/uploads)
     const uploadsPath = path.resolve(process.cwd(), 'public/uploads');
     app.use('/uploads', express.static(uploadsPath));
-    app.use('/uploads/general', express.static(path.join(uploadsPath, 'general')));
-    app.use('/uploads/question', express.static(path.join(uploadsPath, 'question')));
-    app.use('/uploads/daily-contest', express.static(path.join(uploadsPath, 'daily-contest')));
-    app.use('/uploads/contest', express.static(path.join(uploadsPath, 'contest')));
-    app.use('/uploads/category', express.static(path.join(uploadsPath, 'category')));
+    app.use('/api/uploads', express.static(uploadsPath));
 
-    // Fallback static image/media resolver for uploaded files
+    // Dynamic fallback static image/media resolver for all uploaded files across subfolders
     app.use((req: any, res: any, next: any) => {
       const reqPath = req.path || req.url || '';
       if (req.method === 'GET' && /\.(png|jpe?g|gif|webp|svg|ico|pdf|mp4|webm)$/i.test(reqPath)) {
         const filename = path.basename(reqPath);
-        const searchDirs = [
-          uploadsPath,
-          path.join(uploadsPath, 'general'),
-          path.join(uploadsPath, 'question'),
-          path.join(uploadsPath, 'daily-contest'),
-          path.join(uploadsPath, 'contest'),
-          path.join(uploadsPath, 'category'),
-          path.join(uploadsPath, 'kyc'),
-          path.join(uploadsPath, 'avatars')
-        ];
+        const searchDirs: string[] = [uploadsPath];
+        try {
+          if (fs.existsSync(uploadsPath)) {
+            const items = fs.readdirSync(uploadsPath, { withFileTypes: true });
+            for (const item of items) {
+              if (item.isDirectory()) {
+                searchDirs.push(path.join(uploadsPath, item.name));
+              }
+            }
+          }
+        } catch (err) {
+          // ignore directory read errors
+        }
 
         for (const dir of searchDirs) {
           const filePath = path.join(dir, filename);
@@ -207,30 +206,21 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     });
 
     // Centralized Error Middleware (Winston logs, Stack hiding)
-    app.use(errorHandler);
-
-    // Start listening immediately on 0.0.0.0 so Vite dev server proxy connections are accepted without delay
-    const PORT = config.PORT;
-    server.listen(PORT, '0.0.0.0', () => {
-      logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
-    });
-
-
-
     // Database Connection Pooling & Initialization
     mongoose.set('bufferCommands', true);
     const dbOptions = {
       maxPoolSize: 100, // Handle high concurrent connections
       minPoolSize: 10,
       socketTimeoutMS: 45000,
-      serverSelectionTimeoutMS: 30000
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000
     };
 
     try {
       logger.info('Connecting to MongoDB Cluster...');
       await mongoose.connect(config.MONGODB_URI, dbOptions);
       logger.info('Successfully connected to MongoDB Cluster.');
-      await seedDatabase();
+      await seedDatabase().catch((e) => logger.warn('Seed database warning:', e.message));
     } catch (err) {
       logger.error('Database connection failed:', err);
       logger.warn('\n======================================================');
@@ -240,6 +230,12 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       logger.warn('Please start mongod locally or update MONGODB_URI in .env');
       logger.warn('======================================================\n');
     }
+
+    // Start listening after MongoDB connection attempt completes
+    const PORT = config.PORT;
+    server.listen(PORT, '0.0.0.0', () => {
+      logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
+    });
   };
 
   startServer().catch((err) => {

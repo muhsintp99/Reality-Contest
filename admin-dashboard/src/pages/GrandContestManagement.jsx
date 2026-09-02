@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
   Crown, Plus, Calendar, Clock, Percent, Award, Play, XCircle, CheckCircle2, Sliders, Shield,
@@ -12,6 +13,7 @@ import { RightDrawer } from '../components/RightDrawer';
 import { RichTextEditor } from '../components/RichTextEditor';
 
 export const GrandContestManagement = () => {
+  const navigate = useNavigate();
   const { showAlert, showSnackbar, showConfirm } = useAlert();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
 
@@ -77,23 +79,33 @@ export const GrandContestManagement = () => {
   }, [isMockMode]);
 
   const fetchSeasons = async () => {
-    if (isMockMode) return;
     try {
-      const res = await axios.get('/api/contests', { withCredentials: true });
-      if (res.data.contests) {
-        const mapped = res.data.contests.map((c, idx) => ({
-          id: `GS-2026-S${idx + 1}`,
+      let res = await axios.get('/api/admin/grand-contests', { withCredentials: true }).catch(() => null);
+      if (!res?.data?.success) {
+        res = await axios.get('/api/grand-contests', { withCredentials: true }).catch(() => null);
+      }
+      if (!res?.data?.success) {
+        res = await axios.get('/api/contests', { withCredentials: true }).catch(() => null);
+      }
+
+      const raw = res?.data?.data || res?.data;
+      const contestsList = Array.isArray(raw?.contests) ? raw.contests : Array.isArray(raw) ? raw : [];
+
+      if (contestsList.length > 0) {
+        const mapped = contestsList.map((c, idx) => ({
+          id: c.contestId || `GS-2026-S${idx + 1}`,
           _id: c._id,
           name: c.title,
-          totalStages: 5,
+          totalStages: c.tasksCount || (c.tasks ? c.tasks.length : 5),
           eliminationRate: '25%',
           passMarks: 75,
           timerSec: c.timerLimit ? c.timerLimit * 60 : 60,
           status: c.status === 'Registration Open' || c.status === 'Live' ? 'Published' : c.status,
-          prizePool: `${c.prizePool?.toLocaleString() || 0} Coins 🪙`,
+          prizePool: `₹${c.prizePool?.toLocaleString() || 0}`,
           startDate: c.startDate ? c.startDate.split('T')[0] : '',
           endDate: c.endDate ? c.endDate.split('T')[0] : '',
-          rules: c.rules || ''
+          rules: c.rules || '',
+          guidelines: c.guidelines || ''
         }));
         setSeasons(mapped);
       }
@@ -102,21 +114,31 @@ export const GrandContestManagement = () => {
     }
   };
 
-  // Season Handlers
-  const handleSaveSeason = () => {
+  const handleSaveSeason = async () => {
     if (!seasonForm.name) {
       showSnackbar('Please enter a valid Season Name', 'warning');
       return;
     }
-    const newSeason = {
-      id: `GS-2026-S${seasons.length + 1}`,
-      _id: `gs-${Date.now()}`,
-      ...seasonForm
-    };
-    setSeasons([newSeason, ...seasons]);
-    showSnackbar('New Grand Contest Season created successfully!', 'success');
-    setShowAddSeasonDrawer(false);
-    resetSeasonForm();
+    try {
+      const payload = {
+        title: seasonForm.name,
+        description: seasonForm.name,
+        prizePool: Number(String(seasonForm.prizePool).replace(/[^0-9]/g, '')) || 500000,
+        rules: seasonForm.rules,
+        durationDays: 14,
+        status: seasonForm.status === 'Scheduled' ? 'Registration Open' : seasonForm.status
+      };
+      let res = await axios.post('/api/admin/grand-contests', payload, { withCredentials: true }).catch(() => null);
+      if (!res?.data?.success) {
+        await axios.post('/api/grand-contests', payload, { withCredentials: true }).catch(() => null);
+      }
+      showSnackbar('New Grand Contest created successfully!', 'success');
+      setShowAddSeasonDrawer(false);
+      resetSeasonForm();
+      fetchSeasons();
+    } catch (err) {
+      showSnackbar('Failed to create Grand Contest', 'error');
+    }
   };
 
   const handleUpdateSeason = () => {
@@ -251,13 +273,22 @@ export const GrandContestManagement = () => {
 
         <div className="flex items-center gap-2">
           {activeTab === 'seasons' && (
-            <button
-              onClick={() => { resetSeasonForm(); setShowAddSeasonDrawer(true); }}
-              className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-90 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-md"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Season</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/admin-dashboard/grand-contests/wizard')}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 text-slate-950 font-bold rounded-xl flex items-center gap-2 transition-all shadow-md text-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Grand Contest Wizard</span>
+              </button>
+              <button
+                onClick={() => { resetSeasonForm(); setShowAddSeasonDrawer(true); }}
+                className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-90 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Quick Season Drawer</span>
+              </button>
+            </div>
           )}
 
           {activeTab === 'stages' && (

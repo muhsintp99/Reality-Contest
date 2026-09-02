@@ -26,8 +26,7 @@ export default defineConfig({
         secure: false,
       },
       '/uploads': {
-        // target: process.env.VITE_API_TARGET || 'https://api.hakalive.in',
-        target: process.env.VITE_API_TARGET || 'http://localhost:10000/api',
+        target: (process.env.VITE_API_TARGET || 'http://localhost:10000').replace(/\/api\/?$/, ''),
         changeOrigin: true,
         secure: false,
       }

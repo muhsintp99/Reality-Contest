@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRoomSubmission extends Document {
-  taskId: mongoose.Types.ObjectId;
+  taskId?: mongoose.Types.ObjectId;
   cycleId: mongoose.Types.ObjectId;
   roomId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
@@ -34,7 +34,7 @@ export interface IRoomSubmission extends Document {
 
 const RoomSubmissionSchema: Schema = new Schema(
   {
-    taskId: { type: Schema.Types.ObjectId, ref: 'RoomTask', required: true, index: true },
+    taskId: { type: Schema.Types.ObjectId, index: true },
     cycleId: { type: Schema.Types.ObjectId, ref: 'Cycle', required: true, index: true },
     roomId: { type: Schema.Types.ObjectId, ref: 'Room', required: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },

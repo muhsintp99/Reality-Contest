@@ -119,6 +119,15 @@ export class BiWeeklyRoomCycleController {
     }
   }
 
+  async createCycle(req: Request, res: Response, next: NextFunction) {
+    try {
+      const cycle = await biWeeklyRoomCycleService.createCycle(req.body);
+      return res.status(201).json({ success: true, message: 'Cycle created successfully', data: cycle });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
   async updateCycle(req: Request, res: Response, next: NextFunction) {
     try {
       const cycle = await biWeeklyRoomCycleService.updateCycle(req.params.id, req.body);
@@ -128,41 +137,30 @@ export class BiWeeklyRoomCycleController {
     }
   }
 
-  // ================= TASKS =================
-  async createTask(req: Request, res: Response, next: NextFunction) {
+  async deleteCycle(req: Request, res: Response, next: NextFunction) {
     try {
-      const task = await biWeeklyRoomCycleService.createTask(req.body);
-      return res.status(201).json({ success: true, message: 'Task created successfully', data: task });
+      const cycle = await biWeeklyRoomCycleService.deleteCycle(req.params.id);
+      return res.status(200).json({ success: true, message: 'Cycle deleted successfully', data: cycle });
     } catch (err: any) {
       return next(err);
     }
+  }
+
+  // ================= TASKS (REMOVED) =================
+  async createTask(req: Request, res: Response, next: NextFunction) {
+    return res.status(200).json({ success: true, message: 'Task management removed', data: null });
   }
 
   async getTasks(req: Request, res: Response, next: NextFunction) {
-    try {
-      const result = await biWeeklyRoomCycleService.getTasks(req.query);
-      return res.status(200).json({ success: true, data: result });
-    } catch (err: any) {
-      return next(err);
-    }
+    return res.status(200).json({ success: true, data: { tasks: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } } });
   }
 
   async updateTask(req: Request, res: Response, next: NextFunction) {
-    try {
-      const task = await biWeeklyRoomCycleService.updateTask(req.params.id, req.body);
-      return res.status(200).json({ success: true, message: 'Task updated successfully', data: task });
-    } catch (err: any) {
-      return next(err);
-    }
+    return res.status(200).json({ success: true, message: 'Task management removed', data: null });
   }
 
   async deleteTask(req: Request, res: Response, next: NextFunction) {
-    try {
-      const task = await biWeeklyRoomCycleService.deleteTask(req.params.id);
-      return res.status(200).json({ success: true, message: 'Task deleted successfully', data: task });
-    } catch (err: any) {
-      return next(err);
-    }
+    return res.status(200).json({ success: true, message: 'Task management removed', data: null });
   }
 
   // ================= SUBMISSIONS =================

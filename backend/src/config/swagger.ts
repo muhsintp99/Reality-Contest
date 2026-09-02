@@ -26,7 +26,8 @@ export const swaggerDocument = {
     { name: '8. Mobile App API (Contestant V1)', description: 'Mobile V1 endpoints for contestant registration, login, profile management, image upload, and password change' },
     { name: '9. Question Bank & Quiz Builder', description: 'Question bank CRUD, question pools, bulk imports, and random selection' },
     { name: '10. CMS & Social Media', description: 'CMS social links, platform names, user handles, logos, and legal docs' },
-    { name: '11. Bi-Weekly Room Cycle Module', description: 'Complete REST API endpoints for Rooms, 10-Cycle Blueprint, Task Configuration, Submissions Evaluation, Leaderboard, Rewards, and Settings' }
+    { name: '11. Bi-Weekly Room Cycle Module', description: 'Complete REST API endpoints for Rooms, 10-Cycle Blueprint, Submissions Evaluation, Leaderboard, Rewards, and Settings' },
+    { name: '12. Grand Contest Management', description: 'Grand Contest creation, task connections, analytics, and lifecycle management' }
   ],
   components: {
     securitySchemes: {
@@ -67,6 +68,10 @@ export const swaggerDocument = {
           contestId: { type: 'string', example: 'CNT-2026-1002' },
           title: { type: 'string', example: 'Mega Speed Battle Season 1' },
           description: { type: 'string', example: 'Compete with top contestants in speed quiz' },
+          rules: { type: 'string', example: '1. Complete all quiz stages within timer countdown.' },
+          guidelines: { type: 'string', example: '1. Ensure stable internet connection.' },
+          durationDays: { type: 'number', example: 7 },
+          bannerUrl: { type: 'string', example: '/uploads/contest/cover_1723630000.png' },
           prizePool: { type: 'number', example: 50000, description: 'Prize pool in Coins 🪙' },
           entryFee: { type: 'number', example: 0, description: 'Entry fee amount (0 for Free Entry)' },
           entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Free' },
@@ -90,6 +95,10 @@ export const swaggerDocument = {
           category: { type: 'string', example: 'Speed Battle' },
           categories: { type: 'array', items: { type: 'string' }, example: ['Speed Battle'] },
           description: { type: 'string', example: '20 rapid-fire questions in 3 minutes' },
+          rules: { type: 'string', example: '1. Complete all quiz questions before timer expires.' },
+          guidelines: { type: 'string', example: '1. Single attempt per participant per 24 hours.' },
+          durationDays: { type: 'number', example: 1 },
+          bannerUrl: { type: 'string', example: '/uploads/daily-contest/cover_1723630000.png' },
           prizePool: { type: 'number', example: 10000, description: 'Prize pool in Coins 🪙' },
           entryFee: { type: 'number', example: 0, description: 'Entry fee amount (0 for Free Entry)' },
           entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Free' },
@@ -107,6 +116,62 @@ export const swaggerDocument = {
             enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Completed', 'Maintenance'],
             example: 'Registration Open' 
           }
+        }
+      },
+      RoomResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e...' },
+          code: { type: 'string', example: 'RM-001' },
+          name: { type: 'string', example: 'Alpha Strikers' },
+          description: { type: 'string', example: 'Top competitive room for speed battles' },
+          rules: { type: 'string', example: '1. Maintain top submission score.' },
+          guidelines: { type: 'string', example: '1. Follow sportsmanship guidelines.' },
+          durationDays: { type: 'number', example: 14 },
+          maxMembers: { type: 'number', example: 50 },
+          membersCount: { type: 'number', example: 12 },
+          currentCycle: { type: 'number', example: 1 },
+          cycleIds: { type: 'array', items: { type: 'string' } },
+          roomImage: { type: 'string', example: '/uploads/room/banner_1723630000.png' },
+          status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' },
+          totalPoints: { type: 'number', example: 1250 },
+          rank: { type: 'number', example: 1 }
+        }
+      },
+      CycleResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e...' },
+          cycleNumber: { type: 'number', example: 1 },
+          title: { type: 'string', example: 'Bi-Weekly Sprint 1' },
+          description: { type: 'string', example: '14-day competitive sprint' },
+          rules: { type: 'string', example: '1. Complete all assigned tasks before timer.' },
+          guidelines: { type: 'string', example: '1. Verify file attachments before submitting.' },
+          durationDays: { type: 'number', example: 14 },
+          prizePoolCoins: { type: 'number', example: 5000 },
+          timerMinutes: { type: 'number', example: 60 },
+          maxSeats: { type: 'number', example: 100 },
+          status: { type: 'string', enum: ['Draft', 'Published', 'Running', 'Completed', 'Upcoming', 'Active', 'Archived'], example: 'Active' }
+        }
+      },
+      GrandContestResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e...' },
+          contestId: { type: 'string', example: 'GNC-2026-98124' },
+          title: { type: 'string', example: 'Grand Championship Season 1' },
+          description: { type: 'string', example: 'Major competition featuring connected task challenges.' },
+          rules: { type: 'string', example: '1. Submit tasks before timer expiration.' },
+          guidelines: { type: 'string', example: '1. Ensure all file attachments meet max size rules.' },
+          durationDays: { type: 'number', example: 14 },
+          prizePool: { type: 'number', example: 100000 },
+          entryFee: { type: 'number', example: 499 },
+          entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Cash' },
+          isFree: { type: 'boolean', example: false },
+          tasksCount: { type: 'number', example: 5 },
+          tasks: { type: 'array', items: { type: 'string' } },
+          bannerUrl: { type: 'string', example: 'https://example.com/banner.png' },
+          status: { type: 'string', enum: ['Draft', 'Registration Open', 'Upcoming', 'Active', 'In Progress', 'Live', 'Completed'], example: 'Registration Open' }
         }
       },
       QuestionResponse: {
@@ -2325,8 +2390,12 @@ export const swaggerDocument = {
                 properties: {
                   name: { type: 'string', example: 'Alpha Strikers' },
                   description: { type: 'string', example: 'Room for top tier competitors' },
+                  rules: { type: 'string', example: 'Maintain high accuracy score.' },
+                  guidelines: { type: 'string', example: 'Verify submissions before uploading.' },
+                  durationDays: { type: 'number', example: 14 },
                   maxMembers: { type: 'number', example: 50 },
                   currentCycle: { type: 'number', example: 1 },
+                  cycleIds: { type: 'array', items: { type: 'string' } },
                   roomImage: { type: 'string', example: 'https://example.com/image.png' },
                   status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' },
                   autoAssignment: { type: 'boolean', example: true }
@@ -2464,6 +2533,31 @@ export const swaggerDocument = {
         summary: 'Get 10-Cycle Blueprint List',
         security: [{ bearerAuth: [] }],
         responses: { 200: { description: 'All 10 bi-weekly cycles.' } }
+      },
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Create New Cycle',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title'],
+                properties: {
+                  cycleNumber: { type: 'number', example: 1 },
+                  title: { type: 'string', example: 'Sprint Season 1' },
+                  description: { type: 'string' },
+                  rules: { type: 'string' },
+                  guidelines: { type: 'string' },
+                  durationDays: { type: 'number', example: 14 }
+                }
+              }
+            }
+          }
+        },
+        responses: { 201: { description: 'Cycle created.' } }
       }
     },
     '/api/admin/room-cycle/cycles/{id}/set-active': {
@@ -2476,64 +2570,55 @@ export const swaggerDocument = {
       }
     },
     '/api/admin/room-cycle/cycles/{id}': {
-      put: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Update Cycle Dates & Settings',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Cycle details updated.' } }
-      }
-    },
-    '/api/admin/room-cycle/tasks': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get All Cycle Tasks',
+        summary: 'Get Cycle Details by ID',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Task list.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Cycle details object.' } }
       },
-      post: {
+      put: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Create New Cycle Task (10 Task Types)',
+        summary: 'Update Cycle Details & Settings',
         security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
           required: true,
           content: {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['title', 'description', 'cycleId', 'taskType'],
                 properties: {
-                  title: { type: 'string', example: 'Day 1 Quiz Challenge' },
-                  description: { type: 'string' },
-                  cycleId: { type: 'string' },
-                  taskType: { type: 'string', enum: ['Quiz', 'Image Upload', 'Video Upload', 'Document Upload', 'Creative Writing', 'AI Prompt', 'Survey', 'Puzzle', 'Logic Challenge', 'Daily Activity'] },
-                  points: { type: 'number', example: 100 },
-                  bonusPoints: { type: 'number', example: 20 },
-                  penalty: { type: 'number', example: 10 },
-                  deadline: { type: 'string', format: 'date' },
-                  reviewType: { type: 'string', enum: ['Auto', 'Manual'], default: 'Manual' }
+                  cycleNumber: { type: 'number', example: 1 },
+                  title: { type: 'string', example: 'Bi-Weekly Sprint 1' },
+                  description: { type: 'string', example: 'Updated cycle sprint details' },
+                  rules: { type: 'string', example: 'Rules for this cycle' },
+                  guidelines: { type: 'string', example: 'Guidelines for this cycle' },
+                  durationDays: { type: 'number', example: 14 },
+                  prizePoolCoins: { type: 'number', example: 5000 },
+                  timerMinutes: { type: 'number', example: 60 },
+                  maxSeats: { type: 'number', example: 100 },
+                  coverImage: { type: 'string', example: 'https://example.com/cover.png' },
+                  promoVideoUrl: { type: 'string', example: 'https://example.com/video.mp4' },
+                  rulesPdfUrl: { type: 'string', example: 'https://example.com/rules.pdf' },
+                  roomId: { type: 'string' },
+                  taskIds: { type: 'array', items: { type: 'string' } },
+                  startDate: { type: 'string', format: 'date-time' },
+                  endDate: { type: 'string', format: 'date-time' },
+                  status: { type: 'string', enum: ['Draft', 'Published', 'Running', 'Completed', 'Upcoming', 'Active', 'Archived'] }
                 }
               }
             }
           }
         },
-        responses: { 201: { description: 'Task created.' } }
-      }
-    },
-    '/api/admin/room-cycle/tasks/{id}': {
-      put: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Update Task',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Task updated.' } }
+        responses: { 200: { description: 'Cycle details updated.' } }
       },
       delete: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Delete Task',
+        summary: 'Delete Cycle by ID',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Task deleted.' } }
+        responses: { 200: { description: 'Cycle deleted successfully.' } }
       }
     },
     '/api/admin/room-cycle/submissions': {
@@ -2650,6 +2735,71 @@ export const swaggerDocument = {
         summary: 'Get Module Dashboard Analytics',
         security: [{ bearerAuth: [] }],
         responses: { 200: { description: 'Module KPIs, top rooms, and top performers.' } }
+      }
+    },
+    '/api/admin/grand-contests': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'List All Grand Contests',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'List of grand contests.' } }
+      },
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Create New Grand Contest with Tasks',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title'],
+                properties: {
+                  title: { type: 'string', example: 'Grand Championship 2026' },
+                  description: { type: 'string' },
+                  rules: { type: 'string' },
+                  guidelines: { type: 'string' },
+                  durationDays: { type: 'number', example: 14 },
+                  prizePool: { type: 'number', example: 50000 },
+                  entryFee: { type: 'number', example: 499 },
+                  entryFeeType: { type: 'string', enum: ['Free', 'Coins', 'Cash'], example: 'Cash' },
+                  tasks: { type: 'array', items: { type: 'string' } },
+                  categories: { type: 'array', items: { type: 'string' } },
+                  bannerUrl: { type: 'string' }
+                }
+              }
+            }
+          }
+        },
+        responses: { 201: { description: 'Grand Contest created.' } }
+      }
+    },
+    '/api/admin/grand-contests/{id}': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Get Grand Contest Details by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Grand Contest details object.' } }
+      },
+      put: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Update Grand Contest Details',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object' } } }
+        },
+        responses: { 200: { description: 'Grand Contest updated.' } }
+      },
+      delete: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Delete Grand Contest',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Grand Contest deleted.' } }
       }
     }
   }

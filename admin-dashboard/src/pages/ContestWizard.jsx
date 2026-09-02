@@ -75,6 +75,8 @@ export const ContestWizard = () => {
       title: isDailyType ? 'Daily Speed Quiz Rush 2026' : '',
       description: isDailyType ? 'Automated 24-hour daily quiz battle with live reset countdown.' : '',
       rules: '1. Complete all quiz stages within timer countdown.\n2. Negative marking -2 for wrong attempts.\n3. Top scorers qualify for grand prize pool.',
+      guidelines: '1. Ensure stable internet connection.\n2. Do not refresh or close app during contest.\n3. Anti-cheat monitoring is active.',
+      durationDays: '7',
       prize: isDailyType ? '10000' : '100000',
       fee: isDailyType ? '0' : '499',
       entryFeeType: isDailyType ? 'Free' : 'Cash',
@@ -133,6 +135,8 @@ export const ContestWizard = () => {
         title: values.title,
         description: values.description,
         rules: values.rules,
+        guidelines: values.guidelines,
+        durationDays: parseInt(values.durationDays || '7', 10),
         prizePool: parseFloat(values.prize),
         entryFee: feeVal,
         entryFeeType: values.isFree ? 'Free' : (values.entryFeeType || 'Cash'),
@@ -456,11 +460,19 @@ export const ContestWizard = () => {
             </div>
 
             <RichTextEditor
-              label="Contest Rules & Guidelines"
+              label="Contest Rules"
               value={formik.values.rules}
               onChange={(val) => formik.setFieldValue('rules', val)}
               placeholder="Enter rules, negative marking guidelines, disqualification policies..."
-              rows={4}
+              rows={3}
+            />
+
+            <RichTextEditor
+              label="Participation Guidelines & Instructions"
+              value={formik.values.guidelines}
+              onChange={(val) => formik.setFieldValue('guidelines', val)}
+              placeholder="Enter guidelines, connectivity tips, anti-cheat instructions..."
+              rows={3}
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -603,7 +615,7 @@ export const ContestWizard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div>
                 <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Timer Limit (Minutes)</label>
                 <input
@@ -613,6 +625,33 @@ export const ContestWizard = () => {
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Duration (Days)</label>
+                <input
+                  type="number"
+                  name="durationDays"
+                  min="1"
+                  max="365"
+                  value={formik.values.durationDays || '7'}
+                  onChange={(e) => {
+                    formik.handleChange(e);
+                    const days = parseInt(e.target.value, 10);
+                    if (days && formik.values.tStartDate) {
+                      const start = new Date(formik.values.tStartDate);
+                      if (!isNaN(start.getTime())) {
+                        start.setDate(start.getDate() + days);
+                        const endStr = start.toISOString().split('T')[0];
+                        formik.setFieldValue('tEndDate', endStr);
+                        formik.setFieldValue('regEndDate', endStr);
+                      }
+                    }
+                  }}
+                  onBlur={formik.handleBlur}
+                  placeholder="e.g. 7"
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary font-bold text-indigo-500"
                 />
               </div>
 
@@ -629,7 +668,7 @@ export const ContestWizard = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Total Questions Count</label>
+                <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1.5">Questions Count</label>
                 <input
                   type="number"
                   name="questionsCount"

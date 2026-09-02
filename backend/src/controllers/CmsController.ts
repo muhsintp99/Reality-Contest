@@ -147,6 +147,13 @@ export class CMSController {
   async listBlogs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const blogs = await CMSBlog.find().sort({ createdAt: -1 });
+      for (const blog of blogs) {
+        if (blog.coverImage && blog.coverImage.startsWith('data:')) {
+          const savedUrl = saveBase64File(blog.coverImage, 'blog', 'cover');
+          blog.coverImage = savedUrl;
+          await CMSBlog.findByIdAndUpdate(blog._id, { coverImage: savedUrl }).catch(() => null);
+        }
+      }
       res.status(200).json({ success: true, blogs });
     } catch (err) {
       next(err);
@@ -157,7 +164,8 @@ export class CMSController {
     try {
       const { title, author, category, coverImage, summary, content, status } = req.body;
       const slug = (title || 'blog-post').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const blog = await CMSBlog.create({ title, slug, author: author || 'Editorial Team', category: category || 'Updates', coverImage, summary, content, status: status || 'Published' });
+      const finalCover = coverImage ? saveBase64File(coverImage, 'blog', 'cover') : '';
+      const blog = await CMSBlog.create({ title, slug, author: author || 'Editorial Team', category: category || 'Updates', coverImage: finalCover, summary, content, status: status || 'Published' });
       res.status(201).json({ success: true, message: 'Blog post created.', blog });
     } catch (err) {
       next(err);
@@ -167,7 +175,11 @@ export class CMSController {
   async updateBlog(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const blog = await CMSBlog.findByIdAndUpdate(id, req.body, { new: true });
+      const updateData = { ...req.body };
+      if (updateData.coverImage) {
+        updateData.coverImage = saveBase64File(updateData.coverImage, 'blog', 'cover');
+      }
+      const blog = await CMSBlog.findByIdAndUpdate(id, updateData, { new: true });
       if (!blog) throw new NotFoundError('Blog post not found.');
       res.status(200).json({ success: true, message: 'Blog post updated.', blog });
     } catch (err) {
