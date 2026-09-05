@@ -182,9 +182,12 @@ export const RoomManagementPage = () => {
     try {
       const res = await axios.get(`/api/admin/room-cycle/rooms/${room._id}`);
       if (res.data?.success) {
-        dispatch(setActiveRoom(res.data.data));
-        if (res.data.data.analytics) {
-          setRoomAnalytics(res.data.data.analytics);
+        const data = res.data.data;
+        dispatch(setActiveRoom(data));
+        const updatedRoom = { ...room, ...(data.room || {}), cycles: data.cycles || data.room?.cycleIds || [] };
+        setViewingRoom(updatedRoom);
+        if (data.analytics) {
+          setRoomAnalytics(data.analytics);
         }
       }
     } catch (err) {
@@ -725,16 +728,23 @@ export const RoomManagementPage = () => {
                   </div>
                 )}
 
-                {viewingRoom.cycleIds && viewingRoom.cycleIds.length > 0 && (
+                {((viewingRoom.cycles && viewingRoom.cycles.length > 0) || (viewingRoom.cycleIds && viewingRoom.cycleIds.length > 0)) && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Connected Cycles ({viewingRoom.cycleIds.length})</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                      Connected Cycles ({(viewingRoom.cycles || viewingRoom.cycleIds).length})
+                    </h4>
                     <div className="flex flex-wrap gap-2">
-                      {viewingRoom.cycleIds.map((c) => (
-                        <div key={typeof c === 'object' ? c._id : c} className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs flex items-center gap-2">
+                      {(viewingRoom.cycles || viewingRoom.cycleIds).map((c) => (
+                        <div key={typeof c === 'object' ? (c._id || c.id) : c} className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs flex items-center gap-2">
                           <ShieldCheck className="w-4 h-4 text-indigo-500" />
                           <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                            #{typeof c === 'object' ? c.cycleNumber : 'Cycle'} {typeof c === 'object' ? c.title : c}
+                            #{typeof c === 'object' ? (c.cycleNumber || 'Cycle') : 'Cycle'} {typeof c === 'object' ? c.title : c}
                           </span>
+                          {typeof c === 'object' && c.status && (
+                            <span className="px-1.5 py-0.5 text-[10px] rounded bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-medium">
+                              {c.status}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>

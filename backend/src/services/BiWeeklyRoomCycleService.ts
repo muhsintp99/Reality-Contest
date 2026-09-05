@@ -128,9 +128,51 @@ export class BiWeeklyRoomCycleService {
     };
   }
 
+  async getRoomCycles(roomId: string) {
+    if (!mongoose.Types.ObjectId.isValid(roomId)) {
+      return [];
+    }
+    const room = await Room.findById(roomId);
+    const roomCycleIds = room?.cycleIds || [];
+
+    const cycles = await Cycle.find({
+      $or: [
+        { roomId: new mongoose.Types.ObjectId(roomId) },
+        { _id: { $in: roomCycleIds } }
+      ]
+    }).sort({ cycleNumber: 1 });
+
+    for (const cycle of cycles) {
+      let updated = false;
+      if (cycle.coverImage && cycle.coverImage.startsWith('data:')) {
+        cycle.coverImage = saveBase64File(cycle.coverImage, 'cycle', 'cover');
+        updated = true;
+      }
+      if (cycle.promoVideoUrl && cycle.promoVideoUrl.startsWith('data:')) {
+        cycle.promoVideoUrl = saveBase64File(cycle.promoVideoUrl, 'cycle', 'video');
+        updated = true;
+      }
+      if (cycle.rulesPdfUrl && cycle.rulesPdfUrl.startsWith('data:')) {
+        cycle.rulesPdfUrl = saveBase64File(cycle.rulesPdfUrl, 'cycle', 'pdf');
+        updated = true;
+      }
+      if (updated) {
+        await Cycle.findByIdAndUpdate(cycle._id, {
+          coverImage: cycle.coverImage,
+          promoVideoUrl: cycle.promoVideoUrl,
+          rulesPdfUrl: cycle.rulesPdfUrl
+        }).catch(() => null);
+      }
+    }
+
+    return cycles;
+  }
+
   async getRoomById(roomId: string) {
     const room = await Room.findById(roomId).populate('cycleIds', 'cycleNumber title status startDate endDate');
     if (!room) throw new Error('Room not found');
+
+    const cycles = await this.getRoomCycles(roomId);
 
     const members = await RoomMember.find({ roomId, status: 'Active' })
       .populate('userId', 'name email avatar phone')
@@ -153,7 +195,7 @@ export class BiWeeklyRoomCycleService {
       activeTasksCount
     };
 
-    return { room, members, analytics };
+    return { room, members, cycles, analytics };
   }
 
   async updateRoom(roomId: string, data: Partial<IRoom>) {

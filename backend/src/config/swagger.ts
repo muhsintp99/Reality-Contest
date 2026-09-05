@@ -2458,10 +2458,10 @@ export const swaggerDocument = {
     '/api/admin/room-cycle/rooms/{id}': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get Room Details & Members by ID',
+        summary: 'Get Room Details, Members & Cycles by ID',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Room details and assigned members.' } }
+        responses: { 200: { description: 'Room details, cycles, and assigned members.' } }
       },
       put: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
@@ -2480,6 +2480,15 @@ export const swaggerDocument = {
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Room deleted.' } }
+      }
+    },
+    '/api/admin/room-cycle/rooms/{id}/cycles': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get All Cycles for a Specific Room',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'List of cycles for the specified room.' } }
       }
     },
     '/api/admin/room-cycle/rooms/bulk-action': {

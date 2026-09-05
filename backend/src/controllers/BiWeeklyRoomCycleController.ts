@@ -22,6 +22,15 @@ export class BiWeeklyRoomCycleController {
     }
   }
 
+  async getRoomCycles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const cycles = await biWeeklyRoomCycleService.getRoomCycles(req.params.id);
+      return res.status(200).json({ success: true, cycles, data: cycles });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
   async getRoomById(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await biWeeklyRoomCycleService.getRoomById(req.params.id);

@@ -423,6 +423,7 @@ export function createApiRouter(authLimiter: any): Router {
   // ==================================================================
   // Room Management
   router.get('/admin/room-cycle/rooms', authenticate, biWeeklyRoomCycleController.getRooms);
+  router.get('/admin/room-cycle/rooms/:id/cycles', authenticate, biWeeklyRoomCycleController.getRoomCycles);
   router.get('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
   router.post('/admin/room-cycle/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
   router.put('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
