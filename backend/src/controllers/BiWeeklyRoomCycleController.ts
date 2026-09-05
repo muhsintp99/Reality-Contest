@@ -110,6 +110,15 @@ export class BiWeeklyRoomCycleController {
     }
   }
 
+  async getCycleById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const cycle = await biWeeklyRoomCycleService.getCycleById(req.params.id);
+      return res.status(200).json({ success: true, data: cycle });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
   async setActiveCycle(req: Request, res: Response, next: NextFunction) {
     try {
       const cycle = await biWeeklyRoomCycleService.setActiveCycle(req.params.id);

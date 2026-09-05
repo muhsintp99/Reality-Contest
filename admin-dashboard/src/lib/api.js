@@ -23,8 +23,18 @@ axios.defaults.baseURL = BASE_URL;
 axios.defaults.withCredentials = true;
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
+// Helper to inject bearer token from localStorage if present
+const attachAuthToken = (config) => {
+  const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+  if (token && !config.headers.Authorization && !config.headers.authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+};
+
 // Global request interceptor to automatically resolve leading '/api' prefixes to BASE_URL
 axios.interceptors.request.use((config) => {
+  attachAuthToken(config);
   if (config.url) {
     if (config.url.startsWith('/api/')) {
       config.url = config.url.replace(/^\/api/, '');
@@ -61,6 +71,11 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+api.interceptors.request.use((config) => {
+  attachAuthToken(config);
+  return config;
 });
 
 export default api;

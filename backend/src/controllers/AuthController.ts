@@ -81,6 +81,8 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: 'Logged in successfully.',
+        accessToken,
+        refreshToken,
         user: {
           _id: user._id,
           name: user.name,

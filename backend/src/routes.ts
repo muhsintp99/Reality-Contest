@@ -437,6 +437,7 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Cycle Management
   router.get('/admin/room-cycle/cycles', authenticate, biWeeklyRoomCycleController.getCycles);
+  router.get('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.getCycleById);
   router.post('/admin/room-cycle/cycles', authenticate, biWeeklyRoomCycleController.createCycle);
   router.put('/admin/room-cycle/cycles/:id/set-active', authenticate, biWeeklyRoomCycleController.setActiveCycle);
   router.put('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.updateCycle);

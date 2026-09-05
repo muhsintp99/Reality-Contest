@@ -317,6 +317,36 @@ export class BiWeeklyRoomCycleService {
     return cycles;
   }
 
+  async getCycleById(cycleId: string): Promise<any> {
+    if (!mongoose.Types.ObjectId.isValid(cycleId)) {
+      throw new Error('Cycle not found');
+    }
+    const cycle: any = await Cycle.findById(cycleId).populate('roomId', 'name category status');
+    if (!cycle) throw new Error('Cycle not found');
+
+    let updated = false;
+    if (cycle.coverImage && cycle.coverImage.startsWith('data:')) {
+      cycle.coverImage = saveBase64File(cycle.coverImage, 'cycle', 'cover');
+      updated = true;
+    }
+    if (cycle.promoVideoUrl && cycle.promoVideoUrl.startsWith('data:')) {
+      cycle.promoVideoUrl = saveBase64File(cycle.promoVideoUrl, 'cycle', 'video');
+      updated = true;
+    }
+    if (cycle.rulesPdfUrl && cycle.rulesPdfUrl.startsWith('data:')) {
+      cycle.rulesPdfUrl = saveBase64File(cycle.rulesPdfUrl, 'cycle', 'pdf');
+      updated = true;
+    }
+    if (updated) {
+      await Cycle.findByIdAndUpdate(cycle._id, {
+        coverImage: cycle.coverImage,
+        promoVideoUrl: cycle.promoVideoUrl,
+        rulesPdfUrl: cycle.rulesPdfUrl
+      }).catch(() => null);
+    }
+    return cycle;
+  }
+
 
   async setActiveCycle(cycleId: string) {
     await Cycle.updateMany({ status: 'Active' }, { status: 'Completed' });

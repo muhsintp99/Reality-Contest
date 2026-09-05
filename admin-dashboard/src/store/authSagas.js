@@ -33,6 +33,15 @@ function* handleLogin(action) {
     const response = yield call(api.post, '/auth/login', { loginId, password, isOtpLogin, otp });
     const user = response.data.user;
 
+    const token = response.data.accessToken || response.data.token;
+    if (token) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('accessToken', token);
+    }
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+
     const adminRoles = [
       'Super Admin',
       'Admin',
@@ -53,6 +62,9 @@ function* handleLogin(action) {
       try {
         yield call(api.post, '/auth/logout');
       } catch (e) {}
+      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
       return;
     }
 
@@ -85,6 +97,9 @@ function* handleLogout(action) {
   } catch (err) {
     console.error(err);
   }
+  localStorage.removeItem('token');
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('user');
   yield put(logoutSuccess());
   if (action.payload?.callback) action.payload.callback();
 }
@@ -288,8 +303,14 @@ function* handleLoadCurrentUser() {
       window.location.href = '/login';
       return;
     }
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
     yield put(loadCurrentUserSuccess(user));
   } catch (err) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
     yield put(loadCurrentUserFailure());
   }
 }

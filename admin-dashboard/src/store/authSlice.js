@@ -1,8 +1,17 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+const storedUser = (() => {
+  try {
+    const raw = localStorage.getItem('user');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+})();
+
 const initialState = {
-  user: null,
-  isAuthenticated: false,
+  user: storedUser,
+  isAuthenticated: !!storedUser,
   sessions: [],
   pendingKycs: [],
   currentKyc: null,
