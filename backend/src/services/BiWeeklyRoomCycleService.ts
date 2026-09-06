@@ -481,11 +481,43 @@ export class BiWeeklyRoomCycleService {
   }
 
   // ================= SUBMISSION MANAGEMENT =================
+  async createSubmission(data: {
+    cycleId?: string;
+    contestId?: string;
+    roomId: string;
+    userId: string;
+    taskId: string;
+    submissionType?: 'Link' | 'File' | 'Text' | 'Image' | 'Video';
+    mediaUrl?: string;
+    proofNotes?: string;
+  }) {
+    let mediaUrl = data.mediaUrl || '';
+    if (mediaUrl && mediaUrl.startsWith('data:')) {
+      mediaUrl = saveBase64File(mediaUrl, 'submission', 'proof');
+    }
+
+    const submission = await RoomSubmission.create({
+      cycleId: data.cycleId && mongoose.Types.ObjectId.isValid(data.cycleId) ? data.cycleId : undefined,
+      contestId: data.contestId && mongoose.Types.ObjectId.isValid(data.contestId) ? data.contestId : undefined,
+      roomId: data.roomId && mongoose.Types.ObjectId.isValid(data.roomId) ? data.roomId : undefined,
+      userId: data.userId && mongoose.Types.ObjectId.isValid(data.userId) ? data.userId : undefined,
+      taskId: data.taskId && mongoose.Types.ObjectId.isValid(data.taskId) ? data.taskId : undefined,
+      submissionType: data.submissionType || 'Link',
+      mediaUrl,
+      proofNotes: data.proofNotes || '',
+      status: 'Pending',
+      submittedAt: new Date()
+    });
+
+    return submission;
+  }
+
   async getSubmissions(query: any) {
-    const { cycleId, roomId, taskId, status, search, page = 1, limit = 10 } = query;
+    const { cycleId, contestId, roomId, taskId, status, search, page = 1, limit = 10 } = query;
     const filter: any = {};
 
     if (cycleId && cycleId !== 'All' && mongoose.Types.ObjectId.isValid(cycleId)) filter.cycleId = cycleId;
+    if (contestId && contestId !== 'All' && mongoose.Types.ObjectId.isValid(contestId)) filter.contestId = contestId;
     if (roomId && roomId !== 'All' && mongoose.Types.ObjectId.isValid(roomId)) filter.roomId = roomId;
     if (taskId && taskId !== 'All' && mongoose.Types.ObjectId.isValid(taskId)) filter.taskId = taskId;
     if (status && status !== 'All') filter.status = status;
@@ -494,6 +526,8 @@ export class BiWeeklyRoomCycleService {
 
     let submissions = await RoomSubmission.find(filter)
       .populate('cycleId', 'cycleNumber title')
+      .populate('contestId', 'contestId title')
+      .populate('roomId', 'name code')
       .populate('roomId', 'name code')
       .populate('userId', 'name email avatar')
       .populate('reviewedBy', 'name email')
@@ -571,7 +605,7 @@ export class BiWeeklyRoomCycleService {
 
       await Room.findByIdAndUpdate(submission.roomId, { $inc: { totalPoints: finalPoints } });
 
-      await this.recalculateLeaderboard(submission.cycleId.toString());
+      await this.recalculateLeaderboard(submission.cycleId ? submission.cycleId.toString() : undefined);
     }
 
     return submission;

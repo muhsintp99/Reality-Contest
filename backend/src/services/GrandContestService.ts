@@ -155,6 +155,28 @@ export class GrandContestService {
       status: contest.status
     };
   }
+
+  async joinGrandContest(id: string, userId?: string) {
+    const contest = await this.getGrandContestById(id);
+    const allowedStatuses = ['Registration Open', 'Active', 'Live', 'Upcoming', 'In Progress'];
+    if (!allowedStatuses.includes(contest.status)) {
+      throw new BadRequestError('Registration for this Grand Contest is currently closed.');
+    }
+
+    // Increment participants count
+    const updated = await GrandContest.findByIdAndUpdate(
+      contest._id,
+      { $inc: { maxParticipants: 1 } },
+      { new: true }
+    );
+
+    return {
+      success: true,
+      message: 'Joined Grand Contest successfully',
+      joinedAt: new Date(),
+      contest: updated || contest
+    };
+  }
 }
 
 export const grandContestService = new GrandContestService();

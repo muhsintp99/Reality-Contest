@@ -35,7 +35,7 @@ export class RoomCycleAutomationService {
 
       // 1. Auto End Active Cycle if endDate passed
       const activeCycle = await Cycle.findOne({ status: 'Active', autoEnd: true });
-      if (activeCycle && activeCycle.endDate <= now) {
+      if (activeCycle && activeCycle.endDate && activeCycle.endDate <= now) {
         activeCycle.status = 'Completed';
         activeCycle.completionPercentage = 100;
         await activeCycle.save();
@@ -68,7 +68,7 @@ export class RoomCycleAutomationService {
         await biWeeklyRoomCycleService.distributeRewards();
       }
     } catch (err: any) {
-      logger.error('[RoomCycleAutomationService] Error during automated cycle check:', err.message);
+      logger.error('[RoomCycleAutomationService] Error during automated cycle check:', err?.stack || err?.message || err);
     }
   }
 

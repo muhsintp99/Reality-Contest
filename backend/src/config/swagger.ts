@@ -300,6 +300,66 @@ export const swaggerDocument = {
           status: { type: 'string', enum: ['Published', 'Draft'], example: 'Published' },
           content: { type: 'string', example: '<h2>Privacy Policy</h2><p>Your privacy is important to us...</p>' }
         }
+      },
+      RoomSubmissionResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789sub' },
+          cycleId: { type: 'string', example: '66bc91f24d9e123456789cyc' },
+          roomId: { type: 'string', example: '66bc91f24d9e123456789rm' },
+          userId: { type: 'string', example: '66bc91f24d9e123456789usr' },
+          taskId: { type: 'string', example: '66bc91f24d9e123456789tsk' },
+          submissionType: { type: 'string', enum: ['Link', 'File', 'Text', 'Image', 'Video'], example: 'File' },
+          mediaUrl: { type: 'string', example: '/uploads/submission/proof_1723630000.png' },
+          proofNotes: { type: 'string', example: 'Task proof completed successfully.' },
+          status: { type: 'string', enum: ['Pending', 'Approved', 'Rejected', 'Needs Revision'], example: 'Pending' },
+          score: { type: 'number', example: 100 },
+          bonus: { type: 'number', example: 10 },
+          penalty: { type: 'number', example: 0 },
+          feedback: { type: 'string', example: 'Good job!' },
+          submittedAt: { type: 'string', format: 'date-time', example: '2026-09-05T19:00:00.000Z' },
+          reviewedAt: { type: 'string', format: 'date-time', example: '2026-09-05T19:10:00.000Z' }
+        }
+      },
+      RoomMemberResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789mbr' },
+          roomId: { type: 'string', example: '66bc91f24d9e123456789rm' },
+          userId: { type: 'string', example: '66bc91f24d9e123456789usr' },
+          role: { type: 'string', enum: ['Leader', 'Member'], example: 'Member' },
+          accumulatedPoints: { type: 'number', example: 450 },
+          completedTasksCount: { type: 'number', example: 5 },
+          status: { type: 'string', enum: ['Active', 'Transferred', 'Removed'], example: 'Active' },
+          joinedAt: { type: 'string', format: 'date-time', example: '2026-09-01T10:00:00.000Z' }
+        }
+      },
+      KYCResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789kyc' },
+          userId: { type: 'string', example: '66bc91f24d9e123456789usr' },
+          idType: { type: 'string', enum: ['Aadhaar', 'PAN', 'Passport', 'Driving License'], example: 'Aadhaar' },
+          idNumber: { type: 'string', example: 'XXXX-XXXX-1234' },
+          documentFrontUrl: { type: 'string', example: '/uploads/kyc/front_1723630000.png' },
+          documentBackUrl: { type: 'string', example: '/uploads/kyc/back_1723630000.png' },
+          selfieUrl: { type: 'string', example: '/uploads/kyc/selfie_1723630000.png' },
+          status: { type: 'string', enum: ['Pending', 'Approved', 'Rejected'], example: 'Approved' },
+          rejectionReason: { type: 'string', example: '' }
+        }
+      },
+      WalletTransactionResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789txn' },
+          userId: { type: 'string', example: '66bc91f24d9e123456789usr' },
+          type: { type: 'string', enum: ['Deposit', 'Withdrawal', 'Contest Entry', 'Prize Win', 'Reward Bonus'], example: 'Prize Win' },
+          amount: { type: 'number', example: 500 },
+          currency: { type: 'string', enum: ['INR', 'Coins'], example: 'Coins' },
+          status: { type: 'string', enum: ['Pending', 'Completed', 'Failed'], example: 'Completed' },
+          referenceId: { type: 'string', example: 'TXN-2026-98124' },
+          createdAt: { type: 'string', format: 'date-time', example: '2026-09-05T18:00:00.000Z' }
+        }
       }
     }
   },
@@ -1776,6 +1836,120 @@ export const swaggerDocument = {
         }
       }
     },
+    '/api/v1/mobile/contests/next': {
+      get: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Get Next Contest',
+        description: 'Retrieves the next upcoming or active contest available for participation.',
+        responses: {
+          200: { description: 'Next contest retrieved successfully.' },
+          404: { description: 'No upcoming or active contest found.' }
+        }
+      }
+    },
+    '/api/v1/mobile/contests/next/join': {
+      post: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Join Next Contest',
+        description: 'Automatically finds and registers the authenticated user into the next available active/upcoming contest.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Joined next contest successfully.' },
+          401: { description: 'Authentication required.' },
+          404: { description: 'No active contest available to join.' }
+        }
+      }
+    },
+    '/api/v1/mobile/contests/{id}/join': {
+      post: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Join Contest by ID',
+        description: 'Enrolls the authenticated user into the specified contest ID.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Joined contest successfully.' },
+          400: { description: 'KYC missing, invalid contest state, or maximum participants reached.' },
+          401: { description: 'Authentication required.' }
+        }
+      }
+    },
+    '/api/v1/mobile/room-cycle/join': {
+      post: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Join Room Cycle',
+        description: 'Enrolls and assigns the authenticated contestant into an active room cycle.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Joined room cycle successfully.' },
+          401: { description: 'Authentication required.' }
+        }
+      }
+    },
+    '/api/v1/mobile/room-cycle/{roomId}/join/{contestId}': {
+      post: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Join Specific Room and Contest',
+        description: 'Assigns the authenticated contestant to a room and registers them for a contest simultaneously.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: 'CNT-2026-1002' } }
+        ],
+        responses: {
+          200: { description: 'Joined room and contest successfully.' },
+          400: { description: 'Missing parameters or invalid room/contest.' },
+          401: { description: 'Authentication required.' }
+        }
+      }
+    },
+    '/api/v1/mobile/room-cycle/submissions': {
+      post: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Submit Room Cycle Task Proof',
+        description: 'Uploads a contestant task submission with proof notes, URL links, base64 data, or attached file.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['cycleId', 'roomId', 'taskId'],
+                properties: {
+                  cycleId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d0' },
+                  roomId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' },
+                  taskId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d2' },
+                  submissionType: { type: 'string', enum: ['File', 'Image', 'Video', 'Link', 'Text'], example: 'File' },
+                  mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=example' },
+                  proofNotes: { type: 'string', example: 'Completed the required room task.' },
+                  mediaFile: { type: 'string', format: 'binary', description: 'Attached proof file' }
+                }
+              }
+            },
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['cycleId', 'roomId', 'taskId'],
+                properties: {
+                  cycleId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d0' },
+                  roomId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' },
+                  taskId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d2' },
+                  submissionType: { type: 'string', enum: ['File', 'Image', 'Video', 'Link', 'Text'], example: 'Link' },
+                  mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=example' },
+                  proofNotes: { type: 'string', example: 'Completed the required room task.' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Task submission uploaded successfully. Sent for admin review.' },
+          400: { description: 'Invalid payload or missing parameters.' },
+          401: { description: 'Authentication required.' }
+        }
+      }
+    },
     // ----------------------------------------------------
     // 9. QUESTION BANK & QUIZ BUILDER
     // ----------------------------------------------------
@@ -3014,6 +3188,32 @@ export const swaggerDocument = {
               }
             }
           }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/join': {
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Join Grand Contest',
+        description: 'Registers the authenticated user for participation in the specified Grand Contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: { description: 'Joined Grand Contest successfully.' },
+          400: { description: 'Registration closed or contest invalid.' },
+          401: { description: 'Authentication required.' }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/analytics': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Get Grand Contest Analytics',
+        description: 'Fetches participant metrics, task counts, prize pool details, and status for the Grand Contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: { description: 'Grand Contest analytics metrics object.' }
         }
       }
     },

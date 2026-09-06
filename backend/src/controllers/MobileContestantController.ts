@@ -11,6 +11,10 @@ import { redisService } from '../services/RedisService';
 import { registrationService } from '../services/RegistrationService';
 import { queueService } from '../services/QueueService';
 import { AuthenticatedRequest } from '../middleware/AuthMiddleware';
+import Contest from '../models/Contest';
+import { DailyContest } from '../models/DailyContests';
+import { contestService } from '../services/ContestService';
+import { biWeeklyRoomCycleService } from '../services/BiWeeklyRoomCycleService';
 
 // ------------------------------------------------------------------
 // AVATAR RESOLUTION HELPERS (3-TIER FALLBACK)
@@ -795,6 +799,205 @@ export class MobileContestantController {
         success: true,
         message: 'Token refreshed successfully.',
         data: tokens
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // CONTEST JOINING & NEXT CONTEST ENDPOINTS
+  // ------------------------------------------------------------------
+
+  // GET NEXT CONTEST (/api/v1/mobile/contests/next)
+  public getNextContest = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const now = new Date();
+      let contest: any = await Contest.findOne({
+        status: { $in: ['Registration Open', 'Active', 'Live', 'Upcoming'] },
+        endDate: { $gte: now }
+      }).sort({ startDate: 1, createdAt: -1 });
+
+      if (!contest) {
+        contest = await Contest.findOne({
+          status: { $in: ['Registration Open', 'Active', 'Live', 'Upcoming'] }
+        }).sort({ createdAt: -1 });
+      }
+
+      if (!contest) {
+        contest = await DailyContest.findOne({ status: 'Active' }).sort({ createdAt: -1 });
+      }
+
+      if (!contest) {
+        res.status(404).json({
+          success: false,
+          message: 'No upcoming or active contest found at this moment.'
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Next contest retrieved successfully.',
+        data: contest
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // JOIN NEXT CONTEST (/api/v1/mobile/contests/next/join)
+  public joinNextContest = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id || (req.user as any)?._id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required to join contest.' });
+        return;
+      }
+
+      const now = new Date();
+      let contest: any = await Contest.findOne({
+        status: { $in: ['Registration Open', 'Active', 'Live', 'Upcoming'] },
+        endDate: { $gte: now }
+      }).sort({ startDate: 1, createdAt: -1 });
+
+      if (!contest) {
+        contest = await Contest.findOne({
+          status: { $in: ['Registration Open', 'Active', 'Live', 'Upcoming'] }
+        }).sort({ createdAt: -1 });
+      }
+
+      if (!contest) {
+        res.status(404).json({ success: false, message: 'No active contest available to join.' });
+        return;
+      }
+
+      const result = await contestService.joinContest(contest._id.toString(), userId.toString());
+      res.status(200).json({
+        success: true,
+        message: 'Successfully joined next contest.',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // JOIN CONTEST BY ID (/api/v1/mobile/contests/:id/join)
+  public joinContestById = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id || (req.user as any)?._id;
+      const contestId = req.params.id;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required to join contest.' });
+        return;
+      }
+
+      const result = await contestService.joinContest(contestId, userId.toString());
+      res.status(200).json({
+        success: true,
+        message: 'Successfully joined contest.',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // JOIN ROOM CYCLE (/api/v1/mobile/room-cycle/join)
+  public joinRoomCycle = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id || (req.user as any)?._id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required to join room cycle.' });
+        return;
+      }
+
+      const result = await biWeeklyRoomCycleService.randomAssignUsers([userId.toString()]);
+      res.status(200).json({
+        success: true,
+        message: 'Successfully joined room cycle.',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // JOIN SPECIFIC ROOM & CONTEST (/api/v1/mobile/room-cycle/:roomId/join/:contestId)
+  public joinRoomAndContest = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id || (req.user as any)?._id;
+      const roomId = req.params.roomId || req.body.roomId;
+      const contestId = req.params.contestId || req.body.contestId;
+
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required.' });
+        return;
+      }
+
+      if (!roomId || !contestId) {
+        res.status(400).json({ success: false, message: 'Both roomId and contestId are required.' });
+        return;
+      }
+
+      // 1. Assign contestant to Room
+      const roomResult = await biWeeklyRoomCycleService.assignMembersToRoom(roomId, [userId.toString()]);
+
+      // 2. Register contestant to Contest
+      let contestResult: any = null;
+      try {
+        contestResult = await contestService.joinContest(contestId, userId.toString());
+      } catch (err: any) {
+        contestResult = { note: err.message || 'Contest join attempt noted' };
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully joined room ${roomId} and contest ${contestId}.`,
+        data: {
+          roomId,
+          contestId,
+          roomAssignment: roomResult,
+          contestRegistration: contestResult
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // SUBMIT TASK / UPLOAD SUBMISSION (/api/v1/mobile/room-cycle/submissions)
+  public submitTask = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id || (req.user as any)?._id;
+      if (!userId) {
+        res.status(401).json({ success: false, message: 'Authentication required to submit task.' });
+        return;
+      }
+
+      let uploadedMediaUrl = req.body.mediaUrl || '';
+      if (req.file) {
+        uploadedMediaUrl = `/uploads/${req.file.filename}`;
+      }
+
+      const { cycleId, contestId, roomId, taskId, submissionType, proofNotes } = req.body;
+      const submission = await biWeeklyRoomCycleService.createSubmission({
+        cycleId,
+        contestId: contestId || req.params.contestId || req.query.contestId,
+        roomId: roomId || req.params.roomId || req.query.roomId,
+        userId: userId.toString(),
+        taskId: taskId || req.params.taskId || req.query.taskId,
+        submissionType: submissionType || (req.file ? 'File' : 'Link'),
+        mediaUrl: uploadedMediaUrl,
+        proofNotes
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Task submission uploaded successfully. Submitted for admin review.',
+        data: submission
       });
     } catch (err) {
       next(err);

@@ -64,6 +64,16 @@ export class GrandContestController {
       next(err);
     }
   }
+
+  async joinGrandContest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?._id;
+      const result = await grandContestService.joinGrandContest(req.params.id, userId);
+      res.status(200).json({ success: true, message: 'Joined Grand Contest successfully', data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const grandContestController = new GrandContestController();

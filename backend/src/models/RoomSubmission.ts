@@ -2,7 +2,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRoomSubmission extends Document {
   taskId?: mongoose.Types.ObjectId;
-  cycleId: mongoose.Types.ObjectId;
+  contestId?: mongoose.Types.ObjectId;
+  cycleId?: mongoose.Types.ObjectId;
   roomId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Resubmit_Requested';
@@ -35,7 +36,8 @@ export interface IRoomSubmission extends Document {
 const RoomSubmissionSchema: Schema = new Schema(
   {
     taskId: { type: Schema.Types.ObjectId, index: true },
-    cycleId: { type: Schema.Types.ObjectId, ref: 'Cycle', required: true, index: true },
+    contestId: { type: Schema.Types.ObjectId, ref: 'Contest', index: true },
+    cycleId: { type: Schema.Types.ObjectId, ref: 'Cycle', index: true },
     roomId: { type: Schema.Types.ObjectId, ref: 'Room', required: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     status: {

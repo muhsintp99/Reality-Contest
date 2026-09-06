@@ -143,6 +143,10 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.updateGrandContest);
   router.delete('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.deleteGrandContest);
   router.post('/grand-contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.duplicateGrandContest);
+  router.post('/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
+  router.post('/admin/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
+  router.post('/v1/mobile/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
+  router.post('/mobile/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
   router.get('/grand-contests/:id/analytics', authenticate, grandContestController.getGrandContestAnalytics);
 
   router.post('/admin/grand-contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContest);
@@ -417,6 +421,32 @@ export function createApiRouter(authLimiter: any): Router {
   // Step 7: Change Password
   router.post('/v1/mobile/profile/change-password', authenticate, mobileContestantController.changePassword);
   router.post('/mobile/profile/change-password', authenticate, mobileContestantController.changePassword);
+
+  // Next Contest & Contest Joining Endpoints
+  router.get('/v1/mobile/contests/next', mobileContestantController.getNextContest);
+  router.get('/mobile/contests/next', mobileContestantController.getNextContest);
+  router.get('/v1/mobile/next-contest', mobileContestantController.getNextContest);
+  router.get('/mobile/next-contest', mobileContestantController.getNextContest);
+
+  router.post('/v1/mobile/contests/next/join', authenticate, mobileContestantController.joinNextContest);
+  router.post('/mobile/contests/next/join', authenticate, mobileContestantController.joinNextContest);
+  router.post('/v1/mobile/next-contest/join', authenticate, mobileContestantController.joinNextContest);
+  router.post('/mobile/next-contest/join', authenticate, mobileContestantController.joinNextContest);
+
+  router.post('/v1/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
+  router.post('/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
+
+  router.post('/v1/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
+  router.post('/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
+
+  router.post('/v1/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.post('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.post('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.post('/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+
+  // Contestant Task Submission Endpoint
+  router.post('/v1/mobile/room-cycle/submissions', authenticate, upload.single('mediaFile'), mobileContestantController.submitTask);
+  router.post('/mobile/room-cycle/submissions', authenticate, upload.single('mediaFile'), mobileContestantController.submitTask);
 
   // ==================================================================
   // BI-WEEKLY ROOM CYCLE MODULE API ENDPOINTS
