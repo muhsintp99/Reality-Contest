@@ -983,12 +983,27 @@ export class MobileContestantController {
       }
 
       const { cycleId, contestId, roomId, taskId, submissionType, proofNotes } = req.body;
+      const targetRoomId = (roomId || req.params?.roomId || req.query?.roomId || '').toString().trim();
+      const targetTaskId = (taskId || req.params?.taskId || req.query?.taskId || '').toString().trim();
+      const targetContestId = (contestId || req.params?.contestId || req.query?.contestId || '').toString().trim();
+      const targetCycleId = (cycleId || req.params?.cycleId || req.query?.cycleId || '').toString().trim();
+
+      if (!targetRoomId) {
+        res.status(400).json({ success: false, message: 'roomId parameter is required.' });
+        return;
+      }
+
+      if (!targetTaskId) {
+        res.status(400).json({ success: false, message: 'taskId parameter is required.' });
+        return;
+      }
+
       const submission = await biWeeklyRoomCycleService.createSubmission({
-        cycleId,
-        contestId: contestId || req.params.contestId || req.query.contestId,
-        roomId: roomId || req.params.roomId || req.query.roomId,
+        cycleId: targetCycleId || undefined,
+        contestId: targetContestId || undefined,
+        roomId: targetRoomId,
         userId: userId.toString(),
-        taskId: taskId || req.params.taskId || req.query.taskId,
+        taskId: targetTaskId,
         submissionType: submissionType || (req.file ? 'File' : 'Link'),
         mediaUrl: uploadedMediaUrl,
         proofNotes

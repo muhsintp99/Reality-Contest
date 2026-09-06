@@ -496,6 +496,17 @@ export class BiWeeklyRoomCycleService {
       mediaUrl = saveBase64File(mediaUrl, 'submission', 'proof');
     }
 
+    const files = mediaUrl
+      ? [
+          {
+            url: mediaUrl,
+            filename: mediaUrl.split('/').pop() || 'submission_file',
+            fileType: data.submissionType || 'File',
+            fileSizeMB: 0
+          }
+        ]
+      : [];
+
     const submission = await RoomSubmission.create({
       cycleId: data.cycleId && mongoose.Types.ObjectId.isValid(data.cycleId) ? data.cycleId : undefined,
       contestId: data.contestId && mongoose.Types.ObjectId.isValid(data.contestId) ? data.contestId : undefined,
@@ -505,6 +516,8 @@ export class BiWeeklyRoomCycleService {
       submissionType: data.submissionType || 'Link',
       mediaUrl,
       proofNotes: data.proofNotes || '',
+      content: data.proofNotes || '',
+      files,
       status: 'Pending',
       submittedAt: new Date()
     });
@@ -528,7 +541,7 @@ export class BiWeeklyRoomCycleService {
       .populate('cycleId', 'cycleNumber title')
       .populate('contestId', 'contestId title')
       .populate('roomId', 'name code')
-      .populate('roomId', 'name code')
+      .populate('taskId', 'title points taskType submissionType')
       .populate('userId', 'name email avatar')
       .populate('reviewedBy', 'name email')
       .sort({ createdDate: -1 })

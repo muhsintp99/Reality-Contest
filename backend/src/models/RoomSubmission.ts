@@ -7,6 +7,9 @@ export interface IRoomSubmission extends Document {
   roomId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Resubmit_Requested';
+  submissionType?: 'Link' | 'File' | 'Text' | 'Image' | 'Video';
+  mediaUrl?: string;
+  proofNotes?: string;
   content?: string;
   files: Array<{
     url: string;
@@ -21,6 +24,7 @@ export interface IRoomSubmission extends Document {
   finalPoints: number;
   feedback?: string;
   reviewedBy?: mongoose.Types.ObjectId;
+  submittedAt?: Date;
   reviewedAt?: Date;
   history: Array<{
     action: string;
@@ -35,7 +39,7 @@ export interface IRoomSubmission extends Document {
 
 const RoomSubmissionSchema: Schema = new Schema(
   {
-    taskId: { type: Schema.Types.ObjectId, index: true },
+    taskId: { type: Schema.Types.ObjectId, ref: 'Task', index: true },
     contestId: { type: Schema.Types.ObjectId, ref: 'Contest', index: true },
     cycleId: { type: Schema.Types.ObjectId, ref: 'Cycle', index: true },
     roomId: { type: Schema.Types.ObjectId, ref: 'Room', required: true, index: true },
@@ -46,6 +50,13 @@ const RoomSubmissionSchema: Schema = new Schema(
       default: 'Pending',
       index: true
     },
+    submissionType: {
+      type: String,
+      enum: ['Link', 'File', 'Text', 'Image', 'Video'],
+      default: 'Link'
+    },
+    mediaUrl: { type: String, default: '' },
+    proofNotes: { type: String, default: '' },
     content: { type: String, default: '' },
     files: [
       {
@@ -62,6 +73,7 @@ const RoomSubmissionSchema: Schema = new Schema(
     finalPoints: { type: Number, default: 0 },
     feedback: { type: String, default: '' },
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    submittedAt: { type: Date, default: Date.now },
     reviewedAt: { type: Date },
     history: [
       {

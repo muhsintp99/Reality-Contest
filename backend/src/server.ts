@@ -206,6 +206,8 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     });
 
     // Centralized Error Middleware (Winston logs, Stack hiding)
+    app.use(errorHandler);
+
     // Database Connection Pooling & Initialization
     mongoose.set('bufferCommands', true);
     const dbOptions = {
