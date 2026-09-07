@@ -1887,6 +1887,21 @@ export const swaggerDocument = {
       }
     },
     '/api/v1/mobile/room-cycle/{roomId}/join/{contestId}': {
+      get: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Join Specific Room and Contest (GET)',
+        description: 'Assigns the authenticated contestant to a room and registers them for a contest simultaneously.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: 'CNT-2026-1002' } }
+        ],
+        responses: {
+          200: { description: 'Joined room and contest successfully.' },
+          400: { description: 'Missing parameters or invalid room/contest.' },
+          401: { description: 'Authentication required.' }
+        }
+      },
       post: {
         tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Join Specific Room and Contest',

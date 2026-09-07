@@ -929,16 +929,21 @@ export class MobileContestantController {
   public joinRoomAndContest = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = (req.user as any)?.id || (req.user as any)?._id;
-      const roomId = req.params.roomId || req.body.roomId;
-      const contestId = req.params.contestId || req.body.contestId;
+      const roomId = req.params.roomId || req.body?.roomId || req.query?.roomId;
+      const contestId = req.params.contestId || req.body?.contestId || req.query?.contestId;
 
       if (!userId) {
         res.status(401).json({ success: false, message: 'Authentication required.' });
         return;
       }
 
-      if (!roomId || !contestId) {
-        res.status(400).json({ success: false, message: 'Both roomId and contestId are required.' });
+      if (!roomId || !contestId || roomId === '{roomId}' || contestId === '{contestId}') {
+        res.status(400).json({ success: false, message: 'Both roomId and contestId are required valid parameters.' });
+        return;
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(roomId)) {
+        res.status(400).json({ success: false, message: `Invalid roomId format: '${roomId}'. Must be a valid 24-character hexadecimal ObjectId.` });
         return;
       }
 

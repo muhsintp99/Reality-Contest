@@ -436,9 +436,15 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/v1/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
   router.post('/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
 
+  router.get('/v1/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
+  router.get('/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
   router.post('/v1/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
   router.post('/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
 
+  router.get('/v1/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.get('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.get('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.get('/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/v1/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);

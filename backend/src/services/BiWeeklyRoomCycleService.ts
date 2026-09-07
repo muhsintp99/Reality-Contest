@@ -249,6 +249,9 @@ export class BiWeeklyRoomCycleService {
 
   // ================= MEMBER ASSIGNMENT =================
   async assignMembersToRoom(roomId: string, userIds: string[], role: 'Leader' | 'Member' = 'Member') {
+    if (!mongoose.Types.ObjectId.isValid(roomId)) {
+      throw new Error(`Invalid roomId format: ${roomId}`);
+    }
     const room = await Room.findById(roomId);
     if (!room) throw new Error('Room not found');
 

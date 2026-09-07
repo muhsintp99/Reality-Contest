@@ -34,11 +34,11 @@ export const errorHandler = (
   }
 
   // Handle mongoose validation/cast errors specifically
-  if (err.name === 'ValidationError') {
+  if (err.name === 'ValidationError' || err.name === 'CastError') {
     res.status(400).json({
       success: false,
-      message: 'Database Validation Error',
-      errors: (err as any).errors,
+      message: err.name === 'CastError' ? `Invalid ID format: ${(err as any).value}` : 'Database Validation Error',
+      ...(err.name === 'ValidationError' ? { errors: (err as any).errors } : {}),
       ...(!isProduction ? { stack: err.stack } : {})
     });
     return;
