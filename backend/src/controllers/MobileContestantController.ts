@@ -930,15 +930,15 @@ export class MobileContestantController {
     try {
       const userId = (req.user as any)?.id || (req.user as any)?._id;
       const roomId = req.params.roomId || req.body?.roomId || req.query?.roomId;
-      const contestId = req.params.contestId || req.body?.contestId || req.query?.contestId;
+      const contestId = req.params.contestId || req.params.id || req.params._id || req.body?.contestId || req.body?._id || req.query?.contestId || req.query?._id;
 
       if (!userId) {
         res.status(401).json({ success: false, message: 'Authentication required.' });
         return;
       }
 
-      if (!roomId || !contestId || roomId === '{roomId}' || contestId === '{contestId}') {
-        res.status(400).json({ success: false, message: 'Both roomId and contestId are required valid parameters.' });
+      if (!roomId || !contestId || roomId === '{roomId}' || contestId === '{contestId}' || contestId === '{_id}') {
+        res.status(400).json({ success: false, message: 'Both roomId and contestId (_id) are required valid parameters.' });
         return;
       }
 
@@ -950,20 +950,26 @@ export class MobileContestantController {
       // 1. Assign contestant to Room
       const roomResult = await biWeeklyRoomCycleService.assignMembersToRoom(roomId, [userId.toString()]);
 
-      // 2. Register contestant to Contest
+      // 2. Register contestant to Contest using Contest _id
       let contestResult: any = null;
+      let resolvedContestId = contestId;
       try {
-        contestResult = await contestService.joinContest(contestId, userId.toString());
+        const contestDoc = await contestService.getContestById(contestId);
+        if (contestDoc && contestDoc._id) {
+          resolvedContestId = contestDoc._id.toString();
+        }
+        contestResult = await contestService.joinContest(resolvedContestId, userId.toString());
       } catch (err: any) {
         contestResult = { note: err.message || 'Contest join attempt noted' };
       }
 
       res.status(200).json({
         success: true,
-        message: `Successfully joined room ${roomId} and contest ${contestId}.`,
+        message: `Successfully joined room ${roomId} and contest ${resolvedContestId}.`,
         data: {
           roomId,
-          contestId,
+          contestId: resolvedContestId,
+          _id: resolvedContestId,
           roomAssignment: roomResult,
           contestRegistration: contestResult
         }

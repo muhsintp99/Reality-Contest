@@ -445,10 +445,15 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.get('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.get('/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.get('/v1/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
+  router.get('/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
+
   router.post('/v1/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
+  router.post('/v1/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
+  router.post('/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
 
   // Contestant Task Submission Endpoint
   router.post('/v1/mobile/room-cycle/submissions', authenticate, upload.single('mediaFile'), mobileContestantController.submitTask);
