@@ -122,6 +122,15 @@ export function createApiRouter(authLimiter: any): Router {
 
   // 6. Reality Contest Platform routes
 
+  // Public Contest Endpoints (for Website & Visitors)
+  router.get('/public/contests', contestController.listContests);
+  router.get('/public/contests/completed', (req: any, res: any, next: any) => { req.query = { ...req.query, status: 'Completed' }; contestController.listContests(req, res, next); });
+  router.get('/public/daily-contests', dailyContestsController.listDailyContests);
+  router.get('/public/grand-contests', grandContestController.listGrandContests);
+  router.get('/public/bi-weekly-contests', biWeeklyRoomCycleController.getCycles);
+  router.get('/public/room-cycles', biWeeklyRoomCycleController.getRooms);
+  router.get('/public/coupons', couponController.listCoupons);
+
   // Contest routes
   router.post('/contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.createContest);
   router.get('/contests', authenticate, contestController.listContests);
@@ -316,6 +325,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/admin/roles-permissions/role', authenticate, authorize('Super Admin', 'Admin'), rolePermissionController.createCustomRole);
 
   // Public CMS REST APIs (Accessible for Member Platform & Visitors)
+  router.post('/cms/seed', cmsController.seedCms);
   router.get('/cms/doc/:type', cmsController.getDocument);
   router.get('/cms/document/:type', cmsController.getDocument);
   router.get('/cms/privacy', (req: any, res, next) => { req.params = { ...req.params, type: 'privacy' }; cmsController.getDocument(req, res, next); });
@@ -328,6 +338,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/cms/social', cmsController.listSocial);
 
   // Admin CMS REST APIs
+  router.post('/admin/cms/seed', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.seedCms);
   // Legal Documents (Privacy Policy, Terms, About Us)
   router.get('/admin/cms/doc/:type', authenticate, cmsController.getDocument);
   router.put('/admin/cms/doc/:type', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.updateDocument);

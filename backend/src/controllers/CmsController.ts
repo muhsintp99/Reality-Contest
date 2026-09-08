@@ -334,6 +334,16 @@ export class CMSController {
       next(err);
     }
   }
+
+  async seedCms(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { seedCmsData } = require('../scripts/seedCms');
+      const result = await seedCmsData();
+      res.status(200).json({ success: true, message: 'CMS Database Seeded successfully.', data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const cmsController = new CMSController();

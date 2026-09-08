@@ -209,13 +209,25 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     app.use(errorHandler);
 
     // Database Connection Pooling & Initialization
-    mongoose.set('bufferCommands', true);
+    mongoose.connection.on('disconnected', () => {
+      logger.warn('MongoDB connection lost! Driver attempting auto-reconnect...');
+    });
+    mongoose.connection.on('reconnected', () => {
+      logger.info('MongoDB connection re-established successfully.');
+    });
+    mongoose.connection.on('error', (err) => {
+      logger.error('MongoDB connection error event:', err?.message || err);
+    });
+
     const dbOptions = {
-      maxPoolSize: 100, // Handle high concurrent connections
-      minPoolSize: 10,
+      maxPoolSize: 50,
+      minPoolSize: 5,
       socketTimeoutMS: 45000,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+      heartbeatFrequencyMS: 10000,
+      retryWrites: true,
+      retryReads: true
     };
 
     try {
@@ -226,10 +238,10 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     } catch (err) {
       logger.error('Database connection failed:', err);
       logger.warn('\n======================================================');
-      logger.warn('WARNING: MongoDB is not running on your local machine.');
+      logger.warn('WARNING: MongoDB is not reachable or running.');
       logger.warn(`Attempted URI: ${config.MONGODB_URI}`);
       logger.warn('The server will launch, but database queries will fail.');
-      logger.warn('Please start mongod locally or update MONGODB_URI in .env');
+      logger.warn('Please check network connection or update MONGODB_URI in .env');
       logger.warn('======================================================\n');
     }
 

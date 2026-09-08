@@ -16,6 +16,9 @@ import { WalletDashboard } from './pages/WalletDashboard';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { RewardsBadgeCenter } from './pages/RewardsBadgeCenter';
 import { WebsiteHome } from './pages/WebsiteHome';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { TermsOfService } from './pages/TermsOfService';
+import { SupportContact } from './pages/SupportContact';
 import { ShieldAlert } from 'lucide-react';
 
 const AccessDeniedView = () => {
@@ -99,13 +102,7 @@ const AppContent = () => {
     );
   }
 
-  // 1. Logged-in users landing on '/' are redirected directly to their Dashboard
-  if (isAuthenticated && location.pathname === '/') {
-    const defaultRoute = user?.role === 'Judge' ? '/judge' : user?.role === 'Sponsor' ? '/sponsor' : '/dashboard';
-    return <Navigate to={defaultRoute} replace />;
-  }
-
-  // 2. Standalone Public Website Routes (For unauthenticated visitors on '/' or explicit '/website')
+  // 1. Standalone Public Website Routes (Default home page for all users on '/' or '/website')
   const isWebsitePage = location.pathname === '/' || location.pathname === '/website';
   if (isWebsitePage) {
     return (
@@ -116,7 +113,18 @@ const AppContent = () => {
     );
   }
 
-  // 2. Standalone Auth Pages (Login, Register, Forgot Password)
+  // 2. Standalone Public Legal & Compliance Pages
+  if (['/privacy', '/privacy-policy'].includes(location.pathname)) {
+    return <PrivacyPolicy />;
+  }
+  if (['/terms', '/terms-of-service'].includes(location.pathname)) {
+    return <TermsOfService />;
+  }
+  if (['/support', '/support-contact', '/contact'].includes(location.pathname)) {
+    return <SupportContact />;
+  }
+
+  // 3. Standalone Auth Pages (Login, Register, Forgot Password)
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
   if (isAuthPage) {
     return (

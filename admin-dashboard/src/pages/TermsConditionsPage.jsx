@@ -65,6 +65,48 @@ export const TermsConditionsPage = () => {
     setDrawerOpen(false);
   };
 
+  const [viewSourceCode, setViewSourceCode] = useState(false);
+
+  const renderFormattedContent = (content) => {
+    if (!content) return null;
+    const isHtml = /<[a-z][\s\S]*>/i.test(content);
+    if (viewSourceCode) {
+      return (
+        <div className="bg-slate-950 p-4 rounded-2xl border border-white/10 font-mono text-xs text-amber-400 whitespace-pre-wrap leading-relaxed overflow-x-auto">
+          {content}
+        </div>
+      );
+    }
+    if (isHtml) {
+      return (
+        <div
+          className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 [&_h2]:text-base [&_h2]:font-extrabold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-brandPrimary [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mt-3 [&_h3]:mb-1 [&_p]:text-xs [&_p]:leading-relaxed [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_strong]:font-bold"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
+      );
+    }
+    return (
+      <div className="text-xs text-slate-800 dark:text-white/90 whitespace-pre-wrap leading-relaxed">
+        {content}
+      </div>
+    );
+  };
+
+  const handleSeed = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.post('/api/admin/cms/seed', {}, { withCredentials: true });
+      if (res.data.success) {
+        showSnackbar('Terms & Conditions seeded with default content!', 'success');
+        fetchDocument();
+      }
+    } catch (err) {
+      showSnackbar('Error seeding Terms: ' + (err.response?.data?.message || err.message), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 text-left animate-fade-in pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -77,13 +119,22 @@ export const TermsConditionsPage = () => {
             Define contest eligibility rules, fair play guidelines, and service agreements.
           </p>
         </div>
-        <button
-          onClick={() => openDrawer('edit')}
-          className="px-4 py-2.5 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 transition-all flex items-center gap-2 shadow-lg shadow-brandPrimary/15 cursor-pointer"
-        >
-          <Edit className="w-4 h-4" />
-          <span>Edit Terms & Conditions</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSeed}
+            className="px-3.5 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Seed Default Terms & Conditions"
+          >
+            <span>⚡ Seed Terms Default</span>
+          </button>
+          <button
+            onClick={() => openDrawer('edit')}
+            className="px-4 py-2.5 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 transition-all flex items-center gap-2 shadow-lg shadow-brandPrimary/15 cursor-pointer"
+          >
+            <Edit className="w-4 h-4" />
+            <span>Edit Terms & Conditions</span>
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -103,16 +154,25 @@ export const TermsConditionsPage = () => {
                 Author: {document.author || 'Admin'} • Last Modified: {document.lastUpdated}
               </p>
             </div>
-            <button
-              onClick={() => openDrawer('view')}
-              className="px-3 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Eye className="w-4 h-4" /> Preview
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setViewSourceCode(!viewSourceCode)}
+                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                {viewSourceCode ? '✨ Visual Preview' : '💻 Source HTML'}
+              </button>
+              <button
+                onClick={() => openDrawer('view')}
+                className="px-3 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Eye className="w-4 h-4" /> Preview Drawer
+              </button>
+            </div>
           </div>
 
-          <div className="bg-slate-50/80 dark:bg-[#080b12] border border-slate-200/80 dark:border-white/10 rounded-2xl p-6 font-mono text-xs text-slate-800 dark:text-white/90 whitespace-pre-wrap leading-relaxed">
-            {document.content || 'No Terms & Conditions content added yet. Click "Edit Terms & Conditions" to write terms.'}
+          <div className="bg-slate-50/80 dark:bg-[#080b12] border border-slate-200/80 dark:border-white/10 rounded-2xl p-6 shadow-inner">
+            {renderFormattedContent(document.content || 'No Terms & Conditions content added yet. Click "Edit Terms & Conditions" to write terms.')}
           </div>
         </div>
       )}
@@ -120,9 +180,18 @@ export const TermsConditionsPage = () => {
       <RightDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title={`${drawerMode.toUpperCase()} TERMS & CONDITIONS`}>
         {drawerMode === 'view' ? (
           <div className="space-y-4 text-left">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">{formData.title}</h3>
-            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 font-mono text-xs text-slate-800 dark:text-white whitespace-pre-wrap">
-              {formData.content}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">{formData.title}</h3>
+              <button
+                type="button"
+                onClick={() => setViewSourceCode(!viewSourceCode)}
+                className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-brandPrimary hover:text-white transition-all cursor-pointer"
+              >
+                {viewSourceCode ? '✨ Visual Preview' : '💻 Source HTML'}
+              </button>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-900/80 p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 max-h-[65vh] overflow-y-auto custom-scrollbar">
+              {renderFormattedContent(formData.content)}
             </div>
           </div>
         ) : (
@@ -146,14 +215,28 @@ export const TermsConditionsPage = () => {
                 className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none font-mono"
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Terms Content</label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] text-slate-600 dark:text-white/40 uppercase font-bold">Terms Content (HTML / Markdown)</label>
+                <span className="text-[10px] text-slate-500 font-mono">{(formData.content || '').length} chars</span>
+              </div>
+
+              {/* Quick HTML Helper Toolbar */}
+              <div className="flex flex-wrap gap-1.5 p-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-white/10 text-[11px] font-mono">
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, content: (prev.content || '') + '\n<h2>1. Section Title</h2>\n' }))} className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-lg hover:border-brandPrimary font-bold text-slate-800 dark:text-white cursor-pointer">+ H2</button>
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, content: (prev.content || '') + '\n<h3>Sub-heading</h3>\n' }))} className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-lg hover:border-brandPrimary font-bold text-slate-800 dark:text-white cursor-pointer">+ H3</button>
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, content: (prev.content || '') + '\n<p>Enter paragraph text...</p>\n' }))} className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-lg hover:border-brandPrimary text-slate-800 dark:text-white cursor-pointer">+ Paragraph</button>
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, content: (prev.content || '') + '<strong>Bold Text</strong>' }))} className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-lg hover:border-brandPrimary font-bold text-slate-800 dark:text-white cursor-pointer">Bold</button>
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, content: '<h2>1. Acceptance of Terms</h2>\n<p>By registering, you agree to abide by all platform rules and fair play policies.</p>\n\n<h2>2. Fair Play Policy</h2>\n<p>Zero tolerance for cheating or bot automation.</p>' }))} className="ml-auto px-2 py-1 bg-brandPrimary/10 text-brandPrimary font-bold border border-brandPrimary/30 rounded-lg hover:bg-brandPrimary hover:text-white transition-all cursor-pointer">⚡ Load Template</button>
+              </div>
+
               <textarea
-                rows={12}
+                rows={14}
                 required
                 value={formData.content || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none font-mono"
+                placeholder="<h2>1. Acceptance</h2>&#10;<p>Write or paste terms of service content here...</p>"
+                className="w-full bg-white dark:bg-[#0c1322] border border-slate-300 dark:border-white/10 rounded-xl p-3.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brandPrimary font-mono leading-relaxed shadow-inner"
               />
             </div>
             <button type="submit" className="w-full py-3 bg-brandPrimary text-white rounded-xl text-xs font-bold hover:bg-brandPrimary/90 flex items-center justify-center gap-2 cursor-pointer shadow-lg">

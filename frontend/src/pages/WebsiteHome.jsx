@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { updateWalletBalance, updateUserData } from '../store/authSlice';
@@ -12,6 +12,167 @@ import {
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resolveAvatarSrc } from '../utils/avatar';
+
+// Reusable 4.5 Cards Slider Component for Contest Categories
+const ContestSliderRow = ({ sectionTitle, sectionSubtitle, contestsList, sectionIcon, joinedContestIds, setSelectedContestModal }) => {
+  const trackRef = useRef(null);
+
+  const scrollTrack = (direction) => {
+    if (trackRef.current) {
+      const scrollAmount = trackRef.current.clientWidth * 0.22; // 4.5 cards visible per row
+      trackRef.current.scrollBy({
+        left: direction === 'next' ? scrollAmount : -scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  return (
+    <section className="space-y-3 pt-2">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl sm:text-2xl font-black text-white font-poppins flex items-center gap-2">
+            {sectionIcon}
+            <span>{sectionTitle}</span>
+          </h3>
+          <p className="text-xs text-[#A69EC6] font-medium mt-0.5">{sectionSubtitle}</p>
+        </div>
+
+        {/* Prev / Next Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => scrollTrack('prev')}
+            className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
+            title="Previous"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => scrollTrack('next')}
+            className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
+            title="Next"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 4.5 Cards Slider Track */}
+      {contestsList.length === 0 ? (
+        <div className="w-full py-8 px-6 bg-[#1C1335]/60 border border-[#2E1E54] rounded-[28px] text-center space-y-1">
+          <p className="text-xs font-bold text-white">No active competitions currently in {sectionTitle}</p>
+          <p className="text-[11px] text-[#A69EC6]">Contests are dynamically created and published from the platform dashboard.</p>
+        </div>
+      ) : (
+        <div 
+          ref={trackRef}
+          className="flex gap-3.5 overflow-x-auto scrollbar-none scroll-smooth pb-3 px-0.5"
+          style={{ scrollSnapType: 'x mandatory' }}
+        >
+        {contestsList.map((c) => {
+          const isJoined = joinedContestIds.includes(c.id);
+          return (
+            <div 
+              key={c.id}
+              onClick={() => setSelectedContestModal(c)}
+              style={{ scrollSnapAlign: 'start' }}
+              className="min-w-[85%] sm:min-w-[45%] md:min-w-[30%] lg:min-w-[21.5%] xl:min-w-[21.5%] 2xl:min-w-[21.5%] w-[21.5%] shrink-0 bg-[#1C1335]/90 backdrop-blur-xl border border-[#2E1E54] hover:border-[#CEF500]/90 rounded-[28px] overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-[0_0_30px_rgba(206,245,0,0.25)] group flex flex-col justify-between relative cursor-pointer"
+            >
+              {/* Top Neon Glow Edge Accent */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#CEF500] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
+
+              {/* Gaming Card Image Header */}
+              <div className="relative h-38 sm:h-42 overflow-hidden bg-black">
+                <img 
+                  src={c.image} 
+                  alt={c.title} 
+                  className="w-full h-full object-cover opacity-85 group-hover:scale-110 transition-transform duration-700 brightness-95" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1C1335] via-transparent to-black/40" />
+
+                {/* Cyber Top Badges */}
+                <div className="absolute top-2.5 left-2.5 bg-[#0D0714]/90 backdrop-blur-md text-[#CEF500] border border-[#CEF500]/50 text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1.5 z-10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#CEF500] animate-ping" />
+                  <span>{c.sponsorLogo}</span>
+                  <span className="truncate max-w-[75px] font-poppins">{c.sponsor}</span>
+                </div>
+
+                <div className="absolute top-2.5 right-2.5 bg-[#0D0714]/90 backdrop-blur-md text-white border border-[#2E1E54] group-hover:border-[#CEF500]/40 text-[9px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 z-10">
+                  <Clock className="w-3 h-3 text-[#CEF500]" />
+                  <span>{c.timeLeft}</span>
+                </div>
+              </div>
+
+              {/* Gaming Card Info Body */}
+              <div className="p-4 flex-1 flex flex-col justify-between space-y-3 text-left">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black text-[#A69EC6] uppercase tracking-widest truncate max-w-[60%]">
+                      {c.category}
+                    </span>
+                    <span className="text-[10px] font-black text-[#0D0714] bg-[#CEF500] px-2 py-0.5 rounded-full shadow-sm font-poppins">
+                      {c.entryFee}
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm sm:text-base font-black text-white group-hover:text-[#CEF500] transition-colors leading-snug font-poppins line-clamp-1" title={c.title}>
+                    {c.title}
+                  </h4>
+
+                  <p className="text-[11px] text-[#A69EC6] font-medium line-clamp-2 leading-relaxed">
+                    {c.description}
+                  </p>
+                </div>
+
+                {/* Gaming HUD Stats Box */}
+                <div className="pt-2.5 border-t border-[#2E1E54]/80 space-y-2.5">
+                  <div className="bg-[#0D0714]/80 border border-[#2E1E54] group-hover:border-[#CEF500]/30 rounded-2xl p-2.5 flex items-center justify-between shadow-inner transition-colors">
+                    <div>
+                      <span className="text-[8px] text-[#A69EC6] font-bold uppercase tracking-wider block">Cash Pool</span>
+                      <span className="text-xs font-black text-[#CEF500] font-poppins drop-shadow-[0_0_8px_rgba(206,245,0,0.3)]">{c.prizeCash}</span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[8px] text-[#A69EC6] font-bold uppercase tracking-wider block">Players</span>
+                      <span className="text-[11px] font-black text-white font-poppins">{c.participants}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedContestModal(c);
+                    }}
+                    className={`w-full py-2.5 rounded-full font-black text-[11px] uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isJoined 
+                        ? 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-emerald-500/20' 
+                        : 'bg-gradient-to-r from-[#CEF500] via-[#A3E635] to-[#CEF500] text-[#0D0714] shadow-[#CEF500]/30 hover:scale-[1.03] active:scale-95'
+                    }`}
+                  >
+                    {isJoined ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Joined ✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Enter Contest</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      )}
+    </section>
+  );
+};
 
 export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   const dispatch = useDispatch();
@@ -44,19 +205,164 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   const [wheelRotation, setWheelRotation] = useState(0);
   const [wheelWinMessage, setWheelWinMessage] = useState('');
 
+  // Legal Document Modal state
+  const [legalModal, setLegalModal] = useState({
+    isOpen: false,
+    type: '',
+    title: '',
+    content: '',
+    loading: false
+  });
+
+  const openLegalModal = async (type) => {
+    const docTitle = type === 'privacy' ? 'Privacy Policy' : type === 'terms' ? 'Terms of Service' : 'Legal Document';
+    setLegalModal({
+      isOpen: true,
+      type,
+      title: docTitle,
+      content: '',
+      loading: true
+    });
+
+    try {
+      const res = await axios.get(`/api/cms/${type}`, { timeout: 4000 });
+      const doc = res.data?.document;
+      setLegalModal({
+        isOpen: true,
+        type,
+        title: doc?.title || docTitle,
+        content: doc?.content || `<p>Official platform ${docTitle} content loaded from server.</p>`,
+        loading: false
+      });
+    } catch (err) {
+      const fallbackContent = type === 'privacy'
+        ? `<h2>Platform Privacy Policy</h2><p>Your privacy is important to us at Reality Contest Platform. We collect minimal personal data including name, email, and identity verification details strictly for KYC compliance and platform rewards distribution.</p><p>We employ enterprise encryption standards to safeguard your data and will never share or sell personal information to unauthorized third parties.</p>`
+        : `<h2>Terms of Service</h2><p>Welcome to Reality Contest Platform. By registering or participating in contests, quizzes, and room cycles, you agree to abide by all platform rules, KYC guidelines, and terms of service.</p><p>Fair play is mandatory. Any attempt at automated entry, fraudulent activity, or system abuse will result in immediate disqualification and account termination.</p>`;
+      setLegalModal({
+        isOpen: true,
+        type,
+        title: docTitle,
+        content: fallbackContent,
+        loading: false
+      });
+    }
+  };
+
   // Favorites / Like state simulation
   const [likedItems, setLikedItems] = useState(['c1']);
 
   // Scroll to top visibility check
   const [showQuickTop, setShowQuickTop] = useState(false);
 
-  const [categoryPills, setCategoryPills] = useState(['All', 'Trending', 'Top', 'New', 'Free Entry', 'Creator Showdown', 'Daily Quiz']);
+  const [categoryPills, setCategoryPills] = useState(['All', 'Trending', 'Top', 'New', 'Free Entry', 'Creator Showdown', 'Daily Quiz', 'Completed Contests']);
+
+  // Backend State for all API categories (No static dummy data)
+  const [apiGeneralContests, setApiGeneralContests] = useState([]);
+  const [apiCompletedContests, setApiCompletedContests] = useState([]);
+  const [apiDailyContests, setApiDailyContests] = useState([]);
+  const [apiGrandContests, setApiGrandContests] = useState([]);
+  const [apiBiWeeklyContests, setApiBiWeeklyContests] = useState([]);
+  const [apiAds, setApiAds] = useState([]);
+  const [apiOffers, setApiOffers] = useState([]);
 
   useEffect(() => {
     if (user?.coins) {
       setCoinBalance(user.coins);
     }
   }, [user]);
+
+  // Fetch Public Contests, Ads & Coupons strictly from Backend API
+  useEffect(() => {
+    const fetchWebsiteData = async () => {
+      try {
+        const [activeRes, completedRes, dailyRes, grandRes, biWeeklyRes, adsRes, couponsRes] = await Promise.allSettled([
+          axios.get('/api/public/contests', { timeout: 4000 }),
+          axios.get('/api/public/contests/completed', { timeout: 4000 }),
+          axios.get('/api/public/daily-contests', { timeout: 4000 }),
+          axios.get('/api/public/grand-contests', { timeout: 4000 }),
+          axios.get('/api/public/bi-weekly-contests', { timeout: 4000 }),
+          axios.get('/api/ads', { timeout: 4000 }),
+          axios.get('/api/public/coupons', { timeout: 4000 })
+        ]);
+
+        const extractList = (res, keys = ['contests', 'dailyContests', 'grandContests', 'cycles', 'rooms', 'ads', 'coupons', 'data']) => {
+          if (res.status === 'fulfilled' && res.value?.data) {
+            const raw = res.value.data;
+            if (Array.isArray(raw)) return raw;
+            for (const key of keys) {
+              if (Array.isArray(raw[key])) return raw[key];
+            }
+            if (raw.data && Array.isArray(raw.data)) return raw.data;
+          }
+          return [];
+        };
+
+        const formatContest = (c, defaultCat = 'General') => ({
+          id: c._id || c.id || c.contestId || c.cycleId || c.roomId,
+          _id: c._id || c.id || c.contestId || c.cycleId || c.roomId,
+          title: c.title || c.name || c.roomName || 'Platform Contest',
+          sponsor: c.sponsor || c.organization || c.brand || 'Haka Official',
+          sponsorLogo: c.sponsorLogo || '🏆',
+          prizeCash: typeof c.prizePool === 'number' ? `₹${c.prizePool.toLocaleString()}` : (c.prizePool || c.prizeCash || '₹50,000'),
+          prizeCoins: c.entryFeeCoins ? `${c.entryFeeCoins} Coins` : (c.prizeCoins || '10,000 Coins'),
+          entryFee: c.entryFee === 0 || c.entryFeeType === 'Free' ? 'Free' : (typeof c.entryFee === 'number' ? `₹${c.entryFee}` : (c.entryFee || 'Free')),
+          participants: `${c.participantsCount || c.participants || c.maxParticipants || 100} Players`,
+          timeLeft: c.status === 'Completed' ? 'Completed' : (c.endDate ? `${Math.max(0, Math.ceil((new Date(c.endDate) - new Date()) / (1000 * 60 * 60 * 24)))} Days Left` : 'Active'),
+          category: c.status === 'Completed' ? 'Completed Contests' : (c.category || defaultCat),
+          tags: [c.status || 'Active', c.entryFee === 0 ? 'Free Entry' : 'Prize Pool'],
+          image: c.bannerImage || c.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
+          description: c.description || c.rules || 'Join this exciting platform contest to showcase your skills and win rewards!'
+        });
+
+        const activeList = extractList(activeRes).map(c => formatContest(c, 'General'));
+        const completedList = extractList(completedRes).map(c => formatContest(c, 'Completed Contests'));
+        const dailyList = extractList(dailyRes).map(c => formatContest(c, 'Daily Quiz'));
+        const grandList = extractList(grandRes).map(c => formatContest(c, 'Mega Contests'));
+        const biWeeklyList = extractList(biWeeklyRes).map(c => formatContest(c, 'Weekly Cup'));
+
+        if (activeList.length > 0) setApiGeneralContests(activeList);
+        if (completedList.length > 0) setApiCompletedContests(completedList);
+        if (dailyList.length > 0) setApiDailyContests(dailyList);
+        if (grandList.length > 0) setApiGrandContests(grandList);
+        if (biWeeklyList.length > 0) setApiBiWeeklyContests(biWeeklyList);
+
+        const rawAds = extractList(adsRes, ['ads', 'data']);
+        if (rawAds.length > 0) {
+          setApiAds(rawAds.map(a => ({
+            id: a._id || a.id,
+            title: a.title || 'Sponsored Advertisement',
+            brand: a.sponsor || a.advertiser || 'Partner Brand',
+            duration: a.duration ? `${a.duration} sec` : '30 sec',
+            rewardCoins: a.rewardCoins || a.coins || 50,
+            badge: `+${a.rewardCoins || 50} Coins`,
+            thumbnail: a.bannerImage || a.imageUrl || 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80',
+            description: a.description || 'Watch video ad to claim instant coin rewards.'
+          })));
+        }
+
+        const rawCoupons = extractList(couponsRes, ['coupons', 'data']);
+        if (rawCoupons.length > 0) {
+          setApiOffers(rawCoupons.map(o => ({
+            id: o._id || o.id,
+            title: o.title || o.code || 'Voucher Coupon',
+            brand: o.brand || 'Partner Merchant',
+            category: o.category || 'Deals',
+            coinCost: o.coinCost || o.coinsRequired || 500,
+            discountText: o.discountText || `${o.discountAmount || 20}% OFF`,
+            tag: o.tag || 'Hot Offer',
+            code: o.code || 'SAVE20NOW',
+            validTill: o.expiryDate ? new Date(o.expiryDate).toLocaleDateString() : 'Valid Soon',
+            image: '🎁'
+          })));
+        }
+
+      } catch (err) {
+        console.log('Public Website Data fetch notice:', err?.message);
+      }
+    };
+
+    fetchWebsiteData();
+  }, []);
 
   // Fetch dynamic categories from /api/categories
   useEffect(() => {
@@ -77,53 +383,7 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
     fetchCategoriesFromAPI();
   }, []);
 
-  // Featured Auto-Slider Carousel Data & State
-  const featuredSlidesData = [
-    {
-      id: 'f1',
-      badge: 'CURATED & TRENDING',
-      title: 'Discover weekly challenge',
-      sponsor: '🥤 Sponsored by Pepsi Co',
-      description: 'The original slow instrumental best playlists & video talent entry. Submit your entry to win ₹10,00,000 cash pool + 25,000 Coins!',
-      prizeCash: '₹10,00,000',
-      prizeCoins: '25,000 Coins',
-      image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-      gradient: 'from-[#B983FF] via-[#A855F7] to-[#C084FC]'
-    },
-    {
-      id: 'f2',
-      badge: 'HIGH OCTANE eSPORTS',
-      title: 'Razer Speedrun Arena',
-      sponsor: '🎮 Sponsored by Razer Gaming',
-      description: 'Submit your tactical gaming speedruns & highlight reels. Top streamers win ₹5,00,000 cash pool + Razer Pro Gear!',
-      prizeCash: '₹5,00,000',
-      prizeCoins: '15,00,000 Coins',
-      image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80',
-      gradient: 'from-[#CEF500] via-[#10B981] to-[#059669]'
-    },
-    {
-      id: 'f3',
-      badge: 'TECH & INNOVATION',
-      title: 'Zebronics Audio Innovation Cup',
-      sponsor: '🎧 Sponsored by Zebronics',
-      description: 'Showcase your tech innovation, AI prompt creations, or audio reviews. Win ₹7,50,000 cash & national recognition!',
-      prizeCash: '₹7,50,000',
-      prizeCoins: '30,000 Coins',
-      image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
-      gradient: 'from-[#6366F1] via-[#A855F7] to-[#EC4899]'
-    },
-    {
-      id: 'f4',
-      badge: 'FOOD & CREATOR VIBES',
-      title: 'Swiggy Gourmet Reel Showdown',
-      sponsor: '🍔 Sponsored by Swiggy',
-      description: 'Upload 30-second gourmet food reels & food vlog creations. Split ₹3,00,000 cash pool & Swiggy vouchers!',
-      prizeCash: '₹3,00,000',
-      prizeCoins: '20,000 Coins',
-      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-      gradient: 'from-[#F59E0B] via-[#EF4444] to-[#EC4899]'
-    }
-  ];
+  // Featured Auto-Slider Carousel State
 
   const sliderRef = useRef(null);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -271,18 +531,40 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   const handleConfirmJoinContest = async (contest) => {
     if (!isAuthenticated) {
       setSelectedContestModal(null);
-      navigate('/login');
+      if (onNavigateToLogin) {
+        onNavigateToLogin();
+      } else {
+        navigate('/login');
+      }
       return;
     }
 
     try {
-      const contestId = contest._id || contest.id;
-      const res = await axios.post(`/api/contest/${contestId}/join`, {}, { withCredentials: true });
-      if (res.data.success) {
+      const contestId = contest._id || contest.id || contest.contestId;
+      let res;
+      try {
+        res = await axios.post(`/api/contests/${contestId}/join`, {}, { withCredentials: true });
+      } catch (e1) {
+        try {
+          res = await axios.post(`/api/contest/${contestId}/join`, {}, { withCredentials: true });
+        } catch (e2) {
+          try {
+            res = await axios.post(`/api/v1/mobile/contests/${contestId}/join`, {}, { withCredentials: true });
+          } catch (e3) {
+            try {
+              res = await axios.post(`/api/daily-contests/${contestId}/join`, {}, { withCredentials: true });
+            } catch (e4) {
+              res = await axios.post(`/api/grand-contests/${contestId}/join`, {}, { withCredentials: true });
+            }
+          }
+        }
+      }
+
+      if (res && res.data && (res.data.success || res.status === 200)) {
         if (res.data.user) {
           dispatch(updateUserData(res.data.user));
         }
-        setJoinedContestIds(prev => [...prev, contest.id]);
+        setJoinedContestIds(prev => [...prev, contest.id || contest._id]);
         setSelectedContestModal(null);
         alert(res.data.message || `🎉 Success! You joined "${contest.title}". Best of luck!`);
       }
@@ -291,359 +573,55 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
     }
   };
 
-  // Data Collections
-  const dailyContestsData = [
-    {
-      id: 'd1',
-      title: 'Daily Speed Quiz - Pop & Cinema',
-      sponsor: 'Swiggy',
-      sponsorLogo: '🍔',
-      prizeCash: '₹50,000',
-      prizeCoins: '5,000 Coins',
-      entryFee: 'Free',
-      participants: '22,400 Players',
-      timeLeft: '1 Hour Left',
-      category: 'Daily Quiz',
-      tags: ['Daily Blitz', 'Free Entry'],
-      image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80',
-      description: '10 quick questions about Indian pop culture and cinema. Top 100 players split the prize pool!'
-    },
-    {
-      id: 'd2',
-      title: 'Daily Tech & AI Trivia Sprint',
-      sponsor: 'Zebronics',
-      sponsorLogo: '🎧',
-      prizeCash: '₹75,00,0',
-      prizeCoins: '8,000 Coins',
-      entryFee: '20 Coins',
-      participants: '18,200 Players',
-      timeLeft: '3 Hours Left',
-      category: 'Daily Quiz',
-      tags: ['Live Quiz', 'Tech'],
-      image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
-      description: 'Fast 15-question sprint on AI tools, prompt engineering, and futuristic gadgets!'
-    },
-    {
-      id: 'd3',
-      title: 'Daily Gaming Speedrun Arena',
-      sponsor: 'Razer Gaming',
-      sponsorLogo: '🎮',
-      prizeCash: '₹1,00,000',
-      prizeCoins: '12,000 Coins',
-      entryFee: '50 Coins',
-      participants: '15,600 Players',
-      timeLeft: '6 Hours Left',
-      category: 'Gaming',
-      tags: ['eSports', 'Daily Blitz'],
-      image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80',
-      description: 'Upload your 30-second gaming clutch moment or speedrun clip. Daily leaderboards reset midnight!'
-    },
-    {
-      id: 'd4',
-      title: 'Daily Voucher Quiz - Shoppers Special',
-      sponsor: 'Amazon Pay',
-      sponsorLogo: '🛍️',
-      prizeCash: '₹60,000',
-      prizeCoins: '10,000 Coins',
-      entryFee: 'Free',
-      participants: '29,100 Players',
-      timeLeft: '4 Hours Left',
-      category: 'Free Entry',
-      tags: ['Daily Voucher', 'Free Entry'],
-      image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80',
-      description: 'Answer 5 shopping & deal questions correctly to win instant gift cards!'
-    }
-  ];
+  // Data Collections (Derived strictly from API responses - No static dummy data)
+  const dailyContestsData = apiDailyContests;
+  const weeklyContestsData = apiBiWeeklyContests;
+  const jobContestsData = useMemo(() => {
+    return apiGeneralContests.filter(c => {
+      const catMatch = String(c.category || '').toLowerCase().includes('job');
+      const tagList = Array.isArray(c.tags) ? c.tags : (c.tags ? [c.tags] : []);
+      const tagMatch = tagList.some(t => String(t || '').toLowerCase().includes('job'));
+      return catMatch || tagMatch;
+    });
+  }, [apiGeneralContests]);
 
-  const weeklyContestsData = [
-    {
-      id: 'w1',
-      title: 'Discover Weekly Creator Challenge',
-      sponsor: 'Pepsi Co',
-      sponsorLogo: '🥤',
-      prizeCash: '₹10,00,000',
-      prizeCoins: '25,000 Coins',
-      entryFee: '50 Coins',
-      participants: '14,250 Players',
-      timeLeft: '2 Days Left',
-      category: 'Creator Showdown',
-      tags: ['Weekly Cup', 'Trending'],
-      image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-      description: 'Submit your 60-second video creation showcasing music, dance, or viral skills. Top entries win cash & viral feature!'
-    },
-    {
-      id: 'w2',
-      title: 'Weekly Eco Journalism & Green Voice',
-      sponsor: 'Tata Foundation',
-      sponsorLogo: '🌱',
-      prizeCash: '₹5,00,000',
-      prizeCoins: '15,00,000 Coins',
-      entryFee: '100 Coins',
-      participants: '5,410 Players',
-      timeLeft: '4 Days Left',
-      category: 'Weekly Cup',
-      tags: ['Social Cause', 'Big Prize'],
-      image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
-      description: 'Highlight environmental solutions in an audio/video report. Judged by experts with national recognition.'
-    },
-    {
-      id: 'w3',
-      title: 'Weekly Creator Music Showdown',
-      sponsor: 'Spotify India',
-      sponsorLogo: '🎵',
-      prizeCash: '₹8,00,000',
-      prizeCoins: '20,000 Coins',
-      entryFee: '75 Coins',
-      participants: '11,300 Players',
-      timeLeft: '5 Days Left',
-      category: 'Music',
-      tags: ['Weekly Cup', 'Creator'],
-      image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-      description: 'Original covers, instrumental solos, or beatmaking tracks. Winner gets official playlist placement!'
-    },
-    {
-      id: 'w4',
-      title: 'Weekly Food Vlog & Reel Showdown',
-      sponsor: 'Swiggy Gourmet',
-      sponsorLogo: '🍔',
-      prizeCash: '₹4,50,000',
-      prizeCoins: '18,000 Coins',
-      entryFee: '30 Coins',
-      participants: '9,800 Players',
-      timeLeft: '3 Days Left',
-      category: 'Food',
-      tags: ['Weekly Cup', 'Reels'],
-      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-      description: 'Showcase street food hidden gems or home recipes. Top foodies win cash rewards and Swiggy Black VIP status!'
-    }
-  ];
+  const megaContestsData = apiGrandContests;
+  const defaultCompletedContestsData = apiCompletedContests;
 
-  const jobContestsData = [
-    {
-      id: 'j1',
-      title: 'Frontend & React Developer Sprint 2026',
-      sponsor: 'Tech Hiring Guild',
-      sponsorLogo: '💼',
-      prizeCash: '₹3,50,000',
-      prizeCoins: 'Job Pass',
-      entryFee: 'Free',
-      participants: '7,400 Candidates',
-      timeLeft: '6 Days Left',
-      category: 'Job Contests',
-      tags: ['Hiring Hackathon', 'Career Opportunity'],
-      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
-      description: 'Build a high-performance React dashboard component. Top 10 developers receive direct interview calls from hiring partners!'
-    },
-    {
-      id: 'j2',
-      title: 'UI/UX Design Systems & Figma Sprint',
-      sponsor: 'Product Design Studio',
-      sponsorLogo: '🎨',
-      prizeCash: '₹2,50,000',
-      prizeCoins: 'Internship',
-      entryFee: 'Free',
-      participants: '4,900 Candidates',
-      timeLeft: '4 Days Left',
-      category: 'Job Contests',
-      tags: ['Design Challenge', 'Career Pass'],
-      image: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?auto=format&fit=crop&w=800&q=80',
-      description: 'Design a mobile-first dark mode banking app interface. Selected designers win cash rewards & paid summer fellowships!'
-    },
-    {
-      id: 'j3',
-      title: 'AI Prompt Engineering & ML Model Arena',
-      sponsor: 'AI Innovation Labs',
-      sponsorLogo: '🤖',
-      prizeCash: '₹4,00,000',
-      prizeCoins: 'Career Grant',
-      entryFee: 'Free',
-      participants: '8,200 Candidates',
-      timeLeft: '5 Days Left',
-      category: 'Job Contests',
-      tags: ['AI Hiring', 'High Cash'],
-      image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
-      description: 'Solve real-world NLP and computer vision tasks. Top rankers fast-tracked for Junior ML Engineer positions!'
-    },
-    {
-      id: 'j4',
-      title: 'Digital Growth & Social Marketing Challenge',
-      sponsor: 'GrowthX Alliance',
-      sponsorLogo: '🚀',
-      prizeCash: '₹2,00,000',
-      prizeCoins: 'Fellowship',
-      entryFee: 'Free',
-      participants: '6,100 Candidates',
-      timeLeft: '3 Days Left',
-      category: 'Job Contests',
-      tags: ['Marketing Hiring', 'Free Entry'],
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
-      description: 'Submit an innovative viral launch strategy deck for a D2C product. Winners receive mentorship & job offers!'
-    }
-  ];
+  const contestsData = useMemo(() => [
+    ...apiGeneralContests,
+    ...apiDailyContests,
+    ...apiBiWeeklyContests,
+    ...apiGrandContests,
+    ...apiCompletedContests
+  ], [apiGeneralContests, apiDailyContests, apiBiWeeklyContests, apiGrandContests, apiCompletedContests]);
 
-  const megaContestsData = [
-    {
-      id: 'm1',
-      title: 'India Creator Showdown Grand Finals',
-      sponsor: 'Jio Entertainment',
-      sponsorLogo: '🏆',
-      prizeCash: '₹25,00,000',
-      prizeCoins: '1,00,000 Coins',
-      entryFee: '150 Coins',
-      participants: '45,000 Players',
-      timeLeft: '10 Days Left',
-      category: 'Mega Contests',
-      tags: ['Mega Grand Pool', 'National TV'],
-      image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-      description: 'The mega annual talent championship! Bumper ₹25 Lakhs cash prize pool + celebrity mentorship for final 10!'
-    },
-    {
-      id: 'm2',
-      title: 'SaaS Pitch & Startup Mega Innovation Cup',
-      sponsor: 'T-Hub Startup Arena',
-      sponsorLogo: '💡',
-      prizeCash: '₹15,00,000',
-      prizeCoins: '50,000 Coins',
-      entryFee: '200 Coins',
-      participants: '3,120 Players',
-      timeLeft: '6 Days Left',
-      category: 'Mega Contests',
-      tags: ['VC Funding', 'Mega Grant'],
-      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
-      description: 'Pitch your breakthrough tech idea or MVP deck. Top 3 startups win grant funding and angel investor intros!'
-    },
-    {
-      id: 'm3',
-      title: 'National Gaming eSports Championship',
-      sponsor: 'BGMI Arena',
-      sponsorLogo: '🎮',
-      prizeCash: '₹20,00,000',
-      prizeCoins: '75,000 Coins',
-      entryFee: '100 Coins',
-      participants: '62,000 Players',
-      timeLeft: '8 Days Left',
-      category: 'Mega Contests',
-      tags: ['Mega eSports', 'Trophy'],
-      image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80',
-      description: '4-player squad tournament across 3 knockout stages. Broadcasted live with ₹20 Lakhs total prize pool!'
-    },
-    {
-      id: 'm4',
-      title: 'Global AI Innovators Mega Grand Slam',
-      sponsor: 'OpenAI Community',
-      sponsorLogo: '🌟',
-      prizeCash: '₹30,00,000',
-      prizeCoins: '1,50,000 Coins',
-      entryFee: '250 Coins',
-      participants: '18,500 Players',
-      timeLeft: '12 Days Left',
-      category: 'Mega Contests',
-      tags: ['Global Mega', 'AI Grant'],
-      image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
-      description: 'Build autonomous AI agents or creative generative art. Global winner takes home ₹30,00,000 cash grant!'
-    }
-  ];
+  const featuredSlidesData = useMemo(() => {
+    const combined = [...apiGrandContests, ...apiGeneralContests, ...apiDailyContests, ...apiBiWeeklyContests];
+    if (combined.length === 0) return [];
+    
+    const gradients = [
+      'from-[#B983FF] via-[#A855F7] to-[#C084FC]',
+      'from-[#CEF500] via-[#10B981] to-[#059669]',
+      'from-[#6366F1] via-[#A855F7] to-[#EC4899]',
+      'from-[#F59E0B] via-[#EF4444] to-[#EC4899]'
+    ];
+    
+    return combined.slice(0, 4).map((c, idx) => ({
+      id: c.id || c._id || `f_${idx}`,
+      badge: c.category ? `${c.category.toUpperCase()} ARENA` : 'FEATURED CONTEST',
+      title: c.title,
+      sponsor: `Sponsored by ${c.sponsor}`,
+      description: c.description,
+      prizeCash: c.prizeCash,
+      prizeCoins: c.prizeCoins,
+      image: c.image,
+      gradient: gradients[idx % gradients.length]
+    }));
+  }, [apiGrandContests, apiGeneralContests, apiDailyContests, apiBiWeeklyContests]);
 
-  const contestsData = [
-    ...dailyContestsData,
-    ...weeklyContestsData,
-    ...jobContestsData,
-    ...megaContestsData
-  ];
-
-  const adsData = [
-    {
-      id: 'ad1',
-      title: 'Pepsi Refresh & Vibe Challenge',
-      brand: 'Pepsi Co',
-      duration: '30 sec',
-      rewardCoins: 50,
-      badge: '+50 Coins',
-      thumbnail: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80',
-      description: 'Watch Pepsi\'s latest summer commercial to earn instant coin rewards.'
-    },
-    {
-      id: 'ad2',
-      title: 'Zebronics Wireless Earbuds Reveal',
-      brand: 'Zebronics Audio',
-      duration: '30 sec',
-      rewardCoins: 75,
-      badge: '+75 Coins',
-      thumbnail: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=80',
-      description: 'Discover active noise cancellation tech and collect your audio bonus.'
-    },
-    {
-      id: 'ad3',
-      title: 'Swiggy Gourmet Fast Delivery',
-      brand: 'Swiggy',
-      duration: '30 sec',
-      rewardCoins: 100,
-      badge: '+100 Coins',
-      thumbnail: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80',
-      description: 'Get 50% OFF your next food order and earn 100 bonus coins instantly.'
-    },
-    {
-      id: 'ad4',
-      title: 'Samsung Galaxy AI Experience',
-      brand: 'Samsung',
-      duration: '30 sec',
-      rewardCoins: 120,
-      badge: '+120 Coins',
-      thumbnail: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80',
-      description: 'See the power of Galaxy AI live in action and unlock maximum daily coins.'
-    }
-  ];
-
-  const offersData = [
-    {
-      id: 'o1',
-      title: 'Swiggy ₹500 Gourmet Voucher',
-      brand: 'Swiggy',
-      category: 'Food & Dining',
-      coinCost: 1500,
-      discountText: '₹500 OFF',
-      tag: 'Popular',
-      code: 'HAKA-SWIGGY-500X',
-      validTill: '30 Aug 2026',
-      image: '🍔'
-    },
-    {
-      id: 'o2',
-      title: 'Amazon ₹200 E-Gift Card',
-      brand: 'Amazon',
-      category: 'Shopping',
-      coinCost: 2000,
-      discountText: '₹200 Instant Credit',
-      tag: 'Best Value',
-      code: 'AMZ-HAKA-200GIFT',
-      validTill: '15 Sep 2026',
-      image: '📦'
-    },
-    {
-      id: 'o3',
-      title: 'Zebronics Headphone 40% Coupon',
-      brand: 'Zebronics',
-      category: 'Electronics',
-      coinCost: 600,
-      discountText: '40% Flat Discount',
-      tag: 'Exclusive',
-      code: 'ZEB-40OFF-HAKA',
-      validTill: '31 Aug 2026',
-      image: '🎧'
-    },
-    {
-      id: 'o4',
-      title: 'Netflix 1 Month VIP Sub',
-      brand: 'Netflix',
-      category: 'Subscriptions',
-      coinCost: 4500,
-      discountText: '1 Month Free VIP',
-      tag: 'Hot Deal',
-      code: 'NFLX-HAKA-PASS99',
-      validTill: '10 Oct 2026',
-      image: '🍿'
-    }
-  ];
+  const adsData = apiAds;
+  const offersData = apiOffers;
 
   // Search & Filter Logic
   const filteredContests = contestsData.filter(c => {
@@ -654,156 +632,6 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
       c.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-
-  // Reusable 4.5 Cards Slider Renderer for Contest Categories
-  const renderContestSliderRow = (sectionTitle, sectionSubtitle, contestsList, sectionIcon) => {
-    const trackRef = useRef(null);
-
-    const scrollTrack = (direction) => {
-      if (trackRef.current) {
-        const scrollAmount = trackRef.current.clientWidth * 0.22; // 4.5 cards visible per row
-        trackRef.current.scrollBy({
-          left: direction === 'next' ? scrollAmount : -scrollAmount,
-          behavior: 'smooth'
-        });
-      }
-    };
-
-    return (
-      <section className="space-y-3 pt-2">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black text-white font-poppins flex items-center gap-2">
-              {sectionIcon}
-              <span>{sectionTitle}</span>
-            </h3>
-            <p className="text-xs text-[#A69EC6] font-medium mt-0.5">{sectionSubtitle}</p>
-          </div>
-
-          {/* Prev / Next Controls */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => scrollTrack('prev')}
-              className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
-              title="Previous"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => scrollTrack('next')}
-              className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
-              title="Next"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* 4.5 Cards Slider Track */}
-        <div 
-          ref={trackRef}
-          className="flex gap-3.5 overflow-x-auto scrollbar-none scroll-smooth pb-3 px-0.5"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
-          {contestsList.map((c) => {
-            const isJoined = joinedContestIds.includes(c.id);
-            return (
-              <div 
-                key={c.id}
-                style={{ scrollSnapAlign: 'start' }}
-                className="min-w-[85%] sm:min-w-[45%] md:min-w-[30%] lg:min-w-[21.5%] xl:min-w-[21.5%] 2xl:min-w-[21.5%] w-[21.5%] shrink-0 bg-[#1C1335]/90 backdrop-blur-xl border border-[#2E1E54] hover:border-[#CEF500]/90 rounded-[28px] overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-[0_0_30px_rgba(206,245,0,0.25)] group flex flex-col justify-between relative"
-              >
-                {/* Top Neon Glow Edge Accent */}
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#CEF500] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
-
-                {/* Gaming Card Image Header */}
-                <div className="relative h-38 sm:h-42 overflow-hidden bg-black">
-                  <img 
-                    src={c.image} 
-                    alt={c.title} 
-                    className="w-full h-full object-cover opacity-85 group-hover:scale-110 transition-transform duration-700 brightness-95" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1C1335] via-transparent to-black/40" />
-
-                  {/* Cyber Top Badges */}
-                  <div className="absolute top-2.5 left-2.5 bg-[#0D0714]/90 backdrop-blur-md text-[#CEF500] border border-[#CEF500]/50 text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1.5 z-10">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#CEF500] animate-ping" />
-                    <span>{c.sponsorLogo}</span>
-                    <span className="truncate max-w-[75px] font-poppins">{c.sponsor}</span>
-                  </div>
-
-                  <div className="absolute top-2.5 right-2.5 bg-[#0D0714]/90 backdrop-blur-md text-white border border-[#2E1E54] group-hover:border-[#CEF500]/40 text-[9px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 z-10">
-                    <Clock className="w-3 h-3 text-[#CEF500]" />
-                    <span>{c.timeLeft}</span>
-                  </div>
-                </div>
-
-                {/* Gaming Card Info Body */}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3 text-left">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-black text-[#A69EC6] uppercase tracking-widest truncate max-w-[60%]">
-                        {c.category}
-                      </span>
-                      <span className="text-[10px] font-black text-[#0D0714] bg-[#CEF500] px-2 py-0.5 rounded-full shadow-sm font-poppins">
-                        {c.entryFee}
-                      </span>
-                    </div>
-
-                    <h4 className="text-sm sm:text-base font-black text-white group-hover:text-[#CEF500] transition-colors leading-snug font-poppins line-clamp-1" title={c.title}>
-                      {c.title}
-                    </h4>
-
-                    <p className="text-[11px] text-[#A69EC6] font-medium line-clamp-2 leading-relaxed">
-                      {c.description}
-                    </p>
-                  </div>
-
-                  {/* Gaming HUD Stats Box */}
-                  <div className="pt-2.5 border-t border-[#2E1E54]/80 space-y-2.5">
-                    <div className="bg-[#0D0714]/80 border border-[#2E1E54] group-hover:border-[#CEF500]/30 rounded-2xl p-2.5 flex items-center justify-between shadow-inner transition-colors">
-                      <div>
-                        <span className="text-[8px] text-[#A69EC6] font-bold uppercase tracking-wider block">Cash Pool</span>
-                        <span className="text-xs font-black text-[#CEF500] font-poppins drop-shadow-[0_0_8px_rgba(206,245,0,0.3)]">{c.prizeCash}</span>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="text-[8px] text-[#A69EC6] font-bold uppercase tracking-wider block">Players</span>
-                        <span className="text-[11px] font-black text-white font-poppins">{c.participants}</span>
-                      </div>
-                    </div>
-
-                    {/* Action Button */}
-                    <button
-                      onClick={() => setSelectedContestModal(c)}
-                      className={`w-full py-2.5 rounded-full font-black text-[11px] uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-1.5 cursor-pointer ${
-                        isJoined 
-                          ? 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-emerald-500/20' 
-                          : 'bg-gradient-to-r from-[#CEF500] via-[#A3E635] to-[#CEF500] text-[#0D0714] shadow-[#CEF500]/30 hover:scale-[1.03] active:scale-95'
-                      }`}
-                    >
-                      {isJoined ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Joined ✓</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Enter Contest</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-[#0D0714] text-white font-sans antialiased relative overflow-x-hidden">
@@ -819,11 +647,15 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
         {/* Profile Avatar Top */}
         <button 
           onClick={() => {
-            if (isAuthenticated) navigate('/profile');
-            else navigate('/login');
+            if (isAuthenticated) {
+              const defaultRoute = user?.role === 'Judge' ? '/judge' : user?.role === 'Sponsor' ? '/sponsor' : '/dashboard';
+              navigate(defaultRoute);
+            } else {
+              navigate('/login');
+            }
           }}
-          className="w-10 h-10 rounded-full bg-[#0D0714] border border-[#CEF500]/50 p-0.5 hover:scale-110 transition-transform shadow-md"
-          title="User Profile"
+          className="w-10 h-10 rounded-full bg-[#0D0714] border border-[#CEF500]/50 p-0.5 hover:scale-110 transition-transform shadow-md cursor-pointer"
+          title={isAuthenticated ? `Go to Dashboard (${user?.name || 'Member'})` : "Login / Member Portal"}
         >
           <img 
             src={resolveAvatarSrc(user, user?.name || 'Samantha')} 
@@ -999,11 +831,15 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
             {/* User Icon Avatar Button (Uniform h-10) */}
             <button
               onClick={() => {
-                if (isAuthenticated) navigate('/profile');
-                else navigate('/login');
+                if (isAuthenticated) {
+                  const defaultRoute = user?.role === 'Judge' ? '/judge' : user?.role === 'Sponsor' ? '/sponsor' : '/dashboard';
+                  navigate(defaultRoute);
+                } else {
+                  navigate('/login');
+                }
               }}
               className="relative w-10 h-10 shrink-0 rounded-full bg-[#0D0714] border-2 border-[#CEF500] p-0.5 shadow-lg shadow-[#CEF500]/30 hover:scale-110 transition-all flex items-center justify-center overflow-hidden cursor-pointer"
-              title={isAuthenticated ? 'User Profile / Dashboard' : 'Login / Register'}
+              title={isAuthenticated ? `Go to Dashboard (${user?.name || 'Member'})` : 'Login / Member Portal'}
             >
               <img 
                 src={resolveAvatarSrc(user, user?.name || 'Samantha')} 
@@ -1054,53 +890,54 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
         </section>
 
         {/* FEATURED CONTEST AUTO-SLIDER SWIPER (2 FULL CARDS + 3RD HALF VISIBLE) */}
-        <section 
-          className="space-y-4 pt-2"
-          onMouseEnter={() => setIsSlidePaused(true)}
-          onMouseLeave={() => setIsSlidePaused(false)}
-        >
-          {/* Swiper Controls Header */}
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl sm:text-2xl font-black text-white font-poppins flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#CEF500]" />
-              <span>Discover Weekly Challenges</span>
-            </h3>
+        {featuredSlidesData.length > 0 && (
+          <section 
+            className="space-y-4 pt-2"
+            onMouseEnter={() => setIsSlidePaused(true)}
+            onMouseLeave={() => setIsSlidePaused(false)}
+          >
+            {/* Swiper Controls Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl sm:text-2xl font-black text-white font-poppins flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#CEF500]" />
+                <span>Discover Weekly Challenges</span>
+              </h3>
 
-            {/* Slider Navigation Dots & Arrows */}
-            <div className="flex items-center gap-3">
-              {/* Pagination Dots */}
-              <div className="hidden sm:flex items-center gap-1.5 mr-2">
-                {featuredSlidesData.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleManualSlide(idx)}
-                    className={`h-2 rounded-full transition-all ${
-                      activeSlideIndex === idx
-                        ? 'w-6 bg-[#CEF500]'
-                        : 'w-2 bg-[#2E1E54] hover:bg-[#CEF500]/50'
-                    }`}
-                  />
-                ))}
+              {/* Slider Navigation Dots & Arrows */}
+              <div className="flex items-center gap-3">
+                {/* Pagination Dots */}
+                <div className="hidden sm:flex items-center gap-1.5 mr-2">
+                  {featuredSlidesData.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleManualSlide(idx)}
+                      className={`h-2 rounded-full transition-all ${
+                        activeSlideIndex === idx
+                          ? 'w-6 bg-[#CEF500]'
+                          : 'w-2 bg-[#2E1E54] hover:bg-[#CEF500]/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Prev / Next Arrows */}
+                <button
+                  onClick={() => handleManualSlide((activeSlideIndex - 1 + featuredSlidesData.length) % (featuredSlidesData.length || 1))}
+                  className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
+                  title="Previous Slide"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => handleManualSlide((activeSlideIndex + 1) % (featuredSlidesData.length || 1))}
+                  className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
+                  title="Next Slide"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
-
-              {/* Prev / Next Arrows */}
-              <button
-                onClick={() => handleManualSlide((activeSlideIndex - 1 + featuredSlidesData.length) % featuredSlidesData.length)}
-                className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
-                title="Previous Slide"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-
-              <button
-                onClick={() => handleManualSlide((activeSlideIndex + 1) % featuredSlidesData.length)}
-                className="p-2 rounded-full bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] text-[#A69EC6] hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
-                title="Next Slide"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
             </div>
-          </div>
 
           {/* Swiper Track Container: Exact 2.5 Cards Visible Per Row */}
           <div 
@@ -1177,6 +1014,7 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
             ))}
           </div>
         </section>
+        )}
 
         {/* ==================== TAB CONTENT SECTIONS ==================== */}
 
@@ -1188,36 +1026,54 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
             {selectedCategory === 'All' && searchQuery === '' ? (
               <div className="space-y-12">
                 {/* 1. Daily Contests Card Slider */}
-                {renderContestSliderRow(
-                  'Daily Contests',
-                  'Fast 24-hour trivia & speedrun blitzes reset every midnight.',
-                  dailyContestsData,
-                  <Zap className="w-5 h-5 text-[#CEF500]" />
-                )}
+                <ContestSliderRow
+                  sectionTitle="Daily Contests"
+                  sectionSubtitle="Fast 24-hour trivia & speedrun blitzes reset every midnight."
+                  contestsList={dailyContestsData}
+                  sectionIcon={<Zap className="w-5 h-5 text-[#CEF500]" />}
+                  joinedContestIds={joinedContestIds}
+                  setSelectedContestModal={setSelectedContestModal}
+                />
 
                 {/* 2. Weekly Contests Card Slider */}
-                {renderContestSliderRow(
-                  'Weekly Contests',
-                  '7-day creator & talent cups with massive prize pools.',
-                  weeklyContestsData,
-                  <Trophy className="w-5 h-5 text-[#B983FF]" />
-                )}
+                <ContestSliderRow
+                  sectionTitle="Weekly Contests"
+                  sectionSubtitle="7-day creator & talent cups with massive prize pools."
+                  contestsList={weeklyContestsData}
+                  sectionIcon={<Trophy className="w-5 h-5 text-[#B983FF]" />}
+                  joinedContestIds={joinedContestIds}
+                  setSelectedContestModal={setSelectedContestModal}
+                />
 
                 {/* 3. Job Contests Card Slider */}
-                {renderContestSliderRow(
-                  'Job Contests & Hiring Sprints',
-                  'Compete in tech & design sprints to land direct job passes and internships.',
-                  jobContestsData,
-                  <Briefcase className="w-5 h-5 text-[#3B82F6]" />
-                )}
+                <ContestSliderRow
+                  sectionTitle="Job Contests & Hiring Sprints"
+                  sectionSubtitle="Compete in tech & design sprints to land direct job passes and internships."
+                  contestsList={jobContestsData}
+                  sectionIcon={<Briefcase className="w-5 h-5 text-[#3B82F6]" />}
+                  joinedContestIds={joinedContestIds}
+                  setSelectedContestModal={setSelectedContestModal}
+                />
 
                 {/* 4. Mega Contests Card Slider */}
-                {renderContestSliderRow(
-                  'Mega Contests & Bumper Cups',
-                  'Grand bumper prize pools up to ₹30,00,000 cash!',
-                  megaContestsData,
-                  <Flame className="w-5 h-5 text-[#EF4444]" />
-                )}
+                <ContestSliderRow
+                  sectionTitle="Mega Contests & Bumper Cups"
+                  sectionSubtitle="Grand bumper prize pools up to ₹30,00,000 cash!"
+                  contestsList={megaContestsData}
+                  sectionIcon={<Flame className="w-5 h-5 text-[#EF4444]" />}
+                  joinedContestIds={joinedContestIds}
+                  setSelectedContestModal={setSelectedContestModal}
+                />
+
+                {/* 5. Completed Contests Card Slider (Displayed by default) */}
+                <ContestSliderRow
+                  sectionTitle="Completed Contests & Hall of Fame"
+                  sectionSubtitle="Past completed contests, prize pool distributions, and verified winners."
+                  contestsList={defaultCompletedContestsData}
+                  sectionIcon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+                  joinedContestIds={joinedContestIds}
+                  setSelectedContestModal={setSelectedContestModal}
+                />
               </div>
             ) : (
               /* Filtered Contests Grid View when user searches or selects a pill */
@@ -1232,101 +1088,112 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
-                  {filteredContests.map((c) => {
-                    const isJoined = joinedContestIds.includes(c.id);
-                    return (
-                      <div 
-                        key={c.id}
-                        className="bg-[#1C1335]/90 backdrop-blur-xl border border-[#2E1E54] hover:border-[#CEF500]/90 rounded-[28px] overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-[0_0_30px_rgba(206,245,0,0.25)] group flex flex-col justify-between relative"
-                      >
-                        {/* Top Neon Glow Edge Accent */}
-                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#CEF500] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
+                {filteredContests.length === 0 ? (
+                  <div className="w-full py-12 px-6 bg-[#1C1335]/60 border border-[#2E1E54] rounded-[28px] text-center space-y-2">
+                    <p className="text-sm font-bold text-white">No active competitions matching "{selectedCategory}"</p>
+                    <p className="text-xs text-[#A69EC6]">Try selecting another category pill or clearing your search filter.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
+                    {filteredContests.map((c) => {
+                      const isJoined = joinedContestIds.includes(c.id);
+                      return (
+                        <div 
+                          key={c.id}
+                          onClick={() => setSelectedContestModal(c)}
+                          className="bg-[#1C1335]/90 backdrop-blur-xl border border-[#2E1E54] hover:border-[#CEF500]/90 rounded-[28px] overflow-hidden shadow-2xl transition-all duration-500 hover:shadow-[0_0_30px_rgba(206,245,0,0.25)] group flex flex-col justify-between relative cursor-pointer"
+                        >
+                          {/* Top Neon Glow Edge Accent */}
+                          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#CEF500] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
 
-                        {/* Gaming Card Image Header */}
-                        <div className="relative h-44 overflow-hidden bg-black">
-                          <img 
-                            src={c.image} 
-                            alt={c.title} 
-                            className="w-full h-full object-cover opacity-85 group-hover:scale-110 transition-transform duration-700 brightness-95" 
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#1C1335] via-transparent to-black/40" />
+                          {/* Gaming Card Image Header */}
+                          <div className="relative h-44 overflow-hidden bg-black">
+                            <img 
+                              src={c.image} 
+                              alt={c.title} 
+                              className="w-full h-full object-cover opacity-85 group-hover:scale-110 transition-transform duration-700 brightness-95" 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#1C1335] via-transparent to-black/40" />
 
-                          {/* Cyber Top Badges */}
-                          <div className="absolute top-3 left-3 bg-[#0D0714]/90 backdrop-blur-md text-[#CEF500] border border-[#CEF500]/50 text-xs font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 z-10">
-                            <span className="w-2 h-2 rounded-full bg-[#CEF500] animate-ping" />
-                            <span>{c.sponsorLogo}</span>
-                            <span className="font-poppins">{c.sponsor}</span>
-                          </div>
-
-                          <div className="absolute top-3 right-3 bg-[#0D0714]/90 backdrop-blur-md text-white border border-[#2E1E54] group-hover:border-[#CEF500]/40 text-xs font-extrabold px-3 py-1 rounded-full shadow-md flex items-center gap-1 z-10">
-                            <Clock className="w-3.5 h-3.5 text-[#CEF500]" />
-                            <span>{c.timeLeft}</span>
-                          </div>
-                        </div>
-
-                        {/* Gaming Card Info Body */}
-                        <div className="p-5 flex-1 flex flex-col justify-between space-y-4 text-left">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black text-[#A69EC6] uppercase tracking-widest">
-                                {c.category}
-                              </span>
-                              <span className="text-xs font-black text-[#0D0714] bg-[#CEF500] px-2.5 py-0.5 rounded-full shadow-sm font-poppins">
-                                {c.entryFee}
-                              </span>
+                            {/* Cyber Top Badges */}
+                            <div className="absolute top-3 left-3 bg-[#0D0714]/90 backdrop-blur-md text-[#CEF500] border border-[#CEF500]/50 text-xs font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 z-10">
+                              <span className="w-2 h-2 rounded-full bg-[#CEF500] animate-ping" />
+                              <span>{c.sponsorLogo}</span>
+                              <span className="font-poppins">{c.sponsor}</span>
                             </div>
 
-                            <h4 className="text-base font-black text-white group-hover:text-[#CEF500] transition-colors leading-snug font-poppins line-clamp-1" title={c.title}>
-                              {c.title}
-                            </h4>
-
-                            <p className="text-xs text-[#A69EC6] font-medium line-clamp-2 leading-relaxed">
-                              {c.description}
-                            </p>
+                            <div className="absolute top-3 right-3 bg-[#0D0714]/90 backdrop-blur-md text-white border border-[#2E1E54] group-hover:border-[#CEF500]/40 text-xs font-extrabold px-3 py-1 rounded-full shadow-md flex items-center gap-1 z-10">
+                              <Clock className="w-3.5 h-3.5 text-[#CEF500]" />
+                              <span>{c.timeLeft}</span>
+                            </div>
                           </div>
 
-                          {/* Gaming HUD Stats Box */}
-                          <div className="pt-3 border-t border-[#2E1E54]/80 space-y-3">
-                            <div className="bg-[#0D0714]/80 border border-[#2E1E54] group-hover:border-[#CEF500]/30 rounded-2xl p-3 flex items-center justify-between shadow-inner transition-colors">
-                              <div>
-                                <span className="text-[9px] text-[#A69EC6] font-bold uppercase tracking-wider block">Cash Pool</span>
-                                <span className="text-sm font-black text-[#CEF500] font-poppins drop-shadow-[0_0_8px_rgba(206,245,0,0.3)]">{c.prizeCash}</span>
+                          {/* Gaming Card Info Body */}
+                          <div className="p-5 flex-1 flex flex-col justify-between space-y-4 text-left">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black text-[#A69EC6] uppercase tracking-widest">
+                                  {c.category}
+                                </span>
+                                <span className="text-xs font-black text-[#0D0714] bg-[#CEF500] px-2.5 py-0.5 rounded-full shadow-sm font-poppins">
+                                  {c.entryFee}
+                                </span>
                               </div>
 
-                              <div className="text-right">
-                                <span className="text-[9px] text-[#A69EC6] font-bold uppercase tracking-wider block">Players</span>
-                                <span className="text-xs font-black text-white font-poppins">{c.participants}</span>
-                              </div>
+                              <h4 className="text-base font-black text-white group-hover:text-[#CEF500] transition-colors leading-snug font-poppins line-clamp-1" title={c.title}>
+                                {c.title}
+                              </h4>
+
+                              <p className="text-xs text-[#A69EC6] font-medium line-clamp-2 leading-relaxed">
+                                {c.description}
+                              </p>
                             </div>
 
-                            {/* Action Button */}
-                            <button
-                              onClick={() => setSelectedContestModal(c)}
-                              className={`w-full py-3 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
-                                isJoined 
-                                  ? 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-emerald-500/20' 
-                                  : 'bg-gradient-to-r from-[#CEF500] via-[#A3E635] to-[#CEF500] text-[#0D0714] shadow-[#CEF500]/30 hover:scale-[1.03] active:scale-95'
-                              }`}
-                            >
-                              {isJoined ? (
-                                <>
-                                  <Check className="w-4 h-4" />
-                                  <span>Joined ✓</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>Enter Contest</span>
-                                  <ArrowRight className="w-4 h-4" />
-                                </>
-                              )}
-                            </button>
+                            {/* Gaming HUD Stats Box */}
+                            <div className="pt-3 border-t border-[#2E1E54]/80 space-y-3">
+                              <div className="bg-[#0D0714]/80 border border-[#2E1E54] group-hover:border-[#CEF500]/30 rounded-2xl p-3 flex items-center justify-between shadow-inner transition-colors">
+                                <div>
+                                  <span className="text-[9px] text-[#A69EC6] font-bold uppercase tracking-wider block">Cash Pool</span>
+                                  <span className="text-sm font-black text-[#CEF500] font-poppins drop-shadow-[0_0_8px_rgba(206,245,0,0.3)]">{c.prizeCash}</span>
+                                </div>
+
+                                <div className="text-right">
+                                  <span className="text-[9px] text-[#A69EC6] font-bold uppercase tracking-wider block">Players</span>
+                                  <span className="text-xs font-black text-white font-poppins">{c.participants}</span>
+                                </div>
+                              </div>
+
+                              {/* Action Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedContestModal(c);
+                                }}
+                                className={`w-full py-3 rounded-full font-black text-xs uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
+                                  isJoined 
+                                    ? 'bg-gradient-to-r from-[#10B981] to-[#059669] text-white shadow-emerald-500/20' 
+                                    : 'bg-gradient-to-r from-[#CEF500] via-[#A3E635] to-[#CEF500] text-[#0D0714] shadow-[#CEF500]/30 hover:scale-[1.03] active:scale-95'
+                                }`}
+                              >
+                                {isJoined ? (
+                                  <>
+                                    <Check className="w-4 h-4" />
+                                    <span>Joined ✓</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>Enter Contest</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -1340,40 +1207,47 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
               <p className="text-xs text-[#A69EC6] font-medium mt-1">Watch 30-second sponsored video ads from top brands and collect real coins immediately!</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {adsData.map((ad) => (
-                <div 
-                  key={ad.id}
-                  className="bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] rounded-[32px] overflow-hidden shadow-2xl flex flex-col justify-between transition-all hover:-translate-y-1"
-                >
-                  <div className="relative h-48 overflow-hidden bg-black">
-                    <img src={ad.thumbnail} alt={ad.title} className="w-full h-full object-cover opacity-80 hover:scale-105 transition-all duration-500" />
-                    <div className="absolute top-3 right-3 bg-[#CEF500] text-[#0D0714] text-xs font-black px-3 py-1 rounded-full shadow-lg">
-                      {ad.badge}
+            {adsData.length === 0 ? (
+              <div className="w-full py-12 px-6 bg-[#1C1335]/60 border border-[#2E1E54] rounded-[28px] text-center space-y-2">
+                <p className="text-sm font-bold text-white">No active sponsored ads currently available</p>
+                <p className="text-xs text-[#A69EC6]">Check back later for sponsored video ads to earn instant coin rewards.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {adsData.map((ad) => (
+                  <div 
+                    key={ad.id}
+                    className="bg-[#1C1335] border border-[#2E1E54] hover:border-[#CEF500] rounded-[32px] overflow-hidden shadow-2xl flex flex-col justify-between transition-all hover:-translate-y-1"
+                  >
+                    <div className="relative h-48 overflow-hidden bg-black">
+                      <img src={ad.thumbnail} alt={ad.title} className="w-full h-full object-cover opacity-80 hover:scale-105 transition-all duration-500" />
+                      <div className="absolute top-3 right-3 bg-[#CEF500] text-[#0D0714] text-xs font-black px-3 py-1 rounded-full shadow-lg">
+                        {ad.badge}
+                      </div>
+                      <div className="absolute bottom-3 left-3 bg-[#0D0714]/90 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-white/20">
+                        ⏱️ {ad.duration}
+                      </div>
                     </div>
-                    <div className="absolute bottom-3 left-3 bg-[#0D0714]/90 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-white/20">
-                      ⏱️ {ad.duration}
+
+                    <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] text-[#CEF500] font-black uppercase tracking-wider">{ad.brand}</span>
+                        <h4 className="text-base font-black text-white mt-1 leading-snug">{ad.title}</h4>
+                        <p className="text-xs text-[#A69EC6] font-medium mt-2 leading-relaxed">{ad.description}</p>
+                      </div>
+
+                      <button
+                        onClick={() => handleStartWatchAd(ad)}
+                        className="mt-6 w-full py-3 bg-[#CEF500] hover:bg-[#CEF500]/90 text-[#0D0714] font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
+                      >
+                        <Play className="w-4 h-4 fill-[#0D0714]" />
+                        <span>Watch Ad (+{ad.rewardCoins} Coins)</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="p-6 flex-1 flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] text-[#CEF500] font-black uppercase tracking-wider">{ad.brand}</span>
-                      <h4 className="text-base font-black text-white mt-1 leading-snug">{ad.title}</h4>
-                      <p className="text-xs text-[#A69EC6] font-medium mt-2 leading-relaxed">{ad.description}</p>
-                    </div>
-
-                    <button
-                      onClick={() => handleStartWatchAd(ad)}
-                      className="mt-6 w-full py-3 bg-[#CEF500] hover:bg-[#CEF500]/90 text-[#0D0714] font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
-                    >
-                      <Play className="w-4 h-4 fill-[#0D0714]" />
-                      <span>Watch Ad (+{ad.rewardCoins} Coins)</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
@@ -1385,39 +1259,46 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
               <p className="text-xs text-[#A69EC6] font-medium mt-1">Redeem your accumulated coin rewards for real discount vouchers and gift cards!</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {offersData.map((offer) => (
-                <div 
-                  key={offer.id}
-                  className="bg-gradient-to-b from-[#1C1335] to-[#2E1E54]/40 border border-[#2E1E54] hover:border-[#CEF500] rounded-[32px] p-6 shadow-2xl flex flex-col justify-between relative group"
-                >
-                  <div className="absolute top-4 right-4 bg-[#CEF500] text-[#0D0714] text-[10px] font-black px-3 py-1 rounded-full">
-                    {offer.tag}
-                  </div>
-
-                  <div>
-                    <div className="text-4xl mb-3">{offer.image}</div>
-                    <span className="text-[10px] font-black uppercase text-[#B983FF] tracking-wider">{offer.brand}</span>
-                    <h4 className="text-base font-black text-white mt-1 leading-snug">{offer.title}</h4>
-                    <div className="mt-3 text-lg font-black text-[#CEF500]">{offer.discountText}</div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] text-[#A69EC6] font-bold uppercase block">Required</span>
-                      <span className="text-sm font-black text-[#CEF500]">🪙 {offer.coinCost}</span>
+            {offersData.length === 0 ? (
+              <div className="w-full py-12 px-6 bg-[#1C1335]/60 border border-[#2E1E54] rounded-[28px] text-center space-y-2">
+                <p className="text-sm font-bold text-white">No active vouchers or offers currently available</p>
+                <p className="text-xs text-[#A69EC6]">Check back later for exclusive partner deals and reward coupons.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {offersData.map((offer) => (
+                  <div 
+                    key={offer.id}
+                    className="bg-gradient-to-b from-[#1C1335] to-[#2E1E54]/40 border border-[#2E1E54] hover:border-[#CEF500] rounded-[32px] p-6 shadow-2xl flex flex-col justify-between relative group"
+                  >
+                    <div className="absolute top-4 right-4 bg-[#CEF500] text-[#0D0714] text-[10px] font-black px-3 py-1 rounded-full">
+                      {offer.tag}
                     </div>
 
-                    <button
-                      onClick={() => handleRedeemOffer(offer)}
-                      className="px-5 py-2.5 bg-[#CEF500] hover:bg-[#CEF500]/90 text-[#0D0714] font-black text-xs uppercase tracking-wider rounded-full shadow-md transition-all hover:scale-105 active:scale-95"
-                    >
-                      Redeem
-                    </button>
+                    <div>
+                      <div className="text-4xl mb-3">{offer.image}</div>
+                      <span className="text-[10px] font-black uppercase text-[#B983FF] tracking-wider">{offer.brand}</span>
+                      <h4 className="text-base font-black text-white mt-1 leading-snug">{offer.title}</h4>
+                      <div className="mt-3 text-lg font-black text-[#CEF500]">{offer.discountText}</div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] text-[#A69EC6] font-bold uppercase block">Required</span>
+                        <span className="text-sm font-black text-[#CEF500]">🪙 {offer.coinCost}</span>
+                      </div>
+
+                      <button
+                        onClick={() => handleRedeemOffer(offer)}
+                        className="px-5 py-2.5 bg-[#CEF500] hover:bg-[#CEF500]/90 text-[#0D0714] font-black text-xs uppercase tracking-wider rounded-full shadow-md transition-all hover:scale-105 active:scale-95"
+                      >
+                        Redeem
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
@@ -1512,18 +1393,55 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
                   </div>
                 </div>
 
+                {!isAuthenticated && (
+                  <div className="bg-[#0D0714] border border-[#CEF500]/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5 text-white">
+                      <LogIn className="w-4 h-4 text-[#CEF500] shrink-0" />
+                      <span className="font-semibold">Log in to enter this contest and claim cash & coin rewards!</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedContestModal(null);
+                        if (onNavigateToLogin) onNavigateToLogin();
+                        else navigate('/login');
+                      }}
+                      className="px-4 py-2 bg-[#CEF500] text-[#0D0714] font-black rounded-full text-xs uppercase tracking-wider shrink-0 hover:scale-105 transition-transform cursor-pointer shadow-md"
+                    >
+                      Login Now
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex gap-4 pt-2">
                   <button
                     onClick={() => setSelectedContestModal(null)}
-                    className="flex-1 py-3 bg-transparent text-white border border-[#2E1E54] font-black text-xs uppercase tracking-wider rounded-full hover:bg-white/5"
+                    className="flex-1 py-3 bg-transparent text-white border border-[#2E1E54] font-black text-xs uppercase tracking-wider rounded-full hover:bg-white/5 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => handleConfirmJoinContest(selectedContestModal)}
-                    className="flex-1 py-3 bg-[#CEF500] text-[#0D0714] font-black text-xs uppercase tracking-wider rounded-full shadow-lg shadow-[#CEF500]/30 hover:scale-105 transition-all"
+                    className={`flex-1 py-3 font-black text-xs uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      !isAuthenticated
+                        ? 'bg-gradient-to-r from-[#CEF500] via-[#A3E635] to-[#CEF500] text-[#0D0714] shadow-[#CEF500]/30 hover:scale-105'
+                        : joinedContestIds.includes(selectedContestModal.id || selectedContestModal._id)
+                          ? 'bg-emerald-600 text-white cursor-default'
+                          : 'bg-[#CEF500] text-[#0D0714] shadow-[#CEF500]/30 hover:scale-105'
+                    }`}
                   >
-                    Confirm & Join Contest
+                    {!isAuthenticated ? (
+                      <>
+                        <LogIn className="w-4 h-4" />
+                        <span>Login to Enter Contest</span>
+                      </>
+                    ) : joinedContestIds.includes(selectedContestModal.id || selectedContestModal._id) ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Already Joined ✓</span>
+                      </>
+                    ) : (
+                      <span>Confirm & Join Contest</span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -1629,14 +1547,74 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
         )}
       </AnimatePresence>
 
+      {/* ==================== LEGAL DOCUMENT MODAL (PRIVACY POLICY & TERMS OF SERVICE) ==================== */}
+      <AnimatePresence>
+        {legalModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-3xl bg-[#1C1335] border border-[#CEF500]/40 rounded-3xl p-6 sm:p-8 text-left space-y-6 shadow-2xl relative max-h-[85vh] flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-[#2E1E54] pb-4">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-7 h-7 text-[#CEF500]" />
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-black text-white font-poppins">
+                      {legalModal.title}
+                    </h3>
+                    <p className="text-xs text-[#A69EC6] font-medium">
+                      Official Platform Compliance Document
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLegalModal(prev => ({ ...prev, isOpen: false }))}
+                  className="p-2 rounded-full bg-[#0D0714] text-[#A69EC6] hover:text-white hover:bg-[#2E1E54] transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="overflow-y-auto pr-2 space-y-4 text-xs sm:text-sm text-[#A69EC6] leading-relaxed flex-1 scrollbar-thin scrollbar-thumb-[#CEF500]/30">
+                {legalModal.loading ? (
+                  <div className="py-12 text-center space-y-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#CEF500]/30 border-t-[#CEF500] mx-auto" />
+                    <p className="text-xs font-semibold text-white/70">Fetching document from server...</p>
+                  </div>
+                ) : (
+                  <div 
+                    className="prose prose-invert max-w-none text-[#A69EC6] space-y-4 font-sans [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-[#CEF500] [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-white [&_h3]:mt-3 [&_h3]:mb-1 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_strong]:text-white font-sans leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: legalModal.content }}
+                  />
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-4 border-t border-[#2E1E54] flex justify-end">
+                <button
+                  onClick={() => setLegalModal(prev => ({ ...prev, isOpen: false }))}
+                  className="px-6 py-2.5 bg-[#CEF500] text-[#0D0714] font-black text-xs uppercase tracking-wider rounded-full shadow-lg hover:scale-105 transition-transform cursor-pointer"
+                >
+                  I Understand & Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* ==================== DESKTOP FOOTER (SINGLE ROW) ==================== */}
       <footer className="bg-transparent py-8 text-xs text-[#A69EC6] relative z-10">
         <div className="max-w-[1480px] w-[calc(100%-48px)] mx-auto pr-0 lg:pr-24 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-semibold">
           <span>© 2026 Reality Contest Platform. All rights reserved.</span>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-[#CEF500] transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-[#CEF500] transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-[#CEF500] transition-colors">Support & Contact</a>
+            <button onClick={() => navigate('/privacy-policy')} className="hover:text-[#CEF500] transition-colors cursor-pointer">Privacy Policy</button>
+            <button onClick={() => navigate('/terms-of-service')} className="hover:text-[#CEF500] transition-colors cursor-pointer">Terms of Service</button>
+            <button onClick={() => navigate('/support-contact')} className="hover:text-[#CEF500] transition-colors cursor-pointer">Support & Contact</button>
           </div>
         </div>
       </footer>

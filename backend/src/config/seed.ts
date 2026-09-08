@@ -131,6 +131,14 @@ export async function seedDatabase() {
         logger.info(`Seeded default account for role [${r.role}]: ${r.email}`);
       }
     }
+
+    // 3. Seed CMS Data (Documents, FAQs, Help Articles, Blogs, News, Social Links)
+    try {
+      const { seedCmsData } = require('../scripts/seedCms');
+      await seedCmsData();
+    } catch (cmsErr: any) {
+      logger.error(`CMS seeding warning: ${cmsErr.message}`);
+    }
   } catch (err: any) {
     logger.error(`Database seeding failed: ${err.message}`);
   }
