@@ -905,6 +905,20 @@ export class MobileContestantController {
     }
   };
 
+  // CHECK JOIN STATUS (GET /api/v1/mobile/room-cycle/:roomId/join/:contestId)
+  public checkJoinStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      const roomId = req.params.roomId || (req.query?.roomId as string);
+      const contestId = req.params.contestId || req.params.id || req.params._id || (req.query?.contestId as string);
+
+      const result = await biWeeklyRoomCycleService.checkJoinStatus(roomId, contestId, userId ? userId.toString() : undefined);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   // JOIN ROOM CYCLE (/api/v1/mobile/room-cycle/join)
   public joinRoomCycle = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {

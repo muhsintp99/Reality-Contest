@@ -15,8 +15,31 @@ export class BiWeeklyRoomCycleController {
 
   async getRooms(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await biWeeklyRoomCycleService.getRooms(req.query);
+      const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      const result = await biWeeklyRoomCycleService.getRooms(req.query, userId ? userId.toString() : undefined);
       return res.status(200).json({ success: true, data: result });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
+  async checkJoinStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { roomId, contestId } = req.params;
+      const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      const result = await biWeeklyRoomCycleService.checkJoinStatus(roomId, contestId, userId ? userId.toString() : undefined);
+      return res.status(200).json(result);
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
+  async joinRoomCycle(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { roomId, contestId } = req.params;
+      const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      const result = await biWeeklyRoomCycleService.joinRoomCycle(roomId, contestId, userId ? userId.toString() : undefined);
+      return res.status(200).json(result);
     } catch (err: any) {
       return next(err);
     }

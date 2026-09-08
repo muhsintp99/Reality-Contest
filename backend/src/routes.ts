@@ -26,7 +26,7 @@ import { biWeeklyRoomCycleController } from './controllers/BiWeeklyRoomCycleCont
 import { grandContestController } from './controllers/GrandContestController';
 
 // Import Middlewares
-import { authenticate, authorize, requireNotGuest } from './middleware/AuthMiddleware';
+import { authenticate, authorize, requireNotGuest, optionalAuthenticate } from './middleware/AuthMiddleware';
 import { validateRequest } from './middleware/ValidationMiddleware';
 
 // Import Zod validation schemas
@@ -128,7 +128,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/public/daily-contests', dailyContestsController.listDailyContests);
   router.get('/public/grand-contests', grandContestController.listGrandContests);
   router.get('/public/bi-weekly-contests', biWeeklyRoomCycleController.getCycles);
-  router.get('/public/room-cycles', biWeeklyRoomCycleController.getRooms);
+  router.get('/public/room-cycles', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
   router.get('/public/coupons', couponController.listCoupons);
 
   // Contest routes
@@ -447,18 +447,23 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/v1/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
   router.post('/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
 
-  router.get('/v1/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
-  router.get('/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
+  // Check Join Status Endpoints (GET)
+  router.get('/v1/mobile/room-cycle/join', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/mobile/room-cycle/join', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/v1/mobile/room-cycle/:roomId/join/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/mobile/room-cycle/:roomId/join/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/v1/mobile/room-cycle/join/:roomId/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/mobile/room-cycle/join/:roomId/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/v1/mobile/room-cycle/:roomId/join/:_id', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/mobile/room-cycle/:roomId/join/:_id', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/v1/mobile/room-cycle/join-status/:roomId/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/v1/mobile/room-cycle/join-status/:roomId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/room-cycle/:roomId/join/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+  router.get('/room-cycle/:roomId/join', optionalAuthenticate, mobileContestantController.checkJoinStatus);
+
+  // Perform Join Action Endpoints (POST)
   router.post('/v1/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
   router.post('/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
-
-  router.get('/v1/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.get('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.get('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.get('/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.get('/v1/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
-  router.get('/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
-
   router.post('/v1/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
   router.post('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
@@ -474,7 +479,9 @@ export function createApiRouter(authLimiter: any): Router {
   // BI-WEEKLY ROOM CYCLE MODULE API ENDPOINTS
   // ==================================================================
   // Room Management
-  router.get('/admin/room-cycle/rooms', authenticate, biWeeklyRoomCycleController.getRooms);
+  router.get('/admin/room-cycle/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
+  router.get('/v1/mobile/room-cycle/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
+  router.get('/mobile/room-cycle/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
   router.get('/admin/room-cycle/rooms/:id/cycles', authenticate, biWeeklyRoomCycleController.getRoomCycles);
   router.get('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
   router.post('/admin/room-cycle/rooms', authenticate, biWeeklyRoomCycleController.createRoom);

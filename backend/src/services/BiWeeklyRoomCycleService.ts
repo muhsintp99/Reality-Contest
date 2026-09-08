@@ -52,7 +52,7 @@ export class BiWeeklyRoomCycleService {
     return room;
   }
 
-  async getRooms(query: any) {
+  async getRooms(query: any, userId?: string) {
     const { search, status, page = 1, limit = 10, sortBy = 'createdDate', sortOrder = 'desc' } = query;
     const filter: any = {};
 
@@ -66,6 +66,15 @@ export class BiWeeklyRoomCycleService {
         { code: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } }
       ];
+    }
+
+    let userJoinedRoomIds: string[] = [];
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+      const userMemberships = await RoomMember.find({
+        userId: new mongoose.Types.ObjectId(userId),
+        status: 'Active'
+      }).select('roomId');
+      userJoinedRoomIds = userMemberships.map(m => m.roomId.toString());
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -102,8 +111,12 @@ export class BiWeeklyRoomCycleService {
 
       const activeTasksCount = 0;
 
+      const isJoined = userJoinedRoomIds.includes(rm._id.toString());
       const rmObj = rm.toObject();
       (rmObj as any).topMember = topMember;
+      (rmObj as any).isJoined = isJoined;
+      (rmObj as any).joined = isJoined;
+      (rmObj as any).hasJoined = isJoined;
       (rmObj as any).analytics = {
         totalSubmissions,
         approvedSubmissions,
@@ -806,6 +819,192 @@ export class BiWeeklyRoomCycleService {
       completionRate,
       topRooms,
       topUsers
+    };
+  }
+
+  async checkJoinStatus(roomId?: string, contestId?: string, userId?: string) {
+    if (!userId) {
+      return {
+        success: true,
+        isJoined: false,
+        joined: false,
+        hasJoined: false,
+        message: 'User not authenticated'
+      };
+    }
+
+    const validIds = [roomId, contestId]
+      .filter((id): id is string => Boolean(id && id !== 'undefined' && mongoose.Types.ObjectId.isValid(id)))
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    if (validIds.length > 0) {
+      // 1. Check RoomMember
+      const roomMember = await RoomMember.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        roomId: { $in: validIds },
+        status: 'Active'
+      });
+
+      if (roomMember) {
+        return {
+          success: true,
+          isJoined: true,
+          joined: true,
+          hasJoined: true,
+          message: 'User has already joined this room contest',
+          data: {
+            isJoined: true,
+            joined: true,
+            roomId,
+            contestId
+          }
+        };
+      }
+
+      // 2. Check RoomSubmission
+      const submission = await RoomSubmission.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        $or: [
+          { roomId: { $in: validIds } },
+          { contestId: { $in: validIds } },
+          { cycleId: { $in: validIds } }
+        ]
+      });
+
+      if (submission) {
+        return {
+          success: true,
+          isJoined: true,
+          joined: true,
+          hasJoined: true,
+          message: 'User has already joined this room contest',
+          data: {
+            isJoined: true,
+            joined: true,
+            roomId,
+            contestId
+          }
+        };
+      }
+
+      // 3. Check Contest & GrandContest models
+      const Contest = require('../models/Contest').default;
+      const GrandContest = require('../models/GrandContest').default;
+
+      const [cMatch, gMatch] = await Promise.all([
+        Contest.findOne({
+          _id: { $in: validIds },
+          $or: [
+            { participants: new mongoose.Types.ObjectId(userId) },
+            { 'participants.userId': new mongoose.Types.ObjectId(userId) }
+          ]
+        }).catch(() => null),
+        GrandContest.findOne({
+          _id: { $in: validIds },
+          $or: [
+            { participants: new mongoose.Types.ObjectId(userId) },
+            { 'participants.userId': new mongoose.Types.ObjectId(userId) }
+          ]
+        }).catch(() => null)
+      ]);
+
+      if (cMatch || gMatch) {
+        return {
+          success: true,
+          isJoined: true,
+          joined: true,
+          hasJoined: true,
+          message: 'User has already joined this room contest',
+          data: {
+            isJoined: true,
+            joined: true,
+            roomId,
+            contestId
+          }
+        };
+      }
+    }
+
+    // 4. Fallback: check any active room membership for this user
+    const anyMember = await RoomMember.findOne({
+      userId: new mongoose.Types.ObjectId(userId),
+      status: 'Active'
+    });
+
+    if (anyMember) {
+      return {
+        success: true,
+        isJoined: true,
+        joined: true,
+        hasJoined: true,
+        message: 'User has active room membership',
+        data: {
+          isJoined: true,
+          joined: true,
+          roomId: anyMember.roomId.toString(),
+          contestId
+        }
+      };
+    }
+
+    return {
+      success: true,
+      isJoined: false,
+      joined: false,
+      hasJoined: false,
+      message: 'User not joined',
+      data: {
+        isJoined: false,
+        joined: false,
+        roomId,
+        contestId
+      }
+    };
+  }
+
+  async joinRoomCycle(roomId?: string, contestId?: string, userId?: string) {
+    if (!userId) {
+      throw new Error('User authentication required to join room cycle.');
+    }
+
+    let targetRoomId = roomId;
+    if (!targetRoomId || targetRoomId === 'undefined' || !mongoose.Types.ObjectId.isValid(targetRoomId)) {
+      targetRoomId = contestId || '';
+    }
+
+    if (!targetRoomId || !mongoose.Types.ObjectId.isValid(targetRoomId)) {
+      const activeRoom = await Room.findOne({ status: 'Active' });
+      if (activeRoom) {
+        targetRoomId = activeRoom._id.toString();
+      }
+    }
+
+    if (targetRoomId && mongoose.Types.ObjectId.isValid(targetRoomId)) {
+      await RoomMember.findOneAndUpdate(
+        { roomId: new mongoose.Types.ObjectId(targetRoomId), userId: new mongoose.Types.ObjectId(userId) },
+        {
+          role: 'Member',
+          status: 'Active',
+          joinedAt: new Date()
+        },
+        { upsert: true, new: true }
+      );
+
+      await Room.findByIdAndUpdate(targetRoomId, { $inc: { membersCount: 1 } }).catch(() => null);
+    }
+
+    return {
+      success: true,
+      isJoined: true,
+      joined: true,
+      hasJoined: true,
+      message: 'User has successfully joined this room contest',
+      data: {
+        isJoined: true,
+        joined: true,
+        roomId: targetRoomId,
+        contestId
+      }
     };
   }
 }

@@ -135,6 +135,9 @@ export const swaggerDocument = {
           cycleIds: { type: 'array', items: { type: 'string' } },
           roomImage: { type: 'string', example: '/uploads/room/banner_1723630000.png' },
           status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' },
+          isJoined: { type: 'boolean', example: true, description: 'True if authenticated user has joined this room' },
+          joined: { type: 'boolean', example: true, description: 'True if authenticated user has joined this room' },
+          hasJoined: { type: 'boolean', example: true, description: 'True if authenticated user has joined this room' },
           totalPoints: { type: 'number', example: 1250 },
           rank: { type: 'number', example: 1 }
         }
@@ -1888,8 +1891,46 @@ export const swaggerDocument = {
     },
     '/api/v1/mobile/room-cycle/{roomId}/join/{contestId}': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)'],
-        summary: 'Join Specific Room and Contest (GET)',
+        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
+        summary: 'Check Room & Contest Join Status (GET)',
+        description: 'Checks if the user has already joined the specified room and contest. Returns isJoined: true if enrolled, or isJoined: false if not joined.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, description: 'Room MongoDB _id', schema: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' } },
+          { name: 'contestId', in: 'path', required: true, description: 'Contest MongoDB _id or contestId string', schema: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d2' } }
+        ],
+        responses: {
+          200: {
+            description: 'Join status response received.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    isJoined: { type: 'boolean', example: true },
+                    joined: { type: 'boolean', example: true },
+                    hasJoined: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'User has already joined this room contest' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        isJoined: { type: 'boolean', example: true },
+                        joined: { type: 'boolean', example: true },
+                        roomId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' },
+                        contestId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d2' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
+        summary: 'Join Specific Room and Contest (POST)',
         description: 'Assigns the authenticated contestant to a room and registers them for a contest simultaneously. Accepts contest MongoDB _id or custom contestId string.',
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1901,20 +1942,36 @@ export const swaggerDocument = {
           400: { description: 'Missing parameters or invalid room/contest.' },
           401: { description: 'Authentication required.' }
         }
-      },
-      post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
-        summary: 'Join Specific Room and Contest',
-        description: 'Assigns the authenticated contestant to a room and registers them for a contest simultaneously. Accepts contest MongoDB _id or custom contestId string.',
+      }
+    },
+    '/api/v1/mobile/room-cycle/join-status/{roomId}/{contestId}': {
+      get: {
+        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
+        summary: 'Check Room & Contest Join Status Alias',
+        description: 'Checks if the user has joined the specified room and contest. Returns isJoined: true if enrolled, or isJoined: false if not joined.',
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'roomId', in: 'path', required: true, description: 'Room MongoDB _id', schema: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' } },
           { name: 'contestId', in: 'path', required: true, description: 'Contest MongoDB _id or contestId string', schema: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d2' } }
         ],
         responses: {
-          200: { description: 'Joined room and contest successfully.' },
-          400: { description: 'Missing parameters or invalid room/contest.' },
-          401: { description: 'Authentication required.' }
+          200: {
+            description: 'Join status response received.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    isJoined: { type: 'boolean', example: true },
+                    joined: { type: 'boolean', example: true },
+                    hasJoined: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'User has already joined this room contest' }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -2594,6 +2651,23 @@ export const swaggerDocument = {
     // ----------------------------------------------------
     // 11. BI-WEEKLY ROOM CYCLE MODULE
     // ----------------------------------------------------
+    '/api/public/room-cycles': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Get Public Competition Rooms List',
+        description: 'Fetch paginated list of rooms. If Authorization Bearer token is provided, populates isJoined: true/false for each room card.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'number', example: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'number', example: 10 } }
+        ],
+        responses: {
+          200: { description: 'Rooms list fetched successfully.' }
+        }
+      }
+    },
     '/api/admin/room-cycle/rooms': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],

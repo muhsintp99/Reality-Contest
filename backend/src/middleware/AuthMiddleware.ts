@@ -141,4 +141,39 @@ export const requireNotGuest = (req: AuthenticatedRequest, res: Response, next: 
   next();
 };
 
+export const optionalAuthenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    let token = '';
+
+    if (req.cookies && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    try {
+      const decoded: any = jwt.verify(token, config.JWT_ACCESS_SECRET);
+      const userId = decoded.id || decoded.userId || decoded.sub;
+      if (userId) {
+        req.user = {
+          id: userId.toString(),
+          role: decoded.role || 'Contestant',
+          status: decoded.status || 'Active',
+          email: decoded.email || ''
+        };
+      }
+    } catch (err) {
+      // Token expired or invalid - ignore error for optional auth
+    }
+
+    next();
+  } catch (err) {
+    next();
+  }
+};
+
 export default authenticate;
