@@ -12,6 +12,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   server: {
+    host: true,
+    allowedHosts: true,
     port: 10001,
     hmr: {
       protocol: 'ws',
@@ -31,6 +33,11 @@ export default defineConfig({
         secure: false,
       }
     }
+  },
+  preview: {
+    host: true,
+    allowedHosts: true,
+    port: 10001
   }
 })
 

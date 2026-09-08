@@ -12,6 +12,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   server: {
+    host: true,
+    allowedHosts: true,
     port: 10002,
     hmr: {
       protocol: 'ws',
@@ -37,6 +39,11 @@ export default defineConfig({
         secure: false,
       }
     }
+  },
+  preview: {
+    host: true,
+    allowedHosts: true,
+    port: 10002
   },
   build: {
     chunkSizeWarningLimit: 1600
