@@ -86,7 +86,7 @@ export const CycleManagementPage = () => {
   const fetchRoomsAndTasks = async () => {
     try {
       const [rRes, tRes] = await Promise.all([
-        axios.get('/api/admin/room-cycle/rooms').catch(() => null),
+        axios.get('/api/week/rooms').catch(() => null),
         axios.get('/api/admin/tasks').catch(() => null)
       ]);
       if (rRes?.data?.success && Array.isArray(rRes.data.data)) {

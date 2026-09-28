@@ -19,6 +19,15 @@ import { WebsiteHome } from './pages/WebsiteHome';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsOfService } from './pages/TermsOfService';
 import { SupportContact } from './pages/SupportContact';
+import { WeekRoomsList } from './pages/week/WeekRoomsList';
+import { WeekRoomDetails } from './pages/week/WeekRoomDetails';
+import { WeekCycleDetails } from './pages/week/WeekCycleDetails';
+import { WeekTaskDetails } from './pages/week/WeekTaskDetails';
+import { WeekContestScreen } from './pages/week/WeekContestScreen';
+import { WeekResultScreen } from './pages/week/WeekResultScreen';
+import { WeekLeaderboardPage } from './pages/week/WeekLeaderboardPage';
+import { WeekRewardsPage } from './pages/week/WeekRewardsPage';
+import { WeekAnalyticsPage } from './pages/week/WeekAnalyticsPage';
 import { ShieldAlert } from 'lucide-react';
 
 const AccessDeniedView = () => {
@@ -77,8 +86,12 @@ const AppContent = () => {
 
   // Sync activeView state with the URL path
   useEffect(() => {
+    if (location.pathname.startsWith('/week')) {
+      setActiveView('week-rooms');
+      return;
+    }
     const path = location.pathname.split('/').pop() || 'website';
-    const validViews = ['website', 'dashboard', 'contests', 'wallet', 'rewards', 'notifications', 'settings', 'profile', 'judge', 'sponsor'];
+    const validViews = ['website', 'dashboard', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings', 'profile', 'judge', 'sponsor', 'week-rooms'];
     if (validViews.includes(path)) {
       setActiveView(path);
     }
@@ -253,6 +266,61 @@ const AppContent = () => {
             <Route path="/wallet" element={
               <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                 <WalletDashboard />
+              </ProtectedMemberRoute>
+            } />
+
+            {/* Week Rooms Workflow Routes */}
+            <Route path="/week/rooms" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekRoomsList />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekRoomDetails />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId/cycles/:cycleId" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekCycleDetails />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekTaskDetails />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId/contest/:contestId" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekContestScreen />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId/contest/:contestId/result" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekResultScreen />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId/leaderboard" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekLeaderboardPage />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId/rewards" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekRewardsPage />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/week/rooms/:roomId/analytics" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekAnalyticsPage />
               </ProtectedMemberRoute>
             } />
 

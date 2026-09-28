@@ -9,6 +9,7 @@ import { HakaLogo } from '../HakaLogo';
 const MENU_ITEMS = [
   { id: 'website', label: 'Public Website 🌐', icon: Globe, route: '/website' },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/dashboard' },
+  { id: 'week-rooms', label: 'Week Rooms 🏆', icon: Award, route: '/week/rooms' },
   { id: 'contests', label: 'Contest Tournaments', icon: Trophy, route: '/contests' },
   { id: 'daily-contests', label: 'Daily Contests ⚡', icon: Clock, route: '/daily-contests' },
   { id: 'rewards', label: 'Badges & Rewards', icon: Award, route: '/rewards' },
@@ -42,10 +43,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
   // Role-based visibility logic
   const allowedIds = role === 'Judge'
-    ? ['website', 'dashboard', 'wallet', 'notifications', 'settings']
+    ? ['website', 'dashboard', 'week-rooms', 'wallet', 'notifications', 'settings']
     : role === 'Sponsor'
-      ? ['website', 'dashboard', 'wallet', 'notifications', 'settings']
-      : ['website', 'dashboard', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings'];
+      ? ['website', 'dashboard', 'week-rooms', 'wallet', 'notifications', 'settings']
+      : ['website', 'dashboard', 'week-rooms', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings'];
 
   const filteredMenu = MENU_ITEMS.filter(item => allowedIds.includes(item.id)).map(item => {
     // Custom label overwrites for special roles

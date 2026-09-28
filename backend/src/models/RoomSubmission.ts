@@ -3,8 +3,9 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IRoomSubmission extends Document {
   taskId?: mongoose.Types.ObjectId;
   contestId?: mongoose.Types.ObjectId;
+  grandContestId?: mongoose.Types.ObjectId;
   cycleId?: mongoose.Types.ObjectId;
-  roomId: mongoose.Types.ObjectId;
+  roomId?: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Resubmit_Requested';
   submissionType?: 'Link' | 'File' | 'Text' | 'Image' | 'Video';
@@ -40,9 +41,10 @@ export interface IRoomSubmission extends Document {
 const RoomSubmissionSchema: Schema = new Schema(
   {
     taskId: { type: Schema.Types.ObjectId, ref: 'Task', index: true },
-    contestId: { type: Schema.Types.ObjectId, ref: 'Contest', index: true },
+    contestId: { type: Schema.Types.ObjectId, ref: 'GrandContest', index: true },
+    grandContestId: { type: Schema.Types.ObjectId, ref: 'GrandContest', index: true },
     cycleId: { type: Schema.Types.ObjectId, ref: 'Cycle', index: true },
-    roomId: { type: Schema.Types.ObjectId, ref: 'Room', required: true, index: true },
+    roomId: { type: Schema.Types.ObjectId, ref: 'Room', index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     status: {
       type: String,

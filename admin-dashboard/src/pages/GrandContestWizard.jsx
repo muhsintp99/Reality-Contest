@@ -92,10 +92,13 @@ export const GrandContestWizard = () => {
           entryFee: values.entryFeeType === 'Free' ? 0 : (Number(values.entryFee) || 0),
           entryFeeType: values.entryFeeType,
           isFree: values.entryFeeType === 'Free' || values.isFree,
+          entryFeeCoins: values.entryFeeType === 'Coins' ? (Number(values.entryFee) || 0) : 0,
           tasks: values.selectedTasks,
           bannerUrl: finalBannerUrl,
           imageUrl: finalBannerUrl,
           status: values.status,
+          registrationStart: new Date(values.startDate),
+          registrationEnd: new Date(values.endDate),
           startDate: new Date(values.startDate),
           endDate: new Date(values.endDate)
         };

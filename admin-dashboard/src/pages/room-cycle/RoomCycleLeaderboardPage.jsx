@@ -13,6 +13,21 @@ export const RoomCycleLeaderboardPage = () => {
   const { leaderboard, leaderboardScope, loading } = useSelector((state) => state.roomCycle);
   const [search, setSearch] = useState('');
   const [recalculating, setRecalculating] = useState(false);
+  const [rooms, setRoomsList] = useState([]);
+  const [selectedRoomId, setSelectedRoomId] = useState('All');
+  const [roomMembersLeaderboard, setRoomMembersLeaderboard] = useState([]);
+
+  const fetchRooms = async () => {
+    try {
+      const res = await axios.get('/api/week/rooms', { params: { limit: 100 } });
+      if (res.data?.success) {
+        const rList = res.data.data?.rooms || res.data.data || [];
+        setRoomsList(Array.isArray(rList) ? rList : []);
+      }
+    } catch (err) {
+      console.error('Error fetching rooms for leaderboard:', err);
+    }
+  };
 
   const fetchLeaderboard = async (scope) => {
     try {
@@ -33,16 +48,57 @@ export const RoomCycleLeaderboardPage = () => {
     }
   };
 
+  const fetchSpecificRoomLeaderboard = async (roomId) => {
+    if (!roomId || roomId === 'All') {
+      setRoomMembersLeaderboard([]);
+      return;
+    }
+    try {
+      dispatch(setLoading(true));
+      const res = await axios.get(`/api/week/rooms/${roomId}`);
+      if (res.data?.success) {
+        const mems = res.data.data?.members || [];
+        const mapped = mems.map((m, idx) => ({
+          _id: m._id,
+          rank: idx + 1,
+          entityName: m.userId?.name || 'Member',
+          email: m.userId?.email || '',
+          taskPoints: m.accumulatedPoints || 0,
+          bonusPoints: 0,
+          penaltyPoints: 0,
+          totalPoints: m.accumulatedPoints || 0
+        }));
+        setRoomMembersLeaderboard(mapped);
+      }
+    } catch (err) {
+      console.error('Error fetching room leaderboard:', err);
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
   useEffect(() => {
-    fetchLeaderboard(leaderboardScope);
-  }, [leaderboardScope]);
+    fetchRooms();
+  }, []);
+
+  useEffect(() => {
+    if (leaderboardScope === 'Room' && selectedRoomId !== 'All') {
+      fetchSpecificRoomLeaderboard(selectedRoomId);
+    } else {
+      fetchLeaderboard(leaderboardScope);
+    }
+  }, [leaderboardScope, selectedRoomId]);
 
   const handleRecalculate = async () => {
     try {
       setRecalculating(true);
       await axios.post('/api/admin/room-cycle/leaderboard/recalculate');
       showAlert('success', 'Leaderboard scores recalculated!');
-      fetchLeaderboard(leaderboardScope);
+      if (leaderboardScope === 'Room' && selectedRoomId !== 'All') {
+        fetchSpecificRoomLeaderboard(selectedRoomId);
+      } else {
+        fetchLeaderboard(leaderboardScope);
+      }
     } catch (err) {
       showAlert('error', 'Recalculation failed');
     } finally {
@@ -50,7 +106,11 @@ export const RoomCycleLeaderboardPage = () => {
     }
   };
 
-  const filteredData = leaderboard.filter((item) =>
+  const activeLeaderboardData = (leaderboardScope === 'Room' && selectedRoomId !== 'All')
+    ? roomMembersLeaderboard
+    : leaderboard;
+
+  const filteredData = activeLeaderboardData.filter((item) =>
     item.entityName?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -73,28 +133,51 @@ export const RoomCycleLeaderboardPage = () => {
           <button
             onClick={handleRecalculate}
             disabled={recalculating}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${recalculating ? 'animate-spin' : ''}`} /> Recalculate Rankings
           </button>
         </div>
       </div>
 
-      {/* Scope Selection Tabs */}
-      <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-fit">
-        {['Room', 'Cycle', 'Overall'].map((sc) => (
-          <button
-            key={sc}
-            onClick={() => dispatch(setLeaderboardScope(sc))}
-            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-              leaderboardScope === sc
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
-            }`}
-          >
-            {sc} Leaderboard
-          </button>
-        ))}
+      {/* Scope Selection Tabs & Room Selector Dropdown */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-fit">
+          {['Room', 'Cycle', 'Overall'].map((sc) => (
+            <button
+              key={sc}
+              onClick={() => {
+                dispatch(setLeaderboardScope(sc));
+                if (sc !== 'Room') setSelectedRoomId('All');
+              }}
+              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                leaderboardScope === sc
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+              }`}
+            >
+              {sc} Leaderboard
+            </button>
+          ))}
+        </div>
+
+        {leaderboardScope === 'Room' && rooms.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">Filter Room:</span>
+            <select
+              value={selectedRoomId}
+              onChange={(e) => setSelectedRoomId(e.target.value)}
+              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:border-brandPrimary"
+            >
+              <option value="All">All Room Rankings (Room vs Room)</option>
+              {rooms.map((r) => (
+                <option key={r._id} value={r._id}>
+                  {r.name} ({r.code}) - Room Members Leaderboard
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Podium Showcase (Top 3) */}

@@ -2,17 +2,41 @@ import React, { useState } from 'react';
 import { Upload, X, FileText, Image as ImageIcon, Video, CheckCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
+export const getFileType = (val, fallbackType) => {
+  if (!val || typeof val !== 'string') return fallbackType || 'file';
+  const clean = val.toLowerCase();
+  
+  if (clean.startsWith('data:image/')) return 'image';
+  if (clean.startsWith('data:video/')) return 'video';
+  if (clean.startsWith('data:application/') || clean.startsWith('data:text/')) return 'file';
+  
+  if (/\.(jpg|jpeg|png|webp|gif|svg|bmp|ico)($|\?)/i.test(clean)) return 'image';
+  if (/\.(mp4|webm|ogg|mov|avi|mkv|m4v)($|\?)/i.test(clean)) return 'video';
+  if (/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip|rar|7z)($|\?)/i.test(clean)) return 'file';
+  
+  return fallbackType || 'file';
+};
+
+const getFileNameFromUrl = (val) => {
+  if (!val || typeof val !== 'string') return '';
+  if (val.startsWith('data:')) return 'Uploaded File';
+  const parts = val.split('/');
+  return parts[parts.length - 1] || 'Uploaded Document';
+};
+
 export const FileUploadPicker = ({ 
   label, 
-  accept = "image/*", 
+  accept = "image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar", 
   value, 
   onChange, 
-  type = "image", // "image", "video", "file"
-  folder = "general" // e.g. "question", "contest", "daily-contest", "category", "avatar"
+  type = "file", // "image", "video", "file"
+  folder = "general" // e.g. "question", "contest", "daily-contest", "category", "avatar", "tasks"
 }) => {
   const [fileName, setFileName] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  const activeType = getFileType(value, type);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -74,9 +98,9 @@ export const FileUploadPicker = ({
       {/* Active Preview */}
       {value ? (
         <div className="relative rounded-2xl border border-slate-800 overflow-hidden bg-slate-900/80 backdrop-blur-md p-3 group transition-all duration-200 hover:border-slate-700">
-          {type === 'image' && (
+          {activeType === 'image' && (
             <div className="relative overflow-hidden rounded-xl bg-slate-950 border border-slate-800/80">
-              <img src={value} alt="Preview" className="w-full h-40 object-cover rounded-xl transition-transform duration-300 group-hover:scale-102" />
+              <img src={value} alt="Preview" className="w-full h-44 object-cover rounded-xl transition-transform duration-300 group-hover:scale-102" />
               <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                 <span className="text-xs text-white font-bold bg-slate-900/80 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
                   Uploaded Image
@@ -85,18 +109,32 @@ export const FileUploadPicker = ({
             </div>
           )}
 
-          {type === 'video' && (
-            <video src={value} controls className="w-full h-40 rounded-xl bg-black border border-slate-800" />
+          {activeType === 'video' && (
+            <div className="relative overflow-hidden rounded-xl bg-black border border-slate-800">
+              <video src={value} controls className="w-full h-44 rounded-xl object-contain" />
+            </div>
           )}
 
-          {type === 'file' && (
+          {activeType === 'file' && (
             <div className="flex items-center gap-3.5 p-3.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
               <FileText className="w-8 h-8 text-emerald-400 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-white truncate">{fileName || 'Uploaded Document'}</p>
-                <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
-                  <CheckCircle className="w-3 h-3" /> Saved to uploads/{folder}/
-                </span>
+                <p className="text-xs font-bold text-white truncate">{fileName || getFileNameFromUrl(value)}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" /> Attached Document
+                  </span>
+                  {(value.startsWith('/uploads/') || value.startsWith('http')) && (
+                    <a
+                      href={value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold underline"
+                    >
+                      View Document ↗
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -140,11 +178,7 @@ export const FileUploadPicker = ({
               {isUploading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
-                <>
-                  {type === 'image' && <ImageIcon className="w-6 h-6" />}
-                  {type === 'video' && <Video className="w-6 h-6" />}
-                  {type === 'file' && <Upload className="w-6 h-6" />}
-                </>
+                <Upload className="w-6 h-6" />
               )}
             </div>
             <div>
@@ -152,7 +186,7 @@ export const FileUploadPicker = ({
                 {isUploading ? `Uploading file to uploads/${folder}/...` : <>Drag & drop file or <span className="text-emerald-400 underline">Browse File</span></>}
               </p>
               <p className="text-[10px] text-slate-400 mt-0.5">
-                Saved into <code className="font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">public/uploads/{folder}/</code>
+                Supports Images (PNG, JPG, WebP), Videos (MP4), PDFs & Documents
               </p>
             </div>
           </div>

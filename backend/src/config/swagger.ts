@@ -2668,7 +2668,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/rooms': {
+    '/api/week/rooms': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get All Competition Rooms',
@@ -2718,7 +2718,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/rooms/{id}': {
+    '/api/week/rooms/{id}': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Room Details, Members & Cycles by ID',
@@ -2745,7 +2745,7 @@ export const swaggerDocument = {
         responses: { 200: { description: 'Room deleted.' } }
       }
     },
-    '/api/admin/room-cycle/rooms/{id}/cycles': {
+    '/api/week/rooms/{id}/cycles': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get All Cycles for a Specific Room',
@@ -2754,7 +2754,7 @@ export const swaggerDocument = {
         responses: { 200: { description: 'List of cycles for the specified room.' } }
       }
     },
-    '/api/admin/room-cycle/rooms/bulk-action': {
+    '/api/week/rooms/bulk-action': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Bulk Action on Rooms (Activate, Archive, Delete)',
@@ -2775,6 +2775,98 @@ export const swaggerDocument = {
           }
         },
         responses: { 200: { description: 'Bulk action completed.' } }
+      }
+    },
+    '/api/week/rooms/{roomId}/join/{contestId}': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Check Contestant Join Status for Room Contest',
+        description: 'Checks whether the authenticated contestant has joined the specified room and contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' }, example: 'RM-001' },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' }, example: 'CNT-2026-1002' }
+        ],
+        responses: {
+          200: {
+            description: 'Join status fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    isJoined: { type: 'boolean', example: true },
+                    joined: { type: 'boolean', example: true },
+                    hasJoined: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'User has already joined this room contest' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Contestant Join Room & Contest',
+        description: 'Registers the authenticated contestant into the room cohort and associated contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' }, example: 'RM-001' },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' }, example: 'CNT-2026-1002' }
+        ],
+        responses: {
+          200: { description: 'Joined room and contest successfully.' }
+        }
+      }
+    },
+    '/api/week/rooms/{roomId}/start/{contestId}': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Start Contest Task Attempt',
+        description: 'Initializes and records the attempt for the contestant for the specified room and contest task.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'Contest task attempt started successfully.' }
+        }
+      }
+    },
+    '/api/week/rooms/{roomId}/submit/{contestId}': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Submit Task Proof & Answers for Room Contest',
+        description: 'Submits contestant task proof (media file or text link) and answers for automatic or admin evaluation.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  mediaFile: { type: 'string', format: 'binary', description: 'Proof image or video file' },
+                  cycleId: { type: 'string' },
+                  taskId: { type: 'string' },
+                  submissionType: { type: 'string', example: 'Image' },
+                  proofNotes: { type: 'string', example: 'Uploaded proof screenshot' },
+                  answers: { type: 'string', description: 'JSON stringified answer map' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Task submission recorded for review.' }
+        }
       }
     },
     '/api/admin/room-cycle/members/assign': {
@@ -3280,20 +3372,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/grand-contests/{id}/join': {
-      post: {
-        tags: ['12. Grand Contest Management'],
-        summary: 'Join Grand Contest',
-        description: 'Registers the authenticated user for participation in the specified Grand Contest.',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
-        responses: {
-          200: { description: 'Joined Grand Contest successfully.' },
-          400: { description: 'Registration closed or contest invalid.' },
-          401: { description: 'Authentication required.' }
-        }
-      }
-    },
+
     '/api/grand-contests/{id}/analytics': {
       get: {
         tags: ['12. Grand Contest Management'],
@@ -3503,6 +3582,253 @@ export const swaggerDocument = {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Grand Contest duplicated successfully' },
                     data: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/join': {
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Join Grand Contest (Contestant)',
+        description: 'Registers contestant for the Grand Contest. Validates registration window dates, deducts entry fee in Coins or Cash, and logs payment transaction.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: {
+            description: 'Joined Grand Contest successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    alreadyJoined: { type: 'boolean', example: false },
+                    message: { type: 'string', example: 'Joined Grand Contest successfully!' },
+                    joinedAt: { type: 'string', format: 'date-time', example: '2026-09-28T15:00:00.000Z' },
+                    contest: { $ref: '#/components/schemas/GrandContestResponse' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/tasks': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Get Connected Tasks for Grand Contest',
+        description: 'Retrieves all tasks linked to the specified Grand Contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        responses: {
+          200: {
+            description: 'List of connected tasks.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/TaskResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Create & Attach Task to Grand Contest (Admin)',
+        description: 'Creates a new Task and attaches its ID to the Grand Contest tasks array.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title'],
+                properties: {
+                  title: { type: 'string', example: 'Grand Quiz Challenge' },
+                  description: { type: 'string', example: 'Answer 10 speed quiz questions' },
+                  taskType: { type: 'string', example: 'Quiz' },
+                  submissionType: { type: 'string', example: 'Text' },
+                  points: { type: 'number', example: 100 },
+                  reviewType: { type: 'string', example: 'Manual' },
+                  status: { type: 'string', example: 'Published' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Task created and attached successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task created and linked to Grand Contest' },
+                    data: { $ref: '#/components/schemas/TaskResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/tasks/{taskId}': {
+      delete: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Unlink Task from Grand Contest (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } },
+          { name: 'taskId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789task' } }
+        ],
+        responses: {
+          200: {
+            description: 'Task unlinked successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task unlinked from Grand Contest' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/submissions': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'List Proof Submissions for Grand Contest',
+        description: 'Fetches contestant proof submissions for tasks in this Grand Contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } },
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['All', 'Pending', 'Approved', 'Rejected'], example: 'Pending' } }
+        ],
+        responses: {
+          200: {
+            description: 'List of proof submissions.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        submissions: { type: 'array', items: { $ref: '#/components/schemas/RoomSubmissionResponse' } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/tasks/{taskId}/submit': {
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Submit Task Proof for Grand Contest (Contestant)',
+        description: 'Submits contestant proof (URL, base64 file, image, text notes) for a Grand Contest task during the active contest dates window.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } },
+          { name: 'taskId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789task' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  submissionType: { type: 'string', enum: ['Link', 'File', 'Text', 'Image', 'Video'], example: 'Link' },
+                  mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=demo' },
+                  proofNotes: { type: 'string', example: 'Completed task submission proof.' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Proof submitted successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task proof submitted successfully' },
+                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
+    '/api/grand-contests/submissions/{id}/review': {
+      put: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Review Grand Contest Submission (Admin)',
+        description: 'Approves or rejects a contestant task submission, assigning base score, bonus points, penalty points, and review feedback.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789sub' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                  status: { type: 'string', enum: ['Approved', 'Rejected'], example: 'Approved' },
+                  score: { type: 'number', example: 100 },
+                  bonus: { type: 'number', example: 10 },
+                  penalty: { type: 'number', example: 0 },
+                  feedback: { type: 'string', example: 'Excellent submission!' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Submission review recorded.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Submission review recorded' },
+                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
                   }
                 }
               }

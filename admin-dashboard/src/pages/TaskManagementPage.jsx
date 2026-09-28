@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
 import { CustomSelect } from '../components/CustomSelect';
 import { RightDrawer } from '../components/RightDrawer';
+import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
 
 const TASK_TYPE_OPTIONS = [
   { label: 'Quiz', value: 'Quiz' },
@@ -60,6 +61,7 @@ export const TaskManagementPage = () => {
 
   // Tasks State
   const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Task Form State
   const [taskForm, setTaskForm] = useState({
@@ -80,6 +82,7 @@ export const TaskManagementPage = () => {
   }, [isMockMode]);
 
   const fetchTasks = async () => {
+    setLoading(true);
     try {
       let res = await axios.get('/api/admin/tasks', { withCredentials: true }).catch(() => null);
       if (!res || !res.data?.success) {
@@ -95,6 +98,8 @@ export const TaskManagementPage = () => {
     } catch (err) {
       console.error('Error fetching tasks:', err);
       setTasks([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -125,9 +130,12 @@ export const TaskManagementPage = () => {
     }
 
     try {
-      let res = await axios.post('/api/admin/tasks', taskForm, { withCredentials: true }).catch(() => null);
+      const finalMediaUrl = await uploadPendingFile(taskForm.mediaUrl, 'tasks');
+      const payload = { ...taskForm, mediaUrl: finalMediaUrl };
+
+      let res = await axios.post('/api/admin/tasks', payload, { withCredentials: true }).catch(() => null);
       if (!res || !res.data?.success) {
-        res = await axios.post('/api/admin/room-cycle/tasks', taskForm, { withCredentials: true }).catch(() => null);
+        res = await axios.post('/api/admin/room-cycle/tasks', payload, { withCredentials: true }).catch(() => null);
       }
       showSnackbar(`Task "${taskForm.title}" created successfully!`, 'success');
       fetchTasks();
@@ -147,9 +155,12 @@ export const TaskManagementPage = () => {
 
     const id = editingTask._id || editingTask.id;
     try {
-      let res = await axios.put(`/api/admin/tasks/${id}`, editingTask, { withCredentials: true }).catch(() => null);
+      const finalMediaUrl = await uploadPendingFile(editingTask.mediaUrl, 'tasks');
+      const payload = { ...editingTask, mediaUrl: finalMediaUrl };
+
+      let res = await axios.put(`/api/admin/tasks/${id}`, payload, { withCredentials: true }).catch(() => null);
       if (!res || !res.data?.success) {
-        await axios.put(`/api/admin/room-cycle/tasks/${id}`, editingTask, { withCredentials: true }).catch(() => null);
+        await axios.put(`/api/admin/room-cycle/tasks/${id}`, payload, { withCredentials: true }).catch(() => null);
       }
       showSnackbar(`Task "${editingTask.title}" updated successfully!`, 'success');
       fetchTasks();
@@ -312,7 +323,31 @@ export const TaskManagementPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-              {filteredTasks.length === 0 ? (
+              {loading ? (
+                [1, 2, 3, 4, 5].map((idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="p-3"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-4" /></td>
+                    <td className="p-3"><div className="w-9 h-9 bg-slate-200 dark:bg-white/10 rounded-lg" /></td>
+                    <td className="p-3 space-y-1.5">
+                      <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-44" />
+                      <div className="h-3 bg-slate-200 dark:bg-white/10 rounded w-32" />
+                    </td>
+                    <td className="p-3"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-16" /></td>
+                    <td className="p-3"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-16" /></td>
+                    <td className="p-3"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-16" /></td>
+                    <td className="p-3"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-10" /></td>
+                    <td className="p-3"><div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-8" /></td>
+                    <td className="p-3"><div className="h-5 bg-slate-200 dark:bg-white/10 rounded-full w-20" /></td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <div className="w-7 h-7 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                        <div className="w-7 h-7 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                        <div className="w-7 h-7 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : filteredTasks.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="p-8 text-center text-slate-400 text-xs">
                     No tasks found. Click "Create Task" to add a new task.
@@ -324,10 +359,14 @@ export const TaskManagementPage = () => {
                     <td className="p-3 font-bold text-slate-400">{idx + 1}</td>
                     <td className="p-3">
                       {t.mediaUrl ? (
-                        t.mediaUrl.startsWith('data:image/') || t.mediaUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
+                        t.mediaUrl.startsWith('data:image/') || t.mediaUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)/i) ? (
                           <img src={t.mediaUrl} alt="Thumbnail" className="w-9 h-9 rounded-lg object-cover border border-slate-200 dark:border-white/10" />
+                        ) : t.mediaUrl.startsWith('data:video/') || t.mediaUrl.match(/\.(mp4|webm|mov)/i) ? (
+                          <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 inline-block" title="Video File">
+                            <VideoIcon className="w-4 h-4" />
+                          </span>
                         ) : (
-                          <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 inline-block">
+                          <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 inline-block" title="Document File">
                             <FileText className="w-4 h-4" />
                           </span>
                         )
@@ -498,55 +537,14 @@ export const TaskManagementPage = () => {
 
           {/* Media / File Upload Section */}
           <div>
-            <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1">
-              Task Attachment / Media Upload 📎
-            </label>
-            <div className="border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-4 text-center bg-slate-50/50 dark:bg-white/5 hover:border-emerald-500 transition-all cursor-pointer relative">
-              <input
-                type="file"
-                accept="image/*,video/*,.pdf,.doc,.docx"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setTaskForm({ ...taskForm, mediaUrl: reader.result });
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              />
-              {taskForm.mediaUrl ? (
-                <div className="space-y-2">
-                  {taskForm.mediaUrl.startsWith('data:image/') || taskForm.mediaUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                    <img src={taskForm.mediaUrl} alt="Preview" className="h-28 mx-auto rounded-xl object-cover shadow-sm" />
-                  ) : taskForm.mediaUrl.startsWith('data:video/') || taskForm.mediaUrl.match(/\.(mp4|webm)/i) ? (
-                    <video src={taskForm.mediaUrl} controls className="h-28 mx-auto rounded-xl shadow-sm" />
-                  ) : (
-                    <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl font-bold text-xs inline-flex items-center gap-2">
-                      <FileText className="w-5 h-5" /> Attachment Uploaded
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTaskForm({ ...taskForm, mediaUrl: '' });
-                    }}
-                    className="text-rose-500 text-[10px] font-bold underline hover:text-rose-600 block mx-auto cursor-pointer"
-                  >
-                    Remove File
-                  </button>
-                </div>
-              ) : (
-                <div className="py-2">
-                  <Upload className="w-6 h-6 mx-auto text-slate-400 mb-1" />
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Click or Drag & Drop File</span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">Supports Images, Videos, PDFs & Documents</span>
-                </div>
-              )}
-            </div>
+            <FileUploadPicker
+              label="Task Attachment / Image / Media Upload"
+              accept="image/*,video/*,.pdf,.doc,.docx,.zip"
+              value={taskForm.mediaUrl}
+              onChange={(val) => setTaskForm({ ...taskForm, mediaUrl: val })}
+              type={taskForm.submissionType === 'Video' ? 'video' : taskForm.submissionType === 'PDF' || taskForm.submissionType === 'Document' ? 'file' : 'image'}
+              folder="tasks"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -667,55 +665,14 @@ export const TaskManagementPage = () => {
 
             {/* Media / File Upload Section in Edit Drawer */}
             <div>
-              <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1">
-                Task Attachment / Media Upload 📎
-              </label>
-              <div className="border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-4 text-center bg-slate-50/50 dark:bg-white/5 hover:border-emerald-500 transition-all cursor-pointer relative">
-                <input
-                  type="file"
-                  accept="image/*,video/*,.pdf,.doc,.docx"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setEditingTask({ ...editingTask, mediaUrl: reader.result });
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-                {editingTask.mediaUrl ? (
-                  <div className="space-y-2">
-                    {editingTask.mediaUrl.startsWith('data:image/') || editingTask.mediaUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                      <img src={editingTask.mediaUrl} alt="Preview" className="h-28 mx-auto rounded-xl object-cover shadow-sm" />
-                    ) : editingTask.mediaUrl.startsWith('data:video/') || editingTask.mediaUrl.match(/\.(mp4|webm)/i) ? (
-                      <video src={editingTask.mediaUrl} controls className="h-28 mx-auto rounded-xl shadow-sm" />
-                    ) : (
-                      <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl font-bold text-xs inline-flex items-center gap-2">
-                        <FileText className="w-5 h-5" /> Attachment Uploaded
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingTask({ ...editingTask, mediaUrl: '' });
-                      }}
-                      className="text-rose-500 text-[10px] font-bold underline hover:text-rose-600 block mx-auto cursor-pointer"
-                    >
-                      Remove File
-                    </button>
-                  </div>
-                ) : (
-                  <div className="py-2">
-                    <Upload className="w-6 h-6 mx-auto text-slate-400 mb-1" />
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Click or Drag & Drop File</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">Supports Images, Videos, PDFs & Documents</span>
-                  </div>
-                )}
-              </div>
+              <FileUploadPicker
+                label="Task Attachment / Image / Media Upload"
+                accept="image/*,video/*,.pdf,.doc,.docx,.zip"
+                value={editingTask.mediaUrl}
+                onChange={(val) => setEditingTask({ ...editingTask, mediaUrl: val })}
+                type={editingTask.submissionType === 'Video' ? 'video' : editingTask.submissionType === 'PDF' || editingTask.submissionType === 'Document' ? 'file' : 'image'}
+                folder="tasks"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

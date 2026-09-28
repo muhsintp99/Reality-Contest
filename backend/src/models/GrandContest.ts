@@ -45,6 +45,7 @@ export interface IGrandContest extends Document {
   maxParticipants: number;
   categories: string[];
   sponsors?: string[];
+  participants?: mongoose.Types.ObjectId[];
   status: GrandContestStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -82,6 +83,7 @@ const grandContestSchema = new Schema<IGrandContest>(
     maxParticipants: { type: Number, default: 0 },
     categories: [{ type: String }],
     sponsors: [{ type: String }],
+    participants: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     status: {
       type: String,
       enum: [

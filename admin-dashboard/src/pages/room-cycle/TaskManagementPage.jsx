@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Plus, Search, Edit3, Trash2, CheckSquare, RefreshCw, Eye, Filter
+  Plus, Search, Edit3, Trash2, CheckSquare, RefreshCw, Eye, Filter, FileText
 } from 'lucide-react';
 import axios from 'axios';
 import { setTasks, setLoading } from '../../store/roomCycleSlice';
 import { useAlert } from '../../context/AlertContext';
 import { RightDrawer } from '../../components/RightDrawer';
 import { CustomSelect } from '../../components/CustomSelect';
+import { FileUploadPicker, uploadPendingFile } from '../../components/FileUploadPicker';
 
 const TASK_TYPES = [
   'Quiz',
@@ -42,6 +43,7 @@ export const TaskManagementPage = () => {
     title: '',
     description: '',
     instructions: '',
+    mediaUrl: '',
     cycleId: '',
     taskType: 'Quiz',
     points: 100,
@@ -79,11 +81,14 @@ export const TaskManagementPage = () => {
   const handleSaveTask = async (e) => {
     e.preventDefault();
     try {
+      const finalMediaUrl = await uploadPendingFile(taskFormData.mediaUrl, 'tasks');
+      const payload = { ...taskFormData, mediaUrl: finalMediaUrl };
+
       if (editingTaskId) {
-        await axios.put(`/api/admin/room-cycle/tasks/${editingTaskId}`, taskFormData);
+        await axios.put(`/api/admin/room-cycle/tasks/${editingTaskId}`, payload);
         showSnackbar('Task updated successfully!', 'success');
       } else {
-        await axios.post('/api/admin/room-cycle/tasks', taskFormData);
+        await axios.post('/api/admin/room-cycle/tasks', payload);
         showSnackbar('Task created successfully!', 'success');
       }
       setIsTaskDrawerOpen(false);
@@ -127,6 +132,7 @@ export const TaskManagementPage = () => {
               title: '',
               description: '',
               instructions: '',
+              mediaUrl: '',
               cycleId: cycles[0]?._id || '',
               taskType: 'Quiz',
               points: 100,
@@ -170,9 +176,24 @@ export const TaskManagementPage = () => {
       {/* Task List Datatable matching RoomManagementPage */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
-          <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-            Loading tasks...
+          <div className="p-4 space-y-3">
+            {[1, 2, 3, 4, 5].map((idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/50 dark:border-white/5 animate-pulse">
+                <div className="space-y-2 flex-1 max-w-sm">
+                  <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-48" />
+                  <div className="h-3 bg-slate-200 dark:bg-white/10 rounded w-64" />
+                </div>
+                <div className="h-6 bg-slate-200 dark:bg-white/10 rounded-full w-20" />
+                <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-24" />
+                <div className="h-4 bg-slate-200 dark:bg-white/10 rounded w-28" />
+                <div className="h-5 bg-slate-200 dark:bg-white/10 rounded-full w-16" />
+                <div className="flex gap-2">
+                  <div className="w-7 h-7 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                  <div className="w-7 h-7 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                  <div className="w-7 h-7 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : tasks.length === 0 ? (
           <div className="p-12 text-center text-slate-500 dark:text-slate-400">
@@ -329,6 +350,21 @@ export const TaskManagementPage = () => {
               </div>
             )}
 
+            {viewingTask.mediaUrl && (
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Attached Media / Reference File</h4>
+                {viewingTask.mediaUrl.startsWith('data:image/') || viewingTask.mediaUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)/i) ? (
+                  <img src={viewingTask.mediaUrl} alt="Attached Media" className="w-full max-h-48 rounded-xl object-cover border border-slate-200 dark:border-white/10" />
+                ) : viewingTask.mediaUrl.startsWith('data:video/') || viewingTask.mediaUrl.match(/\.(mp4|webm|mov)/i) ? (
+                  <video src={viewingTask.mediaUrl} controls className="w-full max-h-48 rounded-xl border border-slate-200 dark:border-white/10" />
+                ) : (
+                  <a href={viewingTask.mediaUrl} target="_blank" rel="noopener noreferrer" download className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl font-bold text-xs inline-flex items-center gap-2 hover:bg-emerald-500/20 transition-all">
+                    <FileText className="w-5 h-5" /> View / Download Attached Document ↗
+                  </a>
+                )}
+              </div>
+            )}
+
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
               <button
                 onClick={() => setIsDetailsDrawerOpen(false)}
@@ -386,6 +422,16 @@ export const TaskManagementPage = () => {
               value={taskFormData.description}
               onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
               className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
+            />
+          </div>
+
+          <div>
+            <FileUploadPicker
+              label="Task Attachment / Image Upload"
+              accept="image/*,video/*,.pdf,.doc,.docx"
+              value={taskFormData.mediaUrl || ''}
+              onChange={(val) => setTaskFormData({ ...taskFormData, mediaUrl: val })}
+              folder="tasks"
             />
           </div>
 

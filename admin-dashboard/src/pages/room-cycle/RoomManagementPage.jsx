@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Layers, Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, ShieldCheck, Award, Calendar, Grid, List, Trophy, TrendingUp, BarChart3, CheckCircle2, Target, Crown, Medal
+  Layers, Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, ShieldCheck, Award, Calendar, Grid, List, Trophy, TrendingUp, BarChart3, CheckCircle2, Target, Crown, Medal, Clock, XCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { setRooms, setActiveRoom, setLoading } from '../../store/roomCycleSlice';
@@ -55,7 +55,7 @@ export const RoomManagementPage = () => {
   const fetchRooms = async () => {
     try {
       dispatch(setLoading(true));
-      const res = await axios.get('/api/admin/room-cycle/rooms', {
+      const res = await axios.get('/api/week/rooms', {
         params: { search, status: statusFilter, page, limit: 10 }
       });
       if (res.data?.success) {
@@ -114,14 +114,14 @@ export const RoomManagementPage = () => {
     e.preventDefault();
     try {
       if (drawerMode === 'create') {
-        const res = await axios.post('/api/admin/room-cycle/rooms', roomFormData);
+        const res = await axios.post('/api/week/rooms', roomFormData);
         if (res.data?.success) {
           showSnackbar('Room created successfully!', 'success');
           setIsRoomDrawerOpen(false);
           fetchRooms();
         }
       } else {
-        const res = await axios.put(`/api/admin/room-cycle/rooms/${editingRoomId}`, roomFormData);
+        const res = await axios.put(`/api/week/rooms/${editingRoomId}`, roomFormData);
         if (res.data?.success) {
           showSnackbar('Room updated successfully!', 'success');
           setIsRoomDrawerOpen(false);
@@ -136,7 +136,7 @@ export const RoomManagementPage = () => {
   const handleDeleteRoomClick = (room) => {
     showConfirm('Delete Room', `Are you sure you want to permanently delete room "${room.name}"?`, async () => {
       try {
-        await axios.delete(`/api/admin/room-cycle/rooms/${room._id}`);
+        await axios.delete(`/api/week/rooms/${room._id}`);
         showSnackbar(`Room "${room.name}" deleted!`, 'success');
         fetchRooms();
       } catch (err) {
@@ -162,7 +162,7 @@ export const RoomManagementPage = () => {
     if (!selectedRooms.length) return;
     showConfirm(`Bulk ${action}`, `Are you sure you want to execute bulk "${action}" on ${selectedRooms.length} selected rooms?`, async () => {
       try {
-        await axios.post('/api/admin/room-cycle/rooms/bulk-action', {
+        await axios.post('/api/week/rooms/bulk-action', {
           roomIds: selectedRooms,
           action
         });
@@ -175,12 +175,12 @@ export const RoomManagementPage = () => {
     });
   };
 
-  const openViewDetails = async (room) => {
+  const openViewDetails = async (room, tab = 'overview') => {
     setViewingRoom(room);
-    setDetailsTab('overview');
+    setDetailsTab(tab);
     setRoomAnalytics(room.analytics || null);
     try {
-      const res = await axios.get(`/api/admin/room-cycle/rooms/${room._id}`);
+      const res = await axios.get(`/api/week/rooms/${room._id}`);
       if (res.data?.success) {
         const data = res.data.data;
         dispatch(setActiveRoom(data));
@@ -198,7 +198,7 @@ export const RoomManagementPage = () => {
 
   const openViewMembers = async (room) => {
     try {
-      const res = await axios.get(`/api/admin/room-cycle/rooms/${room._id}`);
+      const res = await axios.get(`/api/week/rooms/${room._id}`);
       if (res.data?.success) {
         dispatch(setActiveRoom(res.data.data));
       }
@@ -371,10 +371,14 @@ export const RoomManagementPage = () => {
                   {room.description || 'No description provided.'}
                 </p>
 
-                {/* Leaderboard Banner & Top Scorer */}
-                <div className="bg-gradient-to-r from-amber-500/10 via-brandPrimary/10 to-indigo-500/10 p-2.5 rounded-xl border border-amber-500/20 flex items-center justify-between text-xs">
+                {/* Leaderboard Banner & Top Scorer (Clickable) */}
+                <div
+                  onClick={() => openViewDetails(room, 'leaderboard')}
+                  className="bg-gradient-to-r from-amber-500/10 via-brandPrimary/10 to-indigo-500/10 p-2.5 rounded-xl border border-amber-500/20 flex items-center justify-between text-xs cursor-pointer hover:border-amber-500/50 transition-all group"
+                  title="Click to view Room Leaderboard"
+                >
                   <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                    <Trophy className="w-4 h-4 text-amber-500 shrink-0 group-hover:scale-110 transition-transform" />
                     <div>
                       <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold block uppercase">Rank #{room.rank || '-'}</span>
                       <span className="font-extrabold text-slate-800 dark:text-white">
@@ -410,10 +414,14 @@ export const RoomManagementPage = () => {
                   </div>
                 </div>
 
-                {/* Analytics Metrics Box */}
-                <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 space-y-1.5 text-xs">
+                {/* Analytics Metrics Box (Clickable) */}
+                <div
+                  onClick={() => openViewDetails(room, 'analytics')}
+                  className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 space-y-1.5 text-xs cursor-pointer hover:border-indigo-500/40 transition-all group"
+                  title="Click to view Room Analytics"
+                >
                   <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase">
-                    <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-indigo-500" /> Analytics</span>
+                    <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3 text-indigo-500 group-hover:scale-110 transition-transform" /> Analytics</span>
                     <span className="text-emerald-600 dark:text-emerald-400">{room.analytics?.completionRate || 0}% Approved</span>
                   </div>
                   <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
@@ -449,16 +457,30 @@ export const RoomManagementPage = () => {
               <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => openViewDetails(room)}
-                    title="View Room Details"
+                    onClick={() => openViewDetails(room, 'overview')}
+                    title="View Room Overview"
                     className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl transition-colors"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
+                    onClick={() => openViewDetails(room, 'analytics')}
+                    title="Room Submission Analytics"
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openViewDetails(room, 'leaderboard')}
+                    title="Room Leaderboard"
+                    className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-xl transition-colors"
+                  >
+                    <Trophy className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => openViewMembers(room)}
                     title="Manage Members"
-                    className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-colors"
+                    className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                   >
                     <Users className="w-4 h-4" />
                   </button>
@@ -536,9 +558,13 @@ export const RoomManagementPage = () => {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-xs rounded-lg border border-amber-500/20 inline-flex items-center gap-1">
+                      <button
+                        onClick={() => openViewDetails(room, 'leaderboard')}
+                        className="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-xs rounded-lg border border-amber-500/20 inline-flex items-center gap-1 hover:bg-amber-500/20 transition-all cursor-pointer"
+                        title="Click to view Room Leaderboard"
+                      >
                         <Trophy className="w-3.5 h-3.5" /> Rank #{room.rank || '-'}
-                      </span>
+                      </button>
                     </td>
                     <td className="p-4 font-extrabold text-emerald-600 dark:text-emerald-400">
                       {(room.totalPoints || 0).toLocaleString()} pts
@@ -553,12 +579,16 @@ export const RoomManagementPage = () => {
                     <td className="p-4 font-semibold">{room.membersCount || 0} / {room.maxMembers}</td>
                     <td className="p-4 font-bold text-brandPrimary">Cycle {room.currentCycle || 1}</td>
                     <td className="p-4 text-xs">
-                      <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openViewDetails(room, 'analytics')}
+                        className="text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-all cursor-pointer"
+                        title="Click to view Room Analytics"
+                      >
                         <span className="font-bold text-slate-700 dark:text-slate-300">{room.analytics?.totalSubmissions || 0} subs</span>
                         <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold rounded-md">
                           {room.analytics?.completionRate || 0}% rate
                         </span>
-                      </div>
+                      </button>
                     </td>
                     <td className="p-4">
                       <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold text-xs rounded-full">
@@ -567,10 +597,16 @@ export const RoomManagementPage = () => {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openViewDetails(room)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg">
+                        <button onClick={() => openViewDetails(room, 'overview')} title="Room Overview" className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openViewMembers(room)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <button onClick={() => openViewDetails(room, 'analytics')} title="Room Submission Analytics" className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                          <BarChart3 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => openViewDetails(room, 'leaderboard')} title="Room Leaderboard" className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
+                          <Trophy className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => openViewMembers(room)} title="Manage Members" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
                           <Users className="w-4 h-4" />
                         </button>
                         <button
@@ -596,7 +632,7 @@ export const RoomManagementPage = () => {
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDeleteRoomClick(room)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <button onClick={() => handleDeleteRoomClick(room)} title="Delete Room" className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -793,6 +829,42 @@ export const RoomManagementPage = () => {
                   <span className="font-semibold text-slate-600 dark:text-slate-300">Active Tasks targeting this room</span>
                   <span className="font-extrabold text-brandPrimary text-sm">{roomAnalytics?.activeTasksCount || 0} active tasks</span>
                 </div>
+
+                {/* Recent Room Submissions List */}
+                {roomAnalytics?.recentSubmissions && roomAnalytics.recentSubmissions.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-brandPrimary" /> Recent Submissions in Room
+                    </h4>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {roomAnalytics.recentSubmissions.map((sub) => (
+                        <div key={sub._id} className="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-brandPrimary/10 text-brandPrimary flex items-center justify-center font-bold text-[10px]">
+                              {sub.userId?.name ? sub.userId.name.slice(0, 2) : 'US'}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 dark:text-white block">{sub.userId?.name || 'User'}</span>
+                              <span className="text-[10px] text-slate-500 truncate max-w-[150px] block">{sub.taskId?.title || 'Task Submission'}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                              sub.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                              sub.status === 'Rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                              'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            }`}>
+                              {sub.status}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              {sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -803,6 +875,31 @@ export const RoomManagementPage = () => {
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Room Leaderboard Standings</h4>
                   <span className="text-[11px] font-bold text-amber-500">Ranked by points</span>
                 </div>
+
+                {/* Top 3 Podium Cards */}
+                {roomMembers.length >= 3 && (
+                  <div className="grid grid-cols-3 gap-2 py-1">
+                    {/* #2 Silver */}
+                    <div className="bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-center">
+                      <span className="text-[10px] font-black px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-200 rounded-md">🥈 #2</span>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs mt-1 truncate">{roomMembers[1]?.userId?.name || 'Member'}</p>
+                      <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">{(roomMembers[1]?.accumulatedPoints || 0).toLocaleString()} pts</span>
+                    </div>
+                    {/* #1 Gold */}
+                    <div className="bg-amber-500/10 border-2 border-amber-500 rounded-xl p-2.5 text-center transform scale-105 shadow-sm">
+                      <span className="text-[10px] font-black px-2 py-0.5 bg-amber-400 text-slate-900 rounded-md">🥇 #1</span>
+                      <p className="font-extrabold text-slate-900 dark:text-white text-xs mt-1 truncate">{roomMembers[0]?.userId?.name || 'Member'}</p>
+                      <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 block mt-0.5">{(roomMembers[0]?.accumulatedPoints || 0).toLocaleString()} pts</span>
+                    </div>
+                    {/* #3 Bronze */}
+                    <div className="bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-center">
+                      <span className="text-[10px] font-black px-2 py-0.5 bg-amber-800 text-white rounded-md">🥉 #3</span>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs mt-1 truncate">{roomMembers[2]?.userId?.name || 'Member'}</p>
+                      <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">{(roomMembers[2]?.accumulatedPoints || 0).toLocaleString()} pts</span>
+                    </div>
+                  </div>
+                )}
+
                 {roomMembers.length === 0 ? (
                   <p className="text-xs text-slate-500 p-4 text-center bg-slate-50 dark:bg-slate-900/60 rounded-xl">No leaderboard records found for this room.</p>
                 ) : (

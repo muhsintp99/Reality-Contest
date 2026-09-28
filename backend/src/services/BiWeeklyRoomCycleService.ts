@@ -5,6 +5,7 @@ import RoomSubmission, { IRoomSubmission } from '../models/RoomSubmission';
 import RoomLeaderboard, { IRoomLeaderboard } from '../models/RoomLeaderboard';
 import RoomReward, { IRoomReward } from '../models/RoomReward';
 import RoomMember, { IRoomMember } from '../models/RoomMember';
+import Task from '../models/Task';
 import CycleLog from '../models/CycleLog';
 import RoomCycleSettings from '../models/RoomCycleSettings';
 import User from '../models/User';
@@ -107,9 +108,10 @@ export class BiWeeklyRoomCycleService {
       const totalSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id });
       const approvedSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id, status: 'Approved' });
       const rejectedSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id, status: 'Rejected' });
+      const pendingSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id, status: 'Pending' });
       const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
 
-      const activeTasksCount = 0;
+      const activeTasksCount = await Task.countDocuments({ status: { $in: ['Published', 'Running'] } }).catch(() => 0);
 
       const isJoined = userJoinedRoomIds.includes(rm._id.toString());
       const rmObj = rm.toObject();
@@ -121,6 +123,7 @@ export class BiWeeklyRoomCycleService {
         totalSubmissions,
         approvedSubmissions,
         rejectedSubmissions,
+        pendingSubmissions,
         completionRate,
         activeTasksCount
       };
@@ -197,7 +200,14 @@ export class BiWeeklyRoomCycleService {
     const pendingSubmissions = await RoomSubmission.countDocuments({ roomId, status: 'Pending' });
     const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
 
-    const activeTasksCount = 0;
+    const activeTasksCount = await Task.countDocuments({ status: { $in: ['Published', 'Running'] } }).catch(() => 0);
+
+    const recentSubmissions = await RoomSubmission.find({ roomId })
+      .populate('userId', 'name email avatar')
+      .populate('taskId', 'title taskType points')
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .catch(() => []);
 
     const analytics = {
       totalSubmissions,
@@ -205,7 +215,8 @@ export class BiWeeklyRoomCycleService {
       rejectedSubmissions,
       pendingSubmissions,
       completionRate,
-      activeTasksCount
+      activeTasksCount,
+      recentSubmissions
     };
 
     return { room, members, cycles, analytics };
