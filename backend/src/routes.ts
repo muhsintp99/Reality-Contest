@@ -24,6 +24,7 @@ import { rolePermissionController } from './controllers/RolePermissionController
 import { mobileContestantController } from './controllers/MobileContestantController';
 import { biWeeklyRoomCycleController } from './controllers/BiWeeklyRoomCycleController';
 import { grandContestController } from './controllers/GrandContestController';
+import { paymentController } from './controllers/PaymentController';
 
 // Import Middlewares
 import { authenticate, authorize, requireNotGuest, optionalAuthenticate } from './middleware/AuthMiddleware';
@@ -622,6 +623,15 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/admin/room-cycle/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
   router.put('/admin/room-cycles/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
   router.put('/admin/bi-weekly-room-cycle/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
+
+  // Razorpay Payment Setup Routes
+  router.get('/payments/settings', paymentController.getSettings);
+  router.put('/payments/settings', paymentController.updateSettings);
+  router.post('/payments/settings', paymentController.updateSettings);
+  router.post('/payments/settings/test-connection', paymentController.testConnection);
+  router.get('/admin/payments/settings', paymentController.getSettings);
+  router.put('/admin/payments/settings', paymentController.updateSettings);
+  router.post('/admin/payments/settings/test-connection', paymentController.testConnection);
 
   return router;
 }

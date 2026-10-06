@@ -28,7 +28,8 @@ export const swaggerDocument = {
     { name: '10. CMS & Social Media', description: 'CMS social links, platform names, user handles, logos, and legal docs' },
     { name: '11. Bi-Weekly Room Cycle Module', description: 'Complete REST API endpoints for Rooms, 10-Cycle Blueprint, Submissions Evaluation, Leaderboard, Rewards, and Settings' },
     { name: '12. Grand Contest Management', description: 'Grand Contest creation, task connections, analytics, and lifecycle management' },
-    { name: '13. Task Management', description: 'Complete REST API endpoints for Task creation, listing, details lookup, status toggle, and deletion' }
+    { name: '13. Task Management', description: 'Complete REST API endpoints for Task creation, listing, details lookup, status toggle, and deletion' },
+    { name: '14. Payment Gateway & Razorpay Setup', description: 'Razorpay payment gateway configuration, credentials, webhooks, and payment channels' }
   ],
   components: {
     securitySchemes: {
@@ -362,6 +363,33 @@ export const swaggerDocument = {
           status: { type: 'string', enum: ['Pending', 'Completed', 'Failed'], example: 'Completed' },
           referenceId: { type: 'string', example: 'TXN-2026-98124' },
           createdAt: { type: 'string', format: 'date-time', example: '2026-09-05T18:00:00.000Z' }
+        }
+      },
+      PaymentSettingsResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789pay' },
+          isEnabled: { type: 'boolean', example: true },
+          environment: { type: 'string', enum: ['test', 'live'], example: 'test' },
+          merchantName: { type: 'string', example: 'Haka Contest Platform' },
+          merchantLogo: { type: 'string', example: 'https://hakalive.in/haka_favicon.png' },
+          keyId: { type: 'string', example: 'rzp_test_9876543210abcd' },
+          keySecret: { type: 'string', example: 'sec_test_9876543210secretkey' },
+          webhookSecret: { type: 'string', example: 'whsec_9876543210webhooksecret' },
+          currency: { type: 'string', example: 'INR' },
+          autoCapture: { type: 'boolean', example: true },
+          acceptedMethods: {
+            type: 'object',
+            properties: {
+              upi: { type: 'boolean', example: true },
+              cards: { type: 'boolean', example: true },
+              netbanking: { type: 'boolean', example: true },
+              wallets: { type: 'boolean', example: true },
+              paylater: { type: 'boolean', example: false },
+              emi: { type: 'boolean', example: false }
+            }
+          },
+          webhookUrl: { type: 'string', example: 'http://hakalive.in/api/v1/payments/razorpay/webhook' }
         }
       }
     }
@@ -4204,6 +4232,163 @@ export const swaggerDocument = {
               }
             }
           }
+        }
+      }
+    },
+    '/api/payments/settings': {
+      get: {
+        tags: ['14. Payment Gateway & Razorpay Setup'],
+        summary: 'Get Razorpay Payment Gateway Settings',
+        description: 'Retrieves current Razorpay payment gateway configuration including active mode, credentials format, merchant branding, currency, auto-capture rules, and accepted payment channels.',
+        responses: {
+          200: {
+            description: 'Payment settings retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/PaymentSettingsResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['14. Payment Gateway & Razorpay Setup'],
+        summary: 'Update Razorpay Payment Gateway Settings',
+        description: 'Updates Razorpay API credentials, environment mode, merchant display settings, currency, auto-capture, and payment channels.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/PaymentSettingsResponse' }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Payment settings updated successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Razorpay payment settings updated successfully' },
+                    data: { $ref: '#/components/schemas/PaymentSettingsResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/payments/settings': {
+      get: {
+        tags: ['14. Payment Gateway & Razorpay Setup'],
+        summary: 'Admin: Get Razorpay Payment Gateway Settings',
+        security: [{ bearerAuth: [] }],
+        description: 'Admin endpoint to retrieve current Razorpay payment gateway configuration.',
+        responses: {
+          200: {
+            description: 'Payment settings retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/PaymentSettingsResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      put: {
+        tags: ['14. Payment Gateway & Razorpay Setup'],
+        summary: 'Admin: Update Razorpay Payment Gateway Settings',
+        security: [{ bearerAuth: [] }],
+        description: 'Admin endpoint to update Razorpay API credentials, environment mode, merchant display settings, currency, auto-capture, and payment channels.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/PaymentSettingsResponse' }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Payment settings updated successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Razorpay payment settings updated successfully' },
+                    data: { $ref: '#/components/schemas/PaymentSettingsResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/payments/settings/test-connection': {
+      post: {
+        tags: ['14. Payment Gateway & Razorpay Setup'],
+        summary: 'Test Razorpay Credentials Connection & Handshake',
+        description: 'Performs a connection handshake test validating Razorpay Key ID format against selected environment (Test vs Live).',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['keyId', 'keySecret', 'environment'],
+                properties: {
+                  keyId: { type: 'string', example: 'rzp_test_9876543210abcd' },
+                  keySecret: { type: 'string', example: 'sec_test_9876543210secretkey' },
+                  environment: { type: 'string', enum: ['test', 'live'], example: 'test' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Connection test passed.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Connection successfully verified with Razorpay TEST servers!' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        status: { type: 'string', example: 'connected' },
+                        timestamp: { type: 'string', example: '2026-10-06T14:00:00.000Z' },
+                        environment: { type: 'string', example: 'test' },
+                        keyIdMasked: { type: 'string', example: 'rzp_test_9...abcd' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
         }
       }
     }
