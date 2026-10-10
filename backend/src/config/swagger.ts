@@ -2814,7 +2814,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms': {
       get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Get All Competition Rooms',
         description: 'Fetch paginated list of competition rooms with search, status filter, and capacity details.',
         security: [{ bearerAuth: [] }],
@@ -2856,7 +2856,7 @@ export const swaggerDocument = {
         }
       },
       post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Create New Competition Room',
         description: 'Create a new room with name, description, max members, current cycle, room image, and auto-assignment options.',
         security: [{ bearerAuth: [] }],
@@ -2906,7 +2906,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{id}': {
       get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Get Room Details & Active Members by ID',
         description: 'Retrieves room configuration, assigned cycles, and active member leaderboard rankings.',
         security: [{ bearerAuth: [] }],
@@ -2930,7 +2930,7 @@ export const swaggerDocument = {
         }
       },
       put: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Update Room Details',
         description: 'Updates room capacity, status, rules, description, and settings.',
         security: [{ bearerAuth: [] }],
@@ -2972,7 +2972,7 @@ export const swaggerDocument = {
         }
       },
       delete: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Delete Room',
         description: 'Permanently removes the room and unlinks attached members.',
         security: [{ bearerAuth: [] }],
@@ -2997,7 +2997,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{id}/cycles': {
       get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Get 14-Day Blueprint Cycles for Room',
         description: 'Fetches the 14-day cycle blueprints attached to the specified room.',
         security: [{ bearerAuth: [] }],
@@ -3023,7 +3023,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/bulk-action': {
       post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Bulk Action on Rooms (Activate, Archive, Delete)',
         description: 'Applies bulk operations across multiple room IDs at once.',
         security: [{ bearerAuth: [] }],
@@ -3062,7 +3062,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/contests/{contestId}/check-status': {
       get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Check Contestant Join Status for Room Cycle',
         description: 'Checks whether the authenticated contestant has joined the specified room cohort and cycle contest.',
         security: [{ bearerAuth: [] }],
@@ -3084,7 +3084,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/contests/{contestId}/join': {
       post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Contestant Join Room Cycle & Contest',
         description: 'Enrolls the authenticated contestant into the room cohort and unlocks cycle tasks and leaderboard participation.',
         security: [{ bearerAuth: [] }],
@@ -3107,7 +3107,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/join/{contestId}': {
       get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Check Contestant Join Status (Alias)',
         description: 'Checks whether the authenticated contestant has joined the specified room and contest.',
         security: [{ bearerAuth: [] }],
@@ -3127,7 +3127,7 @@ export const swaggerDocument = {
         }
       },
       post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Contestant Join Room & Contest (Alias)',
         description: 'Registers the authenticated contestant into the room cohort and associated contest.',
         security: [{ bearerAuth: [] }],
@@ -3149,7 +3149,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/start/{contestId}': {
       post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Start Contest Task Attempt',
         description: 'Initializes and records the attempt for the contestant for the specified room and contest task.',
         security: [{ bearerAuth: [] }],
@@ -3185,7 +3185,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/submit/{contestId}': {
       post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Submit Task Proof & Answers for Room Contest',
         description: 'Submits contestant task proof (media file or text link) and answers for automatic or admin evaluation.',
         security: [{ bearerAuth: [] }],
