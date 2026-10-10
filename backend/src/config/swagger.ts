@@ -2077,7 +2077,7 @@ export const swaggerDocument = {
     },
     '/api/v1/mobile/room-cycle/submissions': {
       post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
         summary: 'Submit Room Cycle Task Proof',
         description: 'Uploads a contestant task submission with proof notes, URL links, base64 data, or attached file.',
         security: [{ bearerAuth: [] }],
@@ -2087,26 +2087,28 @@ export const swaggerDocument = {
             'multipart/form-data': {
               schema: {
                 type: 'object',
-                required: ['cycleId', 'roomId', 'taskId'],
+                required: ['roomId', 'taskId'],
                 properties: {
-                  cycleId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d0' },
-                  roomId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' },
-                  taskId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d2' },
+                  roomId: { type: 'string', example: '66bc91f24d9e123456789rm1' },
+                  taskId: { type: 'string', example: '66bc91f24d9e123456789tsk1' },
+                  cycleId: { type: 'string', example: '66bc91f24d9e123456789cyc1' },
+                  contestId: { type: 'string', example: '66bc91f24d9e123456789cnt1' },
                   submissionType: { type: 'string', enum: ['File', 'Image', 'Video', 'Link', 'Text'], example: 'File' },
+                  mediaFile: { type: 'string', format: 'binary', description: 'Attached proof file' },
                   mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=example' },
-                  proofNotes: { type: 'string', example: 'Completed the required room task.' },
-                  mediaFile: { type: 'string', format: 'binary', description: 'Attached proof file' }
+                  proofNotes: { type: 'string', example: 'Completed the required room task.' }
                 }
               }
             },
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['cycleId', 'roomId', 'taskId'],
+                required: ['roomId', 'taskId'],
                 properties: {
-                  cycleId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d0' },
-                  roomId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d1' },
-                  taskId: { type: 'string', example: '66d5a1b2c3d4e5f6a7b8c9d2' },
+                  roomId: { type: 'string', example: '66bc91f24d9e123456789rm1' },
+                  taskId: { type: 'string', example: '66bc91f24d9e123456789tsk1' },
+                  cycleId: { type: 'string', example: '66bc91f24d9e123456789cyc1' },
+                  contestId: { type: 'string', example: '66bc91f24d9e123456789cnt1' },
                   submissionType: { type: 'string', enum: ['File', 'Image', 'Video', 'Link', 'Text'], example: 'Link' },
                   mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=example' },
                   proofNotes: { type: 'string', example: 'Completed the required room task.' }
@@ -2116,9 +2118,23 @@ export const swaggerDocument = {
           }
         },
         responses: {
-          201: { description: 'Task submission uploaded successfully. Sent for admin review.' },
-          400: { description: 'Invalid payload or missing parameters.' },
-          401: { description: 'Authentication required.' }
+          201: {
+            description: 'Task submission uploaded successfully. Sent for admin review.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task submission uploaded successfully. Submitted for admin review.' },
+                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' },
+          401: { $ref: '#/components/schemas/ErrorResponse' }
         }
       }
     },
@@ -3212,52 +3228,6 @@ export const swaggerDocument = {
             }
           },
           400: { $ref: '#/components/schemas/ErrorResponse' }
-        }
-      }
-    },
-    '/api/v1/mobile/room-cycle/submissions': {
-      post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Mobile Contestant Task Proof Submission',
-        description: 'Contestant uploads proof attachment or video link for evaluation in active room cycle.',
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'multipart/form-data': {
-              schema: {
-                type: 'object',
-                required: ['roomId', 'taskId'],
-                properties: {
-                  roomId: { type: 'string', example: '66bc91f24d9e123456789rm1' },
-                  taskId: { type: 'string', example: '66bc91f24d9e123456789tsk1' },
-                  cycleId: { type: 'string', example: '66bc91f24d9e123456789cyc1' },
-                  contestId: { type: 'string', example: '66bc91f24d9e123456789cnt1' },
-                  submissionType: { type: 'string', enum: ['Link', 'File', 'Text', 'Image', 'Video'], example: 'Video' },
-                  mediaFile: { type: 'string', format: 'binary', description: 'Proof image or video file' },
-                  mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=demo' },
-                  proofNotes: { type: 'string', example: 'Here is my strategy video.' }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          201: {
-            description: 'Submission uploaded successfully.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Task submission uploaded successfully. Submitted for admin review.' },
-                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
-                  }
-                }
-              }
-            }
-          }
         }
       }
     },
