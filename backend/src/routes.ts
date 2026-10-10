@@ -656,6 +656,13 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/admin/payments/settings', paymentController.updateSettings);
   router.post('/admin/payments/settings/test-connection', paymentController.testConnection);
 
+  // System & Terminal Logs Endpoints
+  router.get('/admin/system/logs', optionalAuthenticate, adminController.getTerminalLogs);
+  router.get('/admin/room-cycle/logs', optionalAuthenticate, adminController.getTerminalLogs);
+  router.get('/system/logs', optionalAuthenticate, adminController.getTerminalLogs);
+  router.post('/admin/system/logs/purge', optionalAuthenticate, adminController.purgeTerminalLogs);
+  router.post('/system/logs/purge', optionalAuthenticate, adminController.purgeTerminalLogs);
+
   return router;
 }
 

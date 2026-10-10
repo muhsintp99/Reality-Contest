@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Settings, Save, Clock, Users, Shield, Zap, Bell, Award, Check
+  Settings, Save, Clock, Users, Shield, Zap, Bell, Award, Check, Terminal
 } from 'lucide-react';
 import axios from 'axios';
 import { setSettings, setLoading } from '../../store/roomCycleSlice';
 import { useAlert } from '../../context/AlertContext';
+import { TerminalLogsViewer } from '../../components/TerminalLogsViewer';
 
 export const RoomCycleSettingsPage = () => {
   const dispatch = useDispatch();
@@ -228,6 +229,19 @@ export const RoomCycleSettingsPage = () => {
           </button>
         </div>
       </form>
+
+      {/* Live Backend Automation Terminal Logs Section */}
+      <div className="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-3">
+        <div>
+          <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <Terminal className="w-5 h-5 text-emerald-500" /> Live Room Cycle & Automation Backend Logs
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Real-time server terminal output, cycle timer evaluations, automated lockings, and scoring events.
+          </p>
+        </div>
+        <TerminalLogsViewer title="Bi-Weekly Automation Worker Terminal" defaultFilter="all" />
+      </div>
     </div>
   );
 };

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { updateProfileRequest } from '../store/authSlice';
 import { DeviceManager } from '../components/DeviceManager';
+import { TerminalLogsViewer } from '../components/TerminalLogsViewer';
 import { useAlert } from '../context/AlertContext';
 import { 
   Settings, User, Lock, Bell, KeyRound, CreditCard,
   ToggleLeft, ToggleRight, Copy, Check, RefreshCw, Eye, EyeOff,
   ShieldCheck, Zap, CheckCircle2, AlertCircle, Building,
-  Sliders, Trophy, Gift, Coins
+  Sliders, Trophy, Gift, Coins, Terminal
 } from 'lucide-react';
 
 const TABS = [
@@ -15,7 +16,8 @@ const TABS = [
   { id: 'security', label: 'Security & Devices', icon: Lock },
   { id: 'payment', label: 'Razorpay Payment Setup', icon: CreditCard },
   { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'keys', label: 'API Developer Keys', icon: KeyRound }
+  { id: 'keys', label: 'API Developer Keys', icon: KeyRound },
+  { id: 'logs', label: 'Backend Terminal Logs', icon: Terminal }
 ];
 
 export const SettingsPage = () => {
@@ -943,6 +945,21 @@ export const SettingsPage = () => {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* BACKEND TERMINAL LOGS TAB */}
+        {activeTab === 'logs' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                Backend Terminal & System Logs
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Real-time terminal output, PM2 logs, Redis/MongoDB status, worker queues, and errors.
+              </p>
+            </div>
+            <TerminalLogsViewer title="Haka Backend Server Terminal (node dist/server.js)" defaultFilter="all" />
           </div>
         )}
 

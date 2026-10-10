@@ -72,6 +72,10 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     const { roomCycleAutomationService } = require('./services/RoomCycleAutomationService');
     roomCycleAutomationService.startAutomation();
 
+    // Start 24-Hour Automatic Log Cleanup and Retention Service
+    const { logRotationService } = require('./services/LogRotationService');
+    logRotationService.startAutoCleanup(60); // Runs hourly to purge logs older than 24h
+
 
     // Parser and Compression Middlewares
     app.use(
