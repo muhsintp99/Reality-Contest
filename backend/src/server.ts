@@ -51,6 +51,8 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
 } else {
   const startServer = async () => {
     const app = express();
+    // Enable trust proxy for Nginx reverse proxy headers (X-Forwarded-For, etc.)
+    app.set('trust proxy', 1);
     const server = http.createServer(app);
 
     // Wait for Redis connection attempt (resolves instantly if online or after timeout if offline)
@@ -165,6 +167,7 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       max: 30, // Limit to 30 requests per window
       standardHeaders: true,
       legacyHeaders: false,
+      validate: { xForwardedForHeader: false },
       message: { success: false, message: 'Too many authentication attempts. Please try again later.' }
     });
 
@@ -174,6 +177,7 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       max: 1000000, // Limit to 1000 requests per window
       standardHeaders: true,
       legacyHeaders: false,
+      validate: { xForwardedForHeader: false },
       message: { success: false, message: 'Too many requests. Please try again later.' }
     });
 

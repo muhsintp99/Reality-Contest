@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Bi-Weekly Room Cycle & Grand Contest Modules — App API Specification</title>
+  <title>Bi-Weekly Room Cycle & Grand Contest Modules — Complete API Specification</title>
   <style>
     @media print {
-      body { margin: 0; padding: 15mm; font-size: 11pt; }
+      body { margin: 0; padding: 12mm; font-size: 10.5pt; }
       .no-print { display: none; }
       .page-break { page-break-before: always; }
     }
@@ -14,14 +14,14 @@
       color: #1e293b;
       background-color: #f8fafc;
       margin: 0;
-      padding: 40px;
+      padding: 30px;
       line-height: 1.6;
     }
     .container {
-      max-width: 950px;
+      max-width: 980px;
       margin: 0 auto;
       background: #ffffff;
-      padding: 50px;
+      padding: 45px;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
       border: 1px solid #e2e8f0;
@@ -29,11 +29,11 @@
     .header {
       border-bottom: 3px solid #2563eb;
       padding-bottom: 20px;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
     .header h1 {
       color: #0f172a;
-      font-size: 26px;
+      font-size: 25px;
       margin: 0 0 10px 0;
       font-weight: 800;
     }
@@ -56,14 +56,25 @@
     .module-banner {
       background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
       color: white;
-      padding: 14px 20px;
+      padding: 13px 20px;
       border-radius: 10px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       margin-top: 35px;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+    }
+    .sub-banner {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      margin-top: 25px;
+      margin-bottom: 12px;
+      border-left: 4px solid #2563eb;
     }
     h2 {
       color: #1e3a8a;
@@ -77,21 +88,22 @@
       font-size: 14px;
       color: #334155;
       margin-top: 18px;
+      margin-bottom: 8px;
       font-weight: 700;
     }
     p, li {
-      font-size: 13.5px;
+      font-size: 13px;
       color: #475569;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 20px 0;
-      font-size: 12.5px;
+      margin: 18px 0;
+      font-size: 12px;
     }
     th, td {
       border: 1px solid #cbd5e1;
-      padding: 9px 12px;
+      padding: 8px 11px;
       text-align: left;
     }
     th {
@@ -105,32 +117,34 @@
     pre {
       background: #0f172a;
       color: #f8fafc;
-      padding: 14px;
+      padding: 12px 14px;
       border-radius: 8px;
       font-family: 'Consolas', 'Courier New', monospace;
-      font-size: 12px;
+      font-size: 11.5px;
       overflow-x: auto;
-      line-height: 1.5;
+      line-height: 1.45;
     }
     .endpoint-badge {
       display: inline-block;
-      padding: 3px 8px;
+      padding: 2px 7px;
       font-weight: 800;
-      font-size: 11px;
-      border-radius: 5px;
-      margin-right: 6px;
+      font-size: 10.5px;
+      border-radius: 4px;
+      margin-right: 5px;
     }
     .get { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
     .post { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .put { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .delete { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
     .btn-print {
       background: #2563eb;
       color: white;
       border: none;
-      padding: 12px 24px;
+      padding: 10px 20px;
       border-radius: 8px;
       font-weight: 700;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13.5px;
       box-shadow: 0 4px 12px rgba(37,99,235,0.3);
       transition: all 0.2s;
     }
@@ -141,7 +155,7 @@
 </head>
 <body>
 
-  <div class="no-print" style="text-align: right; max-width: 950px; margin: 0 auto 20px auto;">
+  <div class="no-print" style="text-align: right; max-width: 980px; margin: 0 auto 20px auto;">
     <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
   </div>
 
@@ -150,20 +164,22 @@
       <h1>📱 Bi-Weekly Room Cycle & Grand Contest Modules API Guide</h1>
       <div class="header-meta">
         <span class="badge">Version 2.0.0</span>
-        <span><b>Target:</b> iOS & Android Mobile App</span>
-        <span><b>Base Server:</b> <code>http://hakalive.in/api/v1</code></span>
+        <span><b>Target:</b> iOS & Android Mobile Apps + Admin Dashboard</span>
+        <span><b>Base Server:</b> <code>https://api.hakalive.in/api</code> (or <code>http://localhost:10000/api</code>)</span>
       </div>
     </div>
 
-    <h2>1. Global Authentication Header (Required for All Requests)</h2>
+    <h2>1. Global Authentication Header (Required for Protected Requests)</h2>
     <pre>Authorization: Bearer &lt;user_jwt_access_token&gt;
 Content-Type: application/json</pre>
 
     <!-- MODULE A -->
     <div class="module-banner">MODULE A: Bi-Weekly Room Cycle Module</div>
 
-    <h3>Step 1: Browse Available Rooms</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/week/rooms</code> | <span class="endpoint-badge get">GET</span> <code>/api/week/rooms</code></p>
+    <div class="sub-banner">Part 1: Contestant & Mobile App Room APIs</div>
+
+    <h3>Step 1: Browse Available Cohort Rooms</h3>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/week/rooms</code> <i>(or <code>/api/v1/week/rooms</code>)</i></p>
     <pre>{
   "success": true,
   "data": {
@@ -172,6 +188,7 @@ Content-Type: application/json</pre>
         "_id": "66bc91f24d9e123456789rm1",
         "code": "RM-001",
         "name": "Alpha Strikers",
+        "description": "Room for top tier competitors",
         "maxMembers": 50,
         "membersCount": 12,
         "isJoined": false,
@@ -183,7 +200,7 @@ Content-Type: application/json</pre>
 }</pre>
 
     <h3>Step 2: Room Details & 14-Day Cycle Blueprint</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/week/rooms/:id</code> | <span class="endpoint-badge get">GET</span> <code>/api/v1/week/rooms/:id/cycles</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/week/rooms/:id</code> | <span class="endpoint-badge get">GET</span> <code>/api/week/rooms/:id/cycles</code></p>
     <pre>{
   "success": true,
   "cycles": [
@@ -199,8 +216,8 @@ Content-Type: application/json</pre>
 }</pre>
 
     <h3>Step 3: Check Eligibility & Join Room Cycle</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/week/rooms/:roomId/contests/:contestId/check-status</code></p>
-    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/week/rooms/:roomId/contests/:contestId/join</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/week/rooms/:roomId/contests/:contestId/check-status</code></p>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/week/rooms/:roomId/contests/:contestId/join</code></p>
     <pre>{
   "success": true,
   "message": "User has successfully joined this room contest",
@@ -215,8 +232,8 @@ Content-Type: application/json</pre>
 }</pre>
 
     <h3>Step 4: Start Attempt & Submit Task Proof</h3>
-    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/week/rooms/:roomId/start/:contestId</code></p>
-    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/week/rooms/:roomId/submit/:contestId</code> | <span class="endpoint-badge post">POST</span> <code>/api/v1/mobile/room-cycle/submissions</code></p>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/week/rooms/:roomId/start/:contestId</code></p>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/week/rooms/:roomId/submit/:contestId</code> <i>(or <code>/api/v1/mobile/room-cycle/submissions</code>)</i></p>
     <pre>// Multipart/form-data request:
 {
   "roomId": "66bc91f24d9e123456789rm1",
@@ -227,20 +244,27 @@ Content-Type: application/json</pre>
   "proofNotes": "Completed Day 3 sprint challenge proof."
 }</pre>
 
-    <h3>Step 5: Submissions Review, Leaderboard & Rewards</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/admin/room-cycle/submissions?roomId=&lt;roomId&gt;</code></p>
-    <p><span class="endpoint-badge put">PUT</span> <code>/api/v1/admin/room-cycle/submissions/:id/review</code></p>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/admin/room-cycle/leaderboard?scope=Room&roomId=&lt;roomId&gt;</code></p>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/admin/room-cycle/rewards</code></p>
-    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/admin/room-cycle/rewards/distribute</code></p>
+    <div class="sub-banner">Part 2: Admin Room Cycle Management APIs (27 Endpoints)</div>
+    <p>All admin endpoints are routed through <code>/api/admin/room-cycle/...</code>:</p>
+    <ul>
+      <li><b>Rooms:</b> <code>GET /api/admin/room-cycle/rooms</code>, <code>POST /api/admin/room-cycle/rooms</code>, <code>GET /api/admin/room-cycle/rooms/:id</code>, <code>PUT /api/admin/room-cycle/rooms/:id</code>, <code>DELETE /api/admin/room-cycle/rooms/:id</code>, <code>GET /api/admin/room-cycle/rooms/:id/cycles</code>, <code>POST /api/admin/room-cycle/rooms/bulk-action</code></li>
+      <li><b>Members:</b> <code>POST /api/admin/room-cycle/members/assign</code>, <code>POST /api/admin/room-cycle/members/random-assign</code>, <code>POST /api/admin/room-cycle/members/transfer</code>, <code>DELETE /api/admin/room-cycle/members/:roomId/:userId</code></li>
+      <li><b>Cycles:</b> <code>GET /api/admin/room-cycle/cycles</code>, <code>POST /api/admin/room-cycle/cycles</code>, <code>PUT /api/admin/room-cycle/cycles/:id/set-active</code>, <code>GET /api/admin/room-cycle/cycles/:id</code>, <code>PUT /api/admin/room-cycle/cycles/:id</code>, <code>DELETE /api/admin/room-cycle/cycles/:id</code></li>
+      <li><b>Submissions & Grading:</b> <code>GET /api/admin/room-cycle/submissions</code>, <code>PUT /api/admin/room-cycle/submissions/:id/review</code></li>
+      <li><b>Leaderboard & Scores:</b> <code>GET /api/admin/room-cycle/leaderboard</code>, <code>POST /api/admin/room-cycle/leaderboard/recalculate</code></li>
+      <li><b>Rewards Distribution:</b> <code>GET /api/admin/room-cycle/rewards</code>, <code>POST /api/admin/room-cycle/rewards</code>, <code>POST /api/admin/room-cycle/rewards/distribute</code></li>
+      <li><b>Settings & Analytics:</b> <code>GET /api/admin/room-cycle/settings</code>, <code>PUT /api/admin/room-cycle/settings</code>, <code>GET /api/admin/room-cycle/analytics</code></li>
+    </ul>
 
     <div class="page-break"></div>
 
     <!-- MODULE B -->
     <div class="module-banner">MODULE B: Grand Contest Module</div>
 
+    <div class="sub-banner">Part 1: Contestant & Mobile App Grand Contest APIs</div>
+
     <h3>Step 1: List Grand Contests</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/grand-contests</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests</code> <i>(or <code>/api/public/grand-contests</code>)</i></p>
     <pre>{
   "success": true,
   "data": {
@@ -260,7 +284,7 @@ Content-Type: application/json</pre>
 }</pre>
 
     <h3>Step 2: Get Details & Rules</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/grand-contests/:id</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id</code></p>
     <pre>{
   "success": true,
   "data": {
@@ -272,16 +296,16 @@ Content-Type: application/json</pre>
 }</pre>
 
     <h3>Step 3: Join Grand Contest</h3>
-    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/grand-contests/:id/join</code></p>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/grand-contests/:id/join</code> <i>(or <code>/api/v1/mobile/grand-contests/:id/join</code>)</i></p>
     <pre>{
   "success": true,
   "message": "Joined Grand Contest successfully",
   "data": { "contestId": "66bc91f24d9e123456789gnc1", "status": "Registered" }
 }</pre>
 
-    <h3>Step 4: Fetch Connected Tasks & Submit Proof</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/grand-contests/:id/tasks</code></p>
-    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/grand-contests/:id/tasks/:taskId/submit</code></p>
+    <h3>Step 4: Fetch Tasks & Submit Proof</h3>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id/tasks</code></p>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/grand-contests/:id/tasks/:taskId/submit</code> <i>(or <code>/api/grand-contests/:id/submissions</code>)</i></p>
     <pre>// Request Body:
 {
   "submissionType": "Video",
@@ -290,43 +314,55 @@ Content-Type: application/json</pre>
 }</pre>
 
     <h3>Step 5: View Submissions & Analytics</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/grand-contests/:id/submissions</code></p>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/grand-contests/:id/analytics</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id/submissions</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id/analytics</code></p>
+
+    <div class="sub-banner">Part 2: Admin Grand Contest Management APIs</div>
+    <ul>
+      <li><b>Contest CRUD:</b> <code>POST /api/admin/grand-contests</code>, <code>GET /api/admin/grand-contests</code>, <code>GET /api/admin/grand-contests/:id</code>, <code>PUT /api/admin/grand-contests/:id</code>, <code>DELETE /api/admin/grand-contests/:id</code>, <code>POST /api/admin/grand-contests/:id/duplicate</code></li>
+      <li><b>Tasks Connection:</b> <code>GET /api/admin/grand-contests/:id/tasks</code>, <code>POST /api/admin/grand-contests/:id/tasks</code>, <code>DELETE /api/admin/grand-contests/:id/tasks/:taskId</code></li>
+      <li><b>Review Submissions:</b> <code>GET /api/admin/grand-contests/:id/submissions</code>, <code>PUT /api/admin/grand-contests/submissions/:id/review</code></li>
+    </ul>
 
     <h2>3. Master Endpoint Quick Reference Table</h2>
     <table>
       <thead>
         <tr>
           <th>Module</th>
+          <th>Role</th>
           <th>Action</th>
           <th>Method</th>
           <th>Endpoint Path</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td><b>Room Cycle</b></td><td>Browse Rooms</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Room Details</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms/:id</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Room Cycles Blueprint</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms/:id/cycles</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Check Eligibility</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms/:roomId/contests/:contestId/check-status</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Join Room Cycle</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/week/rooms/:roomId/contests/:contestId/join</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Start Attempt</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/week/rooms/:roomId/start/:contestId</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Submit Task Proof</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/week/rooms/:roomId/submit/:contestId</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Assign Members</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/admin/room-cycle/members/assign</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Cycle Blueprints</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/cycles</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Get Submissions</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/submissions</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Review Submission</td><td><span class="endpoint-badge put">PUT</span></td><td><code>/api/v1/admin/room-cycle/submissions/:id/review</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Room Leaderboard</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/leaderboard</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Reward Rules</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/rewards</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Distribute Rewards</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/admin/room-cycle/rewards/distribute</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Module Settings</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/settings</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Module Analytics</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/analytics</code></td></tr>
-        <tr><td><b>Grand Contest</b></td><td>List Grand Contests</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/grand-contests</code></td></tr>
-        <tr><td><b>Grand Contest</b></td><td>Get Details & Rules</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/grand-contests/:id</code></td></tr>
-        <tr><td><b>Grand Contest</b></td><td>Join Grand Contest</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/grand-contests/:id/join</code></td></tr>
-        <tr><td><b>Grand Contest</b></td><td>Fetch Contest Tasks</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/grand-contests/:id/tasks</code></td></tr>
-        <tr><td><b>Grand Contest</b></td><td>Submit Task Proof</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/grand-contests/:id/tasks/:taskId/submit</code></td></tr>
-        <tr><td><b>Grand Contest</b></td><td>View Submissions</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/grand-contests/:id/submissions</code></td></tr>
-        <tr><td><b>Grand Contest</b></td><td>Contest Analytics</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/grand-contests/:id/analytics</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Browse Rooms</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/week/rooms</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Room Details</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/week/rooms/:id</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Room Cycles Blueprint</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/week/rooms/:id/cycles</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Check Eligibility</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/week/rooms/:roomId/contests/:contestId/check-status</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Join Room Cycle</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/week/rooms/:roomId/contests/:contestId/join</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Start Attempt</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/week/rooms/:roomId/start/:contestId</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Submit Task Proof</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/week/rooms/:roomId/submit/:contestId</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>List Rooms</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/rooms</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Create Room</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/admin/room-cycle/rooms</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Assign Members</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/admin/room-cycle/members/assign</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Cycle Blueprints</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/cycles</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Get Submissions</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/submissions</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Review Submission</td><td><span class="endpoint-badge put">PUT</span></td><td><code>/api/admin/room-cycle/submissions/:id/review</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Room Leaderboard</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/leaderboard</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Reward Rules</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/rewards</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Distribute Rewards</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/admin/room-cycle/rewards/distribute</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Module Settings</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/settings</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Module Analytics</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/analytics</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>List Grand Contests</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Get Details & Rules</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Join Grand Contest</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/grand-contests/:id/join</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Fetch Contest Tasks</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id/tasks</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Submit Task Proof</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/grand-contests/:id/tasks/:taskId/submit</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>View Submissions</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id/submissions</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Contest Analytics</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id/analytics</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Admin</td><td>Create Grand Contest</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/admin/grand-contests</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Admin</td><td>Review Submission</td><td><span class="endpoint-badge put">PUT</span></td><td><code>/api/admin/grand-contests/submissions/:id/review</code></td></tr>
       </tbody>
     </table>
   </div>
