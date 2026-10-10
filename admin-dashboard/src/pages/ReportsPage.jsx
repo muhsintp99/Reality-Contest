@@ -6,16 +6,17 @@ import {
   Users, Trophy, Shield, Search, Filter, CheckCircle2, XCircle, AlertTriangle,
   Eye, RefreshCw, TrendingUp, ArrowUpRight, Activity, Layers, Award, Clock,
   ArrowRight, ExternalLink, ChevronRight, Info, Copy, Check, X, Printer,
-  FileCheck, HelpCircle, UserCheck, Flame, PieChart, Landmark
+  FileCheck, HelpCircle, UserCheck, Flame, PieChart, Landmark, ArrowLeft,
+  Sparkles, CheckSquare, ChevronDown
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
 
 export const ReportsPage = () => {
-  const { showAlert, showSnackbar } = useAlert();
+  const { showSnackbar } = useAlert();
   const isMockMode = useSelector((state) => state.auth?.isMockMode);
 
-  // Main navigation tab
-  const [activeTab, setActiveTab] = useState('overview'); // overview, contest, revenue, gst, player, winner, audit, excel, pdf
+  // Main navigation tabs from spec: revenue, gst, contest, player, daily, monthly, winner, audit, excel, pdf
+  const [activeTab, setActiveTab] = useState('revenue');
   const [timeframe, setTimeframe] = useState('30 Days');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +29,7 @@ export const ReportsPage = () => {
   const [contestStatusFilter, setContestStatusFilter] = useState('All');
   const [contestSearch, setContestSearch] = useState('');
 
-  // Selected contest for in-depth per-contest report modal
+  // Selected contest for in-depth per-contest report modal/expanded view
   const [selectedContest, setSelectedContest] = useState(null);
   const [contestReportDetail, setContestReportDetail] = useState(null);
   const [loadingContestDetail, setLoadingContestDetail] = useState(false);
@@ -60,8 +61,7 @@ export const ReportsPage = () => {
       }
       if (showToast) showSnackbar('Platform reports & analytics refreshed successfully!', 'success');
     } catch (err) {
-      console.warn('API fetch failed, generating fallback live summary:', err);
-      // Fallback rich structure if network or offline
+      console.warn('API fetch fallback:', err);
       generateFallbackReportsData();
     } finally {
       setLoading(false);
@@ -88,7 +88,7 @@ export const ReportsPage = () => {
         setAuditTotalPages(res.data.totalPages || 1);
       }
     } catch (err) {
-      console.warn('Audit logs fetch failed:', err);
+      console.warn('Audit logs fetch fallback:', err);
       if (reportsData?.recentAuditLogs) {
         setAuditLogsList(reportsData.recentAuditLogs);
         setAuditTotal(reportsData.recentAuditLogs.length);
@@ -113,7 +113,7 @@ export const ReportsPage = () => {
         generateFallbackContestDetail(contest);
       }
     } catch (err) {
-      console.warn('Contest report fetch failed, using localized report generator:', err);
+      console.warn('Contest report fetch fallback:', err);
       generateFallbackContestDetail(contest);
     } finally {
       setLoadingContestDetail(false);
@@ -316,12 +316,12 @@ export const ReportsPage = () => {
         { month: 'Jul 2026', revenue: 1450000, gst: 261000, payouts: 950000, contests: 48, players: 18420 }
       ],
       dailyTrend: [
-        { date: 'Jul 1', revenue: 42000, gst: 7560, participants: 120 },
-        { date: 'Jul 3', revenue: 58000, gst: 10440, participants: 165 },
-        { date: 'Jul 5', revenue: 84000, gst: 15120, participants: 240 },
-        { date: 'Jul 7', revenue: 96000, gst: 17280, participants: 280 },
-        { date: 'Jul 9', revenue: 115000, gst: 20700, participants: 330 },
-        { date: 'Jul 10', revenue: 128000, gst: 23040, participants: 365 }
+        { date: 'Jul 1', revenue: 42000, gst: 7560, participants: 120, contests: 3, payouts: 15000, newUsers: 240 },
+        { date: 'Jul 3', revenue: 58000, gst: 10440, participants: 165, contests: 4, payouts: 22000, newUsers: 310 },
+        { date: 'Jul 5', revenue: 84000, gst: 15120, participants: 240, contests: 5, payouts: 45000, newUsers: 480 },
+        { date: 'Jul 7', revenue: 96000, gst: 17280, participants: 280, contests: 6, payouts: 51000, newUsers: 530 },
+        { date: 'Jul 9', revenue: 115000, gst: 20700, participants: 330, contests: 7, payouts: 62000, newUsers: 620 },
+        { date: 'Jul 10', revenue: 128000, gst: 23040, participants: 365, contests: 8, payouts: 74000, newUsers: 710 }
       ],
       gstBreakdown: {
         grossTurnover: 1450000,
@@ -483,93 +483,104 @@ export const ReportsPage = () => {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 text-left animate-fade-in font-sans">
-      {/* Top Header & Quick Action Suite */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 sm:p-6 rounded-3xl shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="p-2.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-500">
-              <BarChart3 className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold font-poppins text-slate-900 dark:text-white flex items-center gap-2">
-                Platform Reports & Audit Logs
-              </h1>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live Real-Time Telemetry
-                </span>
-                <span className="text-xs text-slate-400">| Complete Revenue, GST, Contest, Player & Audit Ledger</span>
+      {/* Top Header Card */}
+      <div className="relative overflow-hidden bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 sm:p-6 rounded-3xl shadow-sm">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-teal-500/10 via-emerald-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white shadow-lg shadow-teal-500/20">
+                <BarChart3 className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold font-poppins text-slate-900 dark:text-white flex items-center gap-2">
+                  Platform Reports &amp; Audit Logs
+                </h1>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                    Live System Telemetry
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Generate and download Revenue, GST, Contest, Player, Daily, Monthly &amp; Winner Reports in Excel or PDF formats.
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Global Controls: Timeframe, Refresh & Export Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Timeframe selector */}
-          <div className="flex items-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-1 rounded-2xl text-xs">
-            {['Today', '7 Days', '30 Days', '6 Months', 'All Time'].map((tf) => (
-              <button
-                key={tf}
-                onClick={() => setTimeframe(tf)}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
-                  timeframe === tf
-                    ? 'bg-teal-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {tf}
-              </button>
-            ))}
+          {/* Quick Action Suite */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Timeframe selector */}
+            <div className="flex items-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-1 rounded-2xl text-xs">
+              {['Today', '7 Days', '30 Days', '6 Months', 'All Time'].map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                    timeframe === tf
+                      ? 'bg-teal-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => fetchReportsSummary(true)}
+              disabled={refreshing}
+              className="p-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-teal-500 rounded-2xl transition-all"
+              title="Refresh Telemetry"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-teal-500' : ''}`} />
+            </button>
+
+            <button
+              onClick={handleExportAllExcel}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-semibold text-xs rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 shadow-emerald-600/20"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Export Excel</span>
+            </button>
+
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white font-semibold text-xs rounded-2xl shadow-md hover:bg-rose-700 transition-all active:scale-95 shadow-rose-600/20"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Export PDF</span>
+            </button>
           </div>
-
-          <button
-            onClick={() => fetchReportsSummary(true)}
-            disabled={refreshing}
-            className="p-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-teal-500 rounded-2xl transition-all"
-            title="Refresh Data"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-teal-500' : ''}`} />
-          </button>
-
-          <button
-            onClick={handleExportAllExcel}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white font-semibold text-xs rounded-2xl shadow-md hover:bg-emerald-700 transition-all active:scale-95 shadow-emerald-600/20"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Export Excel (.xlsx)</span>
-          </button>
-
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white font-semibold text-xs rounded-2xl shadow-md hover:bg-rose-700 transition-all active:scale-95 shadow-rose-600/20"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Print / PDF Sheet</span>
-          </button>
         </div>
       </div>
 
-      {/* Main Feature Tabs Navigation */}
+      {/* Main Sub-Tabs Navigation */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-white/10 no-scrollbar">
         {[
-          { id: 'overview', label: 'Overview & KPI Hub', icon: BarChart3 },
-          { id: 'contest', label: 'Contest Reports (Each Contest)', icon: Trophy },
-          { id: 'revenue', label: 'Revenue & Financial Report', icon: DollarSign },
-          { id: 'gst', label: 'GST & Tax Compliance', icon: FileCheck },
-          { id: 'player', label: 'Player Performance', icon: Users },
-          { id: 'winner', label: 'Winners & Prize Distribution', icon: Award },
-          { id: 'audit', label: 'Platform & Contest Audit Logs', icon: Shield },
-          { id: 'excel', label: 'Export Center (Excel)', icon: FileSpreadsheet },
-          { id: 'pdf', label: 'Export Center (PDF)', icon: Download }
+          { id: 'revenue', label: 'Revenue Report', icon: DollarSign },
+          { id: 'gst', label: 'GST Report', icon: FileCheck },
+          { id: 'contest', label: 'Contest Report', icon: Trophy },
+          { id: 'player', label: 'Player Report', icon: Users },
+          { id: 'daily', label: 'Daily Report', icon: Calendar },
+          { id: 'monthly', label: 'Monthly Report', icon: Calendar },
+          { id: 'winner', label: 'Winner Report', icon: Award },
+          { id: 'audit', label: 'Audit Logs', icon: Shield },
+          { id: 'excel', label: 'Export Excel', icon: FileSpreadsheet },
+          { id: 'pdf', label: 'Export PDF', icon: Download }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === 'excel') handleExportAllExcel();
+                if (tab.id === 'pdf') window.print();
+              }}
               className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-2xl whitespace-nowrap transition-all ${
                 isActive
                   ? 'bg-teal-600 text-white shadow-md shadow-teal-600/25 scale-[1.02]'
@@ -588,251 +599,143 @@ export const ReportsPage = () => {
         })}
       </div>
 
-      {/* ================= TAB 1: EXECUTIVE OVERVIEW & KPI HUB ================= */}
-      {activeTab === 'overview' && reportsData && (
+      {/* ================= TAB 1: REVENUE REPORT ================= */}
+      {activeTab === 'revenue' && reportsData && (
         <div className="space-y-6">
-          {/* 6 High-Impact Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gross Entry Revenue</span>
-                <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500"><DollarSign className="w-4 h-4" /></span>
-              </div>
-              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                ₹{(reportsData.summary.grossEntryPool || 0).toLocaleString()}
-              </div>
-              <p className="text-[11px] text-emerald-500 flex items-center gap-1 font-semibold">
-                <ArrowUpRight className="w-3.5 h-3.5" /> +24.8% vs last period
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Gross Platform Turnover</span>
+              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">₹{(reportsData.summary.grossEntryPool).toLocaleString()}</div>
+              <p className="text-xs text-emerald-500 font-semibold flex items-center gap-1">
+                <ArrowUpRight className="w-3.5 h-3.5" /> +24.8% vs last month
               </p>
             </div>
-
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">18% GST Collected</span>
-                <span className="p-2 rounded-xl bg-teal-500/10 text-teal-500"><FileCheck className="w-4 h-4" /></span>
-              </div>
-              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                ₹{(reportsData.summary.totalGstCollected || 0).toLocaleString()}
-              </div>
-              <p className="text-[11px] text-teal-500 font-semibold">Tax Compliance: 100%</p>
+            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">18% GST Component</span>
+              <div className="text-2xl font-extrabold text-teal-500">₹{(reportsData.summary.totalGstCollected).toLocaleString()}</div>
+              <p className="text-xs text-slate-400">9% CGST + 9% SGST Split</p>
             </div>
-
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Prizes Disbursed</span>
-                <span className="p-2 rounded-xl bg-amber-500/10 text-amber-500"><Award className="w-4 h-4" /></span>
-              </div>
-              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                ₹{(reportsData.summary.totalPrizesPaid || 0).toLocaleString()}
-              </div>
-              <p className="text-[11px] text-slate-400">Total Pool: ₹{(reportsData.summary.totalPrizePools || 0).toLocaleString()}</p>
+            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Total Prize Payouts</span>
+              <div className="text-2xl font-extrabold text-amber-500">₹{(reportsData.summary.totalPrizesPaid).toLocaleString()}</div>
+              <p className="text-xs text-slate-400">Disbursed to Winner Wallets</p>
             </div>
-
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Net Commission</span>
-                <span className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500"><TrendingUp className="w-4 h-4" /></span>
-              </div>
-              <div className="text-2xl font-extrabold text-indigo-500">
-                ₹{(reportsData.summary.totalNetCommission || 0).toLocaleString()}
-              </div>
-              <p className="text-[11px] text-slate-400">Platform Net Share (20%)</p>
-            </div>
-
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Contests Active</span>
-                <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500"><Trophy className="w-4 h-4" /></span>
-              </div>
-              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                {reportsData.summary.activeContestsCount} / {reportsData.summary.totalContestsCount}
-              </div>
-              <p className="text-[11px] text-cyan-500 font-semibold">{reportsData.summary.completedContestsCount} Completed</p>
-            </div>
-
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-2 relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">KYC Verified</span>
-                <span className="p-2 rounded-xl bg-purple-500/10 text-purple-500"><UserCheck className="w-4 h-4" /></span>
-              </div>
-              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                {reportsData.summary.kycApprovalRate}
-              </div>
-              <p className="text-[11px] text-slate-400">{(reportsData.summary.kycVerifiedCount || 0).toLocaleString()} Verified Players</p>
+            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Net Platform Commission</span>
+              <div className="text-2xl font-extrabold text-indigo-500">₹{(reportsData.summary.totalNetCommission).toLocaleString()}</div>
+              <p className="text-xs text-slate-400">Net Platform Gross Margin</p>
             </div>
           </div>
 
-          {/* Trajectory & Visual Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Monthly Financial Trajectory */}
-            <div className="lg:col-span-2 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-teal-500" /> Monthly Revenue & Prize Trajectory
-                  </h3>
-                  <p className="text-xs text-slate-400">Gross Entry Fees vs Prize Pool Disbursements</p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('revenue')}
-                  className="text-xs text-teal-500 font-semibold hover:underline flex items-center gap-1"
-                >
-                  View Details <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Bar visualization */}
-              <div className="h-60 flex items-end justify-between gap-3 pt-6 px-2 border-b border-slate-100 dark:border-white/5">
-                {reportsData.monthlyTrajectory.map((m, idx) => {
-                  const maxVal = Math.max(...reportsData.monthlyTrajectory.map((x) => x.revenue)) * 1.15;
-                  const revHeight = Math.round((m.revenue / maxVal) * 100);
-                  const payHeight = Math.round((m.payouts / maxVal) * 100);
-                  return (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
-                      <div className="text-[10px] font-bold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                        ₹{(m.revenue / 100000).toFixed(1)}L
-                      </div>
-                      <div className="w-full flex items-end justify-center gap-1 h-44">
-                        <div
-                          style={{ height: `${revHeight}%` }}
-                          className="w-1/2 bg-teal-500 rounded-t-lg group-hover:bg-teal-400 transition-all shadow-sm"
-                          title={`Gross Revenue: ₹${m.revenue.toLocaleString()}`}
-                        />
-                        <div
-                          style={{ height: `${payHeight}%` }}
-                          className="w-1/2 bg-amber-500/80 rounded-t-lg group-hover:bg-amber-400 transition-all shadow-sm"
-                          title={`Payouts: ₹${m.payouts.toLocaleString()}`}
-                        />
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-400">{m.month.split(' ')[0]}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-center gap-6 pt-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-md bg-teal-500" />
-                  <span className="text-slate-600 dark:text-slate-300 font-medium">Gross Entry Revenue</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-md bg-amber-500" />
-                  <span className="text-slate-600 dark:text-slate-300 font-medium">Prize Payouts</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Contests Performance Box */}
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-amber-500" /> Contests Snapshot
-                </h3>
-                <button
-                  onClick={() => setActiveTab('contest')}
-                  className="text-xs text-teal-500 font-semibold hover:underline flex items-center gap-1"
-                >
-                  All Contests ({reportsData.contestsList.length}) <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {reportsData.contestsList.slice(0, 4).map((c) => (
-                  <div
-                    key={c._id}
-                    onClick={() => openContestReport(c)}
-                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 hover:border-teal-500/40 cursor-pointer transition-all flex items-center justify-between group"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-teal-500 bg-teal-500/10 px-2 py-0.5 rounded">
-                          {c.type}
-                        </span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          c.status === 'Live' || c.status === 'Active'
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-slate-500/10 text-slate-400'
-                        }`}>
-                          {c.status}
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-teal-500 transition-colors">
-                        {c.title}
-                      </h4>
-                      <p className="text-[11px] text-slate-400">
-                        {c.registeredParticipants} Players • ₹{(c.grossRevenue || 0).toLocaleString()} Rev
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-teal-500 group-hover:translate-x-0.5 transition-all" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Snapshot of Recent Audit Logs */}
+          {/* Revenue Breakdown by Contest Type */}
           <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-indigo-500" /> Recent Platform & Contest Audit Events
-                </h3>
-                <p className="text-xs text-slate-400">Real-time security and operational events logged by administrators</p>
-              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-teal-500" /> Revenue Distribution by Tournament Category
+              </h3>
               <button
-                onClick={() => setActiveTab('audit')}
-                className="text-xs text-teal-500 font-semibold hover:underline flex items-center gap-1"
+                onClick={() => {
+                  let csv = 'Contest Type,Entry Revenue,GST 18%,Commission Share\n';
+                  reportsData.contestsList.forEach((c) => {
+                    csv += `"${c.type}",${c.grossRevenue},${c.gstCollected},${c.netCommission}\n`;
+                  });
+                  downloadCSV(`Revenue_Category_Breakdown_${Date.now()}.csv`, csv);
+                }}
+                className="px-3 py-1.5 bg-slate-100 dark:bg-white/5 hover:bg-teal-500 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
               >
-                View Full Audit Trail <ArrowRight className="w-3.5 h-3.5" />
+                <Download className="w-3.5 h-3.5" /> Export Revenue Breakdown
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
-                    <th className="pb-3">Timestamp</th>
-                    <th className="pb-3">Action</th>
-                    <th className="pb-3">Module</th>
-                    <th className="pb-3">Admin User</th>
-                    <th className="pb-3">Details</th>
-                    <th className="pb-3">IP Address</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                  {reportsData.recentAuditLogs.slice(0, 5).map((l, i) => (
-                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
-                      <td className="py-3 text-slate-400 font-mono text-[11px]">
-                        {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </td>
-                      <td className="py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                          l.severity === 'critical' ? 'bg-rose-500/10 text-rose-500' :
-                          l.severity === 'warning' ? 'bg-amber-500/10 text-amber-500' :
-                          l.severity === 'success' ? 'bg-emerald-500/10 text-emerald-500' :
-                          'bg-teal-500/10 text-teal-500'
-                        }`}>
-                          {l.action}
-                        </span>
-                      </td>
-                      <td className="py-3 text-slate-500 dark:text-slate-400 font-medium">{l.module}</td>
-                      <td className="py-3">
-                        <div className="font-semibold text-slate-900 dark:text-white">{l.user?.name}</div>
-                        <div className="text-[10px] text-slate-400">{l.user?.role}</div>
-                      </td>
-                      <td className="py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">{l.details}</td>
-                      <td className="py-3 font-mono text-slate-400 text-[11px]">{l.ipAddress}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+              {[
+                { type: 'Grand Contest', share: '62%', color: 'from-purple-500 to-indigo-600', rev: '₹8,99,000' },
+                { type: 'Standard Contest', share: '24%', color: 'from-teal-500 to-emerald-600', rev: '₹3,48,000' },
+                { type: 'Daily Arena', share: '9%', color: 'from-amber-500 to-orange-600', rev: '₹1,30,500' },
+                { type: 'Bi-Weekly Room', share: '5%', color: 'from-cyan-500 to-blue-600', rev: '₹72,500' }
+              ].map((item, idx) => (
+                <div key={idx} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">{item.type}</span>
+                    <span className="text-xs font-extrabold text-teal-500">{item.share}</span>
+                  </div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-white">{item.rev}</div>
+                  <div className="w-full bg-slate-200 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                    <div style={{ width: item.share }} className={`bg-gradient-to-r ${item.color} h-full rounded-full`} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= TAB 2: CONTEST REPORTS (EACH CONTEST REPORT) ================= */}
+      {/* ================= TAB 2: GST REPORT ================= */}
+      {activeTab === 'gst' && reportsData && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FileCheck className="w-6 h-6 text-teal-500" /> GSTIN &amp; Statutory Tax Compliance Ledger
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Goods and Services Tax (GST 18%) and TDS (30% withholding on contest net winnings) compliance register.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> GSTIN: {reportsData.gstBreakdown.gstinNumber}
+                </span>
+                <button
+                  onClick={() => {
+                    let csv = 'Tax Metric,Amount (INR)\n';
+                    csv += `GSTIN,${reportsData.gstBreakdown.gstinNumber}\n`;
+                    csv += `Gross Turnover,${reportsData.gstBreakdown.grossTurnover}\n`;
+                    csv += `Taxable Base Value,${reportsData.gstBreakdown.taxableValue}\n`;
+                    csv += `CGST 9%,${reportsData.gstBreakdown.cgst}\n`;
+                    csv += `SGST 9%,${reportsData.gstBreakdown.sgst}\n`;
+                    csv += `Total GST 18%,${reportsData.gstBreakdown.totalGst}\n`;
+                    csv += `TDS Deducted on Prize Withdrawals 30%,${reportsData.gstBreakdown.tdsDeducted}\n`;
+                    downloadCSV(`GST_Compliance_Report_${Date.now()}.csv`, csv);
+                  }}
+                  className="px-3.5 py-2 bg-teal-600 text-white font-semibold text-xs rounded-xl hover:bg-teal-700 flex items-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" /> Export GST Annexure
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">Gross Taxable Base</span>
+                <div className="text-xl font-bold text-slate-900 dark:text-white">₹{reportsData.gstBreakdown.taxableValue.toLocaleString()}</div>
+                <p className="text-[10px] text-slate-400">Total Entry Fees minus GST component</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">CGST (9%)</span>
+                <div className="text-xl font-bold text-teal-500">₹{reportsData.gstBreakdown.cgst.toLocaleString()}</div>
+                <p className="text-[10px] text-slate-400">Central Goods &amp; Service Tax</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">SGST (9%)</span>
+                <div className="text-xl font-bold text-teal-500">₹{reportsData.gstBreakdown.sgst.toLocaleString()}</div>
+                <p className="text-[10px] text-slate-400">State Goods &amp; Service Tax</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">30% TDS on Winnings</span>
+                <div className="text-xl font-bold text-amber-500">₹{reportsData.gstBreakdown.tdsDeducted.toLocaleString()}</div>
+                <p className="text-[10px] text-slate-400">Withheld on cash prizes &gt; threshold</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= TAB 3: CONTEST REPORT (EACH CONTEST REPORT) ================= */}
       {activeTab === 'contest' && reportsData && (
         <div className="space-y-6">
           {/* Header & Filter Toolbar */}
@@ -840,7 +743,7 @@ export const ReportsPage = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Trophy className="w-6 h-6 text-teal-500" /> Per-Contest Performance & Audit Reports
+                  <Trophy className="w-6 h-6 text-teal-500" /> Per-Contest Performance &amp; Audit Reports
                 </h2>
                 <p className="text-xs text-slate-400">
                   Select any tournament or room cycle to inspect its full participant roster, revenue ledger, and audit history.
@@ -902,20 +805,20 @@ export const ReportsPage = () => {
             </div>
           </div>
 
-          {/* Contests Table */}
+          {/* Contests Table with Per-Contest Row Action */}
           <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
-                    <th className="py-3.5 px-4">Contest & ID</th>
-                    <th className="py-3.5 px-4">Type & Category</th>
+                    <th className="py-3.5 px-4">Contest &amp; ID</th>
+                    <th className="py-3.5 px-4">Type &amp; Category</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4">Entry / Prize Pool</th>
                     <th className="py-3.5 px-4">Participants</th>
                     <th className="py-3.5 px-4">Gross Revenue</th>
                     <th className="py-3.5 px-4">18% GST</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
+                    <th className="py-3.5 px-4 text-right">Contest Report</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-white/5">
@@ -976,7 +879,7 @@ export const ReportsPage = () => {
                         <td className="py-3.5 px-4 text-right">
                           <button
                             onClick={() => openContestReport(c)}
-                            className="px-3 py-1.5 bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1 ml-auto"
+                            className="px-3.5 py-1.5 bg-teal-600 text-white hover:bg-teal-700 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 ml-auto shadow-sm"
                           >
                             <Eye className="w-3.5 h-3.5" /> View Report
                           </button>
@@ -991,152 +894,7 @@ export const ReportsPage = () => {
         </div>
       )}
 
-      {/* ================= TAB 3: REVENUE & FINANCIAL REPORT ================= */}
-      {activeTab === 'revenue' && reportsData && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase">Gross Platform Turnover</span>
-              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">₹{(reportsData.summary.grossEntryPool).toLocaleString()}</div>
-              <p className="text-xs text-emerald-500 font-semibold">Total Entry Fee Pool</p>
-            </div>
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase">18% GST Component</span>
-              <div className="text-2xl font-extrabold text-teal-500">₹{(reportsData.summary.totalGstCollected).toLocaleString()}</div>
-              <p className="text-xs text-slate-400">9% CGST + 9% SGST</p>
-            </div>
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase">Total Prize Payouts</span>
-              <div className="text-2xl font-extrabold text-amber-500">₹{(reportsData.summary.totalPrizesPaid).toLocaleString()}</div>
-              <p className="text-xs text-slate-400">Disbursed to Winner Wallets</p>
-            </div>
-            <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-5 rounded-3xl shadow-sm space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase">Net Platform Commission</span>
-              <div className="text-2xl font-extrabold text-indigo-500">₹{(reportsData.summary.totalNetCommission).toLocaleString()}</div>
-              <p className="text-xs text-slate-400">Net Platform Gross Margin</p>
-            </div>
-          </div>
-
-          {/* Monthly Trajectory Table */}
-          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-teal-500" /> Month-by-Month Financial Trajectory
-              </h3>
-              <button
-                onClick={() => {
-                  let csv = 'Month,Gross Revenue,GST 18%,Prize Payouts,Contests Held,Active Players\n';
-                  reportsData.monthlyTrajectory.forEach((m) => {
-                    csv += `"${m.month}",${m.revenue},${m.gst},${m.payouts},${m.contests},${m.players}\n`;
-                  });
-                  downloadCSV(`Monthly_Financial_Report_${Date.now()}.csv`, csv);
-                }}
-                className="px-3 py-1.5 bg-slate-100 dark:bg-white/5 hover:bg-teal-500 hover:text-white rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
-              >
-                <Download className="w-3.5 h-3.5" /> Export Monthly CSV
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
-                    <th className="py-3">Month</th>
-                    <th className="py-3">Gross Revenue</th>
-                    <th className="py-3">GST (18%)</th>
-                    <th className="py-3">Prize Payouts</th>
-                    <th className="py-3">Contests Held</th>
-                    <th className="py-3">Active Players</th>
-                    <th className="py-3 text-right">Net Margin</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                  {reportsData.monthlyTrajectory.map((m, i) => (
-                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
-                      <td className="py-3 font-bold text-slate-900 dark:text-white">{m.month}</td>
-                      <td className="py-3 font-semibold text-emerald-500">₹{m.revenue.toLocaleString()}</td>
-                      <td className="py-3 font-medium text-slate-400">₹{m.gst.toLocaleString()}</td>
-                      <td className="py-3 font-medium text-amber-500">₹{m.payouts.toLocaleString()}</td>
-                      <td className="py-3 font-semibold text-slate-900 dark:text-white">{m.contests}</td>
-                      <td className="py-3 text-slate-400">{m.players.toLocaleString()}</td>
-                      <td className="py-3 font-bold text-indigo-400 text-right">
-                        ₹{(m.revenue - m.payouts - m.gst).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= TAB 4: GST & TAX COMPLIANCE REPORT ================= */}
-      {activeTab === 'gst' && reportsData && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FileCheck className="w-6 h-6 text-teal-500" /> GSTIN & Statutory Tax Compliance Ledger
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Goods and Services Tax (GST 18%) and TDS (30% withholding on contest net winnings) compliance register.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" /> GSTIN: {reportsData.gstBreakdown.gstinNumber}
-                </span>
-                <button
-                  onClick={() => {
-                    let csv = 'Tax Metric,Amount (INR)\n';
-                    csv += `GSTIN,${reportsData.gstBreakdown.gstinNumber}\n`;
-                    csv += `Gross Turnover,${reportsData.gstBreakdown.grossTurnover}\n`;
-                    csv += `Taxable Base Value,${reportsData.gstBreakdown.taxableValue}\n`;
-                    csv += `CGST 9%,${reportsData.gstBreakdown.cgst}\n`;
-                    csv += `SGST 9%,${reportsData.gstBreakdown.sgst}\n`;
-                    csv += `Total GST 18%,${reportsData.gstBreakdown.totalGst}\n`;
-                    csv += `TDS Deducted on Prize Withdrawals 30%,${reportsData.gstBreakdown.tdsDeducted}\n`;
-                    downloadCSV(`GST_Compliance_Report_${Date.now()}.csv`, csv);
-                  }}
-                  className="px-3.5 py-2 bg-teal-600 text-white font-semibold text-xs rounded-xl hover:bg-teal-700 flex items-center gap-1.5"
-                >
-                  <Download className="w-4 h-4" /> Export GST Annexure
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">Gross Taxable Base</span>
-                <div className="text-xl font-bold text-slate-900 dark:text-white">₹{reportsData.gstBreakdown.taxableValue.toLocaleString()}</div>
-                <p className="text-[10px] text-slate-400">Total Entry Fees minus GST component</p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">CGST (9%)</span>
-                <div className="text-xl font-bold text-teal-500">₹{reportsData.gstBreakdown.cgst.toLocaleString()}</div>
-                <p className="text-[10px] text-slate-400">Central Goods & Service Tax</p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">SGST (9%)</span>
-                <div className="text-xl font-bold text-teal-500">₹{reportsData.gstBreakdown.sgst.toLocaleString()}</div>
-                <p className="text-[10px] text-slate-400">State Goods & Service Tax</p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">30% TDS on Winnings</span>
-                <div className="text-xl font-bold text-amber-500">₹{reportsData.gstBreakdown.tdsDeducted.toLocaleString()}</div>
-                <p className="text-[10px] text-slate-400">Withheld on cash prizes &gt; threshold</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= TAB 5: PLAYER PERFORMANCE REPORT ================= */}
+      {/* ================= TAB 4: PLAYER REPORT ================= */}
       {activeTab === 'player' && reportsData && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1160,7 +918,7 @@ export const ReportsPage = () => {
           <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Flame className="w-5 h-5 text-amber-500" /> Top Contestant Performers & Earnings Leaderboard
+                <Flame className="w-5 h-5 text-amber-500" /> Top Contestant Performers &amp; Earnings Leaderboard
               </h3>
             </div>
 
@@ -1168,7 +926,7 @@ export const ReportsPage = () => {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
-                    <th className="py-3">Rank & Contestant</th>
+                    <th className="py-3">Rank &amp; Contestant</th>
                     <th className="py-3">Email</th>
                     <th className="py-3">Contests Joined</th>
                     <th className="py-3">Wins</th>
@@ -1212,14 +970,130 @@ export const ReportsPage = () => {
         </div>
       )}
 
-      {/* ================= TAB 6: WINNER & PRIZE DISTRIBUTION REPORT ================= */}
+      {/* ================= TAB 5: DAILY REPORT ================= */}
+      {activeTab === 'daily' && reportsData && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-teal-500" /> Day-by-Day Platform Activity Report
+                </h3>
+                <p className="text-xs text-slate-400">Daily breakdown of tournament fees, GST deductions, active players, and disbursements.</p>
+              </div>
+              <button
+                onClick={() => {
+                  let csv = 'Date,Gross Revenue (INR),GST 18% (INR),Active Participants,Contests Run,Prize Payouts (INR),New Registrations\n';
+                  reportsData.dailyTrend.forEach((d) => {
+                    csv += `"${d.date}",${d.revenue},${d.gst},${d.participants},${d.contests || 5},${d.payouts || Math.round(d.revenue * 0.6)},${d.newUsers || 300}\n`;
+                  });
+                  downloadCSV(`Daily_Platform_Report_${Date.now()}.csv`, csv);
+                }}
+                className="px-3.5 py-2 bg-teal-600 text-white font-semibold text-xs rounded-xl hover:bg-teal-700 flex items-center gap-1.5 shadow-sm"
+              >
+                <Download className="w-4 h-4" /> Export Daily CSV
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
+                    <th className="py-3">Date</th>
+                    <th className="py-3">Gross Revenue</th>
+                    <th className="py-3">GST (18%)</th>
+                    <th className="py-3">Active Participants</th>
+                    <th className="py-3">Contests Run</th>
+                    <th className="py-3">Prize Payouts</th>
+                    <th className="py-3 text-right">New Registrations</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                  {reportsData.dailyTrend.map((d, i) => (
+                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                      <td className="py-3 font-bold text-slate-900 dark:text-white">{d.date}</td>
+                      <td className="py-3 font-semibold text-emerald-500">₹{d.revenue.toLocaleString()}</td>
+                      <td className="py-3 font-medium text-slate-400">₹{d.gst.toLocaleString()}</td>
+                      <td className="py-3 font-semibold text-slate-900 dark:text-white">{d.participants}</td>
+                      <td className="py-3 text-teal-400 font-semibold">{d.contests || 5}</td>
+                      <td className="py-3 text-amber-500 font-medium">₹{(d.payouts || Math.round(d.revenue * 0.6)).toLocaleString()}</td>
+                      <td className="py-3 font-bold text-indigo-400 text-right">+{d.newUsers || 300}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= TAB 6: MONTHLY REPORT ================= */}
+      {activeTab === 'monthly' && reportsData && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-teal-500" /> Month-by-Month Financial &amp; Operational Trajectory
+                </h3>
+                <p className="text-xs text-slate-400">Aggregated monthly turnover, tax compliance, payouts, and player retention growth.</p>
+              </div>
+              <button
+                onClick={() => {
+                  let csv = 'Month,Gross Revenue,GST 18%,Prize Payouts,Contests Held,Active Players\n';
+                  reportsData.monthlyTrajectory.forEach((m) => {
+                    csv += `"${m.month}",${m.revenue},${m.gst},${m.payouts},${m.contests},${m.players}\n`;
+                  });
+                  downloadCSV(`Monthly_Financial_Report_${Date.now()}.csv`, csv);
+                }}
+                className="px-3.5 py-2 bg-teal-600 text-white font-semibold text-xs rounded-xl hover:bg-teal-700 flex items-center gap-1.5 shadow-sm"
+              >
+                <Download className="w-4 h-4" /> Export Monthly CSV
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
+                    <th className="py-3">Month</th>
+                    <th className="py-3">Gross Revenue</th>
+                    <th className="py-3">GST (18%)</th>
+                    <th className="py-3">Prize Payouts</th>
+                    <th className="py-3">Contests Held</th>
+                    <th className="py-3">Active Players</th>
+                    <th className="py-3 text-right">Net Margin</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                  {reportsData.monthlyTrajectory.map((m, i) => (
+                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                      <td className="py-3 font-bold text-slate-900 dark:text-white">{m.month}</td>
+                      <td className="py-3 font-semibold text-emerald-500">₹{m.revenue.toLocaleString()}</td>
+                      <td className="py-3 font-medium text-slate-400">₹{m.gst.toLocaleString()}</td>
+                      <td className="py-3 font-medium text-amber-500">₹{m.payouts.toLocaleString()}</td>
+                      <td className="py-3 font-semibold text-slate-900 dark:text-white">{m.contests}</td>
+                      <td className="py-3 text-slate-400">{m.players.toLocaleString()}</td>
+                      <td className="py-3 font-bold text-indigo-400 text-right">
+                        ₹{(m.revenue - m.payouts - m.gst).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= TAB 7: WINNER REPORT ================= */}
       {activeTab === 'winner' && reportsData && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Award className="w-5 h-5 text-amber-500" /> Contest Winners & Prize Payout Ledger
+                  <Award className="w-5 h-5 text-amber-500" /> Contest Winners &amp; Prize Payout Ledger
                 </h3>
                 <p className="text-xs text-slate-400">Complete record of prize payouts, TDS deductions, and wallet transaction credits.</p>
               </div>
@@ -1241,7 +1115,7 @@ export const ReportsPage = () => {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
-                    <th className="py-3">Rank & Winner</th>
+                    <th className="py-3">Rank &amp; Winner</th>
                     <th className="py-3">Contest Title</th>
                     <th className="py-3">Gross Prize</th>
                     <th className="py-3">30% TDS</th>
@@ -1292,14 +1166,14 @@ export const ReportsPage = () => {
         </div>
       )}
 
-      {/* ================= TAB 7: PLATFORM & CONTEST AUDIT LOGS ================= */}
+      {/* ================= TAB 8: AUDIT LOGS ================= */}
       {activeTab === 'audit' && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Shield className="w-6 h-6 text-indigo-500" /> Platform Security & Activity Audit Trail
+                  <Shield className="w-6 h-6 text-indigo-500" /> Platform Security &amp; Activity Audit Trail
                 </h3>
                 <p className="text-xs text-slate-400">
                   Immutable chronological audit logs recording administrator actions, manual overrides, qualification changes, and financial disbursements.
@@ -1371,11 +1245,11 @@ export const ReportsPage = () => {
                 <thead>
                   <tr className="bg-slate-50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5 text-slate-400 font-semibold">
                     <th className="py-3.5 px-4">Timestamp</th>
-                    <th className="py-3.5 px-4">Action & Severity</th>
+                    <th className="py-3.5 px-4">Action &amp; Severity</th>
                     <th className="py-3.5 px-4">Module</th>
                     <th className="py-3.5 px-4">Admin Performed By</th>
                     <th className="py-3.5 px-4">Details Description</th>
-                    <th className="py-3.5 px-4">IP & Device</th>
+                    <th className="py-3.5 px-4">IP &amp; Device</th>
                     <th className="py-3.5 px-4 text-right">Inspect</th>
                   </tr>
                 </thead>
@@ -1454,71 +1328,6 @@ export const ReportsPage = () => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ================= TAB 8 & 9: EXPORT CENTER SUITE ================= */}
-      {(activeTab === 'excel' || activeTab === 'pdf') && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase">
-                Excel .XLSX / CSV Generator
-              </span>
-              <FileSpreadsheet className="w-6 h-6 text-emerald-500" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Full Platform Master Dataset</h3>
-            <p className="text-xs text-slate-400">
-              Export high-precision spreadsheets covering Gross Entry Revenue, 18% GST calculations, Contest rosters, Participant metrics, and Payout ledgers.
-            </p>
-            <div className="pt-2 space-y-2">
-              <button
-                onClick={handleExportAllExcel}
-                className="w-full py-3 bg-emerald-600 text-white font-semibold text-xs rounded-2xl hover:bg-emerald-700 flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20"
-              >
-                <FileSpreadsheet className="w-4 h-4" /> Download Complete Platform Excel Workbook
-              </button>
-              <button
-                onClick={() => {
-                  let csv = 'Contest ID,Title,Type,Category,Status,Entry Fee,Prize Pool,Registered,Completed,Revenue,GST 18%,Platform Commission\n';
-                  reportsData?.contestsList?.forEach((c) => {
-                    csv += `"${c.contestId}","${c.title}","${c.type}","${c.category}","${c.status}",${c.entryFee},${c.prizePool},${c.registeredParticipants},${c.completedParticipants},${c.grossRevenue},${c.gstCollected},${c.netCommission}\n`;
-                  });
-                  downloadCSV(`Contests_Ledger_${Date.now()}.csv`, csv);
-                }}
-                className="w-full py-2.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-2xl hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center gap-2"
-              >
-                <Download className="w-4 h-4" /> Export Contests Performance Dataset (.csv)
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 p-6 rounded-3xl shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-2.5 py-1 rounded-full uppercase">
-                PDF Compliance Sheet &amp; Print
-              </span>
-              <Printer className="w-6 h-6 text-rose-500" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Statutory Audit &amp; Tax Print Sheet</h3>
-            <p className="text-xs text-slate-400">
-              Generate official printable PDF documents formatted for GST compliance, executive management review, and security audit logs.
-            </p>
-            <div className="pt-2 space-y-2">
-              <button
-                onClick={() => window.print()}
-                className="w-full py-3 bg-rose-600 text-white font-semibold text-xs rounded-2xl hover:bg-rose-700 flex items-center justify-center gap-2 shadow-md shadow-rose-600/20"
-              >
-                <Printer className="w-4 h-4" /> Print / Save Full Summary as PDF
-              </button>
-              <button
-                onClick={handleExportAuditLogsCSV}
-                className="w-full py-2.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-2xl hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center gap-2"
-              >
-                <Shield className="w-4 h-4" /> Download Security Audit Logs
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -1634,7 +1443,7 @@ export const ReportsPage = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-3">
-                      <h4 className="text-xs font-bold uppercase text-slate-400">Revenue & Tax Ledger</h4>
+                      <h4 className="text-xs font-bold uppercase text-slate-400">Revenue &amp; Tax Ledger</h4>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Gross Entry Fees Collected:</span>
@@ -1656,7 +1465,7 @@ export const ReportsPage = () => {
                     </div>
 
                     <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-3">
-                      <h4 className="text-xs font-bold uppercase text-slate-400">Prize Pool & Commission Ledger</h4>
+                      <h4 className="text-xs font-bold uppercase text-slate-400">Prize Pool &amp; Commission Ledger</h4>
                       <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Total Prize Pool Allocated:</span>
@@ -1686,7 +1495,7 @@ export const ReportsPage = () => {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-white/10 text-slate-400 font-semibold">
-                        <th className="pb-3">Rank & Name</th>
+                        <th className="pb-3">Rank &amp; Name</th>
                         <th className="pb-3">Contestant ID</th>
                         <th className="pb-3">Registered Time</th>
                         <th className="pb-3">Completion Time</th>
@@ -1767,7 +1576,7 @@ export const ReportsPage = () => {
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b border-slate-200 dark:border-white/10 text-slate-400 font-semibold">
-                          <th className="pb-3">Rank & Winner</th>
+                          <th className="pb-3">Rank &amp; Winner</th>
                           <th className="pb-3">Score</th>
                           <th className="pb-3">Gross Prize</th>
                           <th className="pb-3">30% TDS</th>
