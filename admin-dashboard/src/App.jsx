@@ -41,7 +41,7 @@ const QuestionBulkImportPage = lazy(() => import('./pages/QuestionBulkImportPage
 const QuestionAnalyticsPage = lazy(() => import('./pages/QuestionAnalyticsPage').then(m => ({ default: m.QuestionAnalyticsPage })));
 const SurveyManagement = lazy(() => import('./pages/SurveyManagement').then(m => ({ default: m.SurveyManagement })));
 const TaskManagementPage = lazy(() => import('./pages/TaskManagementPage').then(m => ({ default: m.TaskManagementPage })));
-const ChallengeManagement = lazy(() => import('./pages/ChallengeManagement').then(m => ({ default: m.ChallengeManagement })));
+// const ChallengeManagement = lazy(() => import('./pages/ChallengeManagement').then(m => ({ default: m.ChallengeManagement })));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
 const WalletManagementPage = lazy(() => import('./pages/WalletManagementPage').then(m => ({ default: m.WalletManagementPage })));
 const CoinManagementPage = lazy(() => import('./pages/CoinManagementPage').then(m => ({ default: m.CoinManagementPage })));
@@ -169,7 +169,7 @@ const AppContent = () => {
         } />
         <Route path="/" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
         <Route path="/admin-dashboard" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
-        
+
         <Route path="/admin-dashboard/*" element={
           <ProtectedRoute>
             <AdminDashboardLayout
@@ -211,7 +211,7 @@ const AppContent = () => {
                   <Route path="question-bank/analytics" element={<QuestionAnalyticsPage />} />
                   <Route path="surveys" element={<SurveyManagement />} />
                   <Route path="tasks" element={<TaskManagementPage />} />
-                  <Route path="challenges" element={<ChallengeManagement />} />
+                  {/* <Route path="challenges" element={<ChallengeManagement />} /> */}
                   <Route path="leaderboard" element={<LeaderboardPage />} />
                   <Route path="wallet" element={<WalletManagementPage />} />
                   <Route path="coin-management" element={<CoinManagementPage />} />
@@ -288,7 +288,7 @@ const AppContent = () => {
             </AdminDashboardLayout>
           </ProtectedRoute>
         } />
-        
+
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/admin-dashboard/dashboard" replace />} />
       </Routes>

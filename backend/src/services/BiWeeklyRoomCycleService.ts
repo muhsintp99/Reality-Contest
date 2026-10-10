@@ -939,72 +939,151 @@ export class BiWeeklyRoomCycleService {
     }
 
     // ================= CALCULATE COMPLETION STATUS =================
+    let totalCyclesCount = 0;
+    let completedCyclesCount = 0;
+
     if (isJoined && userObjId) {
       // Find the target Room
       if (validIds.length > 0) {
-        targetRoom = await Room.findOne({ _id: { $in: validIds } });
+        targetRoom = await Room.findOne({
+          $or: [
+            { _id: { $in: validIds } },
+            { cycleIds: { $in: validIds } }
+          ]
+        });
+
+        if (!targetRoom) {
+          const matchedCycle: any = await Cycle.findOne({ _id: { $in: validIds } }).lean();
+          if (matchedCycle && matchedCycle.roomId) {
+            targetRoom = await Room.findById(matchedCycle.roomId);
+          }
+        }
       }
+
       if (!targetRoom && foundRoomMember) {
         targetRoom = await Room.findById(foundRoomMember.roomId);
       }
 
       if (targetRoom) {
-        // Find active cycle of this room
-        const currentCycleNum = Number(targetRoom.currentCycle) || 1;
-        targetCycle = await Cycle.findOne({
-          roomId: targetRoom._id,
-          cycleNumber: currentCycleNum
-        });
+        // 1. Fetch all cycles belonging to this room
+        const roomCycles: any[] = await Cycle.find({
+          $or: [
+            { roomId: targetRoom._id },
+            { _id: { $in: targetRoom.cycleIds || [] } }
+          ]
+        }).lean();
 
-        if (!targetCycle && targetRoom.cycleIds && targetRoom.cycleIds.length > 0) {
-          targetCycle = await Cycle.findOne({
-            _id: { $in: targetRoom.cycleIds },
-            status: { $in: ['Running', 'Active', 'Published'] }
-          });
+        totalCyclesCount = roomCycles.length;
+        const cycleIds = roomCycles.map((c: any) => c._id);
+
+        // 2. Fetch all tasks belonging to this room and its cycles
+        const allTasks: any[] = await Task.find({
+          $or: [
+            { roomId: targetRoom._id },
+            { cycleId: { $in: cycleIds } }
+          ]
+        }).select('_id cycleId roomId status').lean();
+
+        const allRoomTaskIdSet = new Set<string>();
+        const taskMapByCycle = new Map<string, Set<string>>();
+
+        for (const cycle of roomCycles) {
+          const cId = (cycle._id || '').toString();
+          taskMapByCycle.set(cId, new Set<string>());
+          if (Array.isArray(cycle.taskIds)) {
+            for (const tId of cycle.taskIds) {
+              if (tId) {
+                const str = tId.toString();
+                allRoomTaskIdSet.add(str);
+                taskMapByCycle.get(cId)!.add(str);
+              }
+            }
+          }
         }
 
-        if (!targetCycle) {
-          targetCycle = await Cycle.findOne({ roomId: targetRoom._id }).sort({ cycleNumber: -1 });
+        for (const task of allTasks) {
+          const strId = (task._id || '').toString();
+          allRoomTaskIdSet.add(strId);
+          if (task.cycleId) {
+            const cStr = task.cycleId.toString();
+            if (!taskMapByCycle.has(cStr)) taskMapByCycle.set(cStr, new Set<string>());
+            taskMapByCycle.get(cStr)!.add(strId);
+          }
         }
 
-        // Get total tasks in this cycle
-        let cycleTasks: any[] = [];
-        if (targetCycle && targetCycle.taskIds && targetCycle.taskIds.length > 0) {
-          cycleTasks = targetCycle.taskIds;
-        } else if (targetCycle) {
-          cycleTasks = await Task.find({ $or: [{ cycleId: targetCycle._id }, { roomId: targetRoom._id }] }).select('_id');
-        }
+        totalTasksCount = allRoomTaskIdSet.size;
 
-        totalTasksCount = cycleTasks.length;
-
-        // Fetch user's submissions in this room/cycle
+        // 3. Fetch user's submissions across all room cycles
         const queryConditions: any[] = [{ roomId: targetRoom._id }];
-        if (targetCycle) queryConditions.push({ cycleId: targetCycle._id });
+        if (cycleIds.length > 0) queryConditions.push({ cycleId: { $in: cycleIds } });
         if (validIds.length > 0) queryConditions.push({ contestId: { $in: validIds } });
 
-        const submissions = await RoomSubmission.find({
+        const submissions: any[] = await RoomSubmission.find({
           userId: userObjId,
           $or: queryConditions,
           status: { $in: ['Approved', 'Pending', 'Resubmit_Requested'] }
         }).lean();
 
-        // Unique submitted tasks count
-        const submittedTaskIdSet = new Set<string>();
+        // Unique submitted tasks by the user
+        const userSubmittedTaskIdSet = new Set<string>();
         submissions.forEach((s: any) => {
           if (s.taskId) {
-            submittedTaskIdSet.add(s.taskId.toString());
+            userSubmittedTaskIdSet.add(s.taskId.toString());
           }
         });
 
-        completedTasksCount = submittedTaskIdSet.size || submissions.length;
+        completedTasksCount = userSubmittedTaskIdSet.size || submissions.length;
 
-        // Determine if all tasks in the cycle are completed
-        if (totalTasksCount > 0 && completedTasksCount >= totalTasksCount) {
+        // 4. Verify completion across ALL cycles in the room
+        let allCyclesCompleted = totalCyclesCount > 0;
+        completedCyclesCount = 0;
+
+        if (totalCyclesCount > 0) {
+          for (const cycle of roomCycles) {
+            const cId = (cycle._id || '').toString();
+            const cycleTaskSet = taskMapByCycle.get(cId) || new Set<string>();
+
+            if (cycleTaskSet.size > 0) {
+              let cycleTasksDone = true;
+              for (const taskId of cycleTaskSet) {
+                if (!userSubmittedTaskIdSet.has(taskId)) {
+                  cycleTasksDone = false;
+                  break;
+                }
+              }
+              if (cycleTasksDone) {
+                completedCyclesCount++;
+              } else {
+                allCyclesCompleted = false;
+              }
+            } else {
+              if (cycle.status === 'Completed') {
+                completedCyclesCount++;
+              } else {
+                allCyclesCompleted = false;
+              }
+            }
+          }
+        } else {
+          allCyclesCompleted = false;
+        }
+
+        // ================= FINAL COMPLETED DECISION =================
+        // Only completed: true IF all cycles and all tasks in the room are completed
+        if (totalTasksCount > 0) {
+          if (allCyclesCompleted && completedTasksCount >= totalTasksCount) {
+            isCompleted = true;
+          } else {
+            isCompleted = false;
+          }
+        } else if (totalCyclesCount > 0) {
+          isCompleted = allCyclesCompleted && completedCyclesCount === totalCyclesCount;
+        } else if (targetRoom.status === 'Completed') {
           isCompleted = true;
-        } else if (targetRoom.status === 'Completed' || targetCycle?.status === 'Completed') {
+        } else if (foundRoomMember && foundRoomMember.completedTasksCount > 0 && foundRoomMember.completedTasksCount >= totalTasksCount && totalTasksCount > 0) {
           isCompleted = true;
-        } else if (foundRoomMember && foundRoomMember.completedTasksCount >= totalTasksCount && totalTasksCount > 0) {
-          isCompleted = true;
+        } else {
+          isCompleted = false;
         }
       } else {
         // Check GrandContest or Standard Contest
@@ -1039,6 +1118,7 @@ export class BiWeeklyRoomCycleService {
     }
 
     const pendingTasks = Math.max(0, totalTasksCount - completedTasksCount);
+    const pendingCycles = Math.max(0, totalCyclesCount - completedCyclesCount);
 
     if (isJoined) {
       return {
@@ -1050,8 +1130,8 @@ export class BiWeeklyRoomCycleService {
         isCompleted: isCompleted,
         hasCompleted: isCompleted,
         message: isCompleted
-          ? 'User has completed all tasks in this room cycle contest'
-          : 'User has already joined this room contest',
+          ? 'User has completed all cycles and tasks in this room contest'
+          : 'User has already joined this room contest (tasks/cycles pending)',
         data: {
           isJoined: true,
           joined: true,
@@ -1063,7 +1143,10 @@ export class BiWeeklyRoomCycleService {
           contestId: contestId || (targetRoom ? targetRoom._id.toString() : ''),
           totalTasks: totalTasksCount,
           completedTasks: completedTasksCount,
-          pendingTasks: pendingTasks
+          pendingTasks: pendingTasks,
+          totalCycles: totalCyclesCount,
+          completedCycles: completedCyclesCount,
+          pendingCycles: pendingCycles
         }
       };
     }
@@ -1088,7 +1171,10 @@ export class BiWeeklyRoomCycleService {
         contestId: contestId || '',
         totalTasks: 0,
         completedTasks: 0,
-        pendingTasks: 0
+        pendingTasks: 0,
+        totalCycles: 0,
+        completedCycles: 0,
+        pendingCycles: 0
       }
     };
   }

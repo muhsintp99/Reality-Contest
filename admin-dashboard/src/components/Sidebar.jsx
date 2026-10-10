@@ -22,7 +22,7 @@ const MENU_ITEMS = [
   { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, hasSub: true },
   { id: 'surveys', label: 'Survey Management', icon: ClipboardList },
   { id: 'tasks', label: 'Task Management', icon: CheckSquare },
-  { id: 'challenges', label: 'Challenge Management', icon: Gamepad2 },
+  // { id: 'challenges', label: 'Challenge Management', icon: Gamepad2 },
   { id: 'leaderboard', label: 'Leaderboard', icon: Award },
   { id: 'wallet', label: 'Wallet Management', icon: Wallet },
   { id: 'coin-management', label: 'Coin Management', icon: Coins },

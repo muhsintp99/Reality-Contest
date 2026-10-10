@@ -395,13 +395,13 @@ export const swaggerDocument = {
         type: 'object',
         properties: {
           success: { type: 'boolean', example: true },
-          isJoined: { type: 'boolean', example: true, description: 'True if contestant has joined the room cohort/cycle' },
+          isJoined: { type: 'boolean', example: true, description: 'True if contestant has joined the room cohort' },
           joined: { type: 'boolean', example: true },
           hasJoined: { type: 'boolean', example: true },
-          completed: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in the cycle' },
-          isCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in the cycle' },
-          hasCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in the cycle' },
-          message: { type: 'string', example: 'User has completed all tasks in this room cycle contest' },
+          completed: { type: 'boolean', example: true, description: 'True if contestant has completed all cycles and tasks in this room' },
+          isCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all cycles and tasks in this room' },
+          hasCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all cycles and tasks in this room' },
+          message: { type: 'string', example: 'User has completed all cycles and tasks in this room contest' },
           data: {
             type: 'object',
             properties: {
@@ -413,9 +413,12 @@ export const swaggerDocument = {
               hasCompleted: { type: 'boolean', example: true },
               roomId: { type: 'string', example: '6a9805182c419f9617bb2ea2' },
               contestId: { type: 'string', example: '6a9d21e7155a5b06743543b1' },
-              totalTasks: { type: 'number', example: 4 },
-              completedTasks: { type: 'number', example: 4 },
-              pendingTasks: { type: 'number', example: 0 }
+              totalTasks: { type: 'number', example: 6 },
+              completedTasks: { type: 'number', example: 6 },
+              pendingTasks: { type: 'number', example: 0 },
+              totalCycles: { type: 'number', example: 2 },
+              completedCycles: { type: 'number', example: 2 },
+              pendingCycles: { type: 'number', example: 0 }
             }
           }
         }
