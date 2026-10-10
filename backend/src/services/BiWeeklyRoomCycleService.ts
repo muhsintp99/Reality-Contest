@@ -840,41 +840,54 @@ export class BiWeeklyRoomCycleService {
         isJoined: false,
         joined: false,
         hasJoined: false,
-        message: 'User not authenticated'
+        completed: false,
+        isCompleted: false,
+        hasCompleted: false,
+        message: 'User not authenticated',
+        data: {
+          isJoined: false,
+          joined: false,
+          hasJoined: false,
+          completed: false,
+          isCompleted: false,
+          hasCompleted: false,
+          roomId: roomId || '',
+          contestId: contestId || '',
+          totalTasks: 0,
+          completedTasks: 0,
+          pendingTasks: 0
+        }
       };
     }
 
+    const userObjId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
     const validIds = [roomId, contestId]
       .filter((id): id is string => Boolean(id && id !== 'undefined' && mongoose.Types.ObjectId.isValid(id)))
       .map(id => new mongoose.Types.ObjectId(id));
 
-    if (validIds.length > 0) {
+    let isJoined = false;
+    let isCompleted = false;
+    let totalTasksCount = 0;
+    let completedTasksCount = 0;
+    let targetRoom: any = null;
+    let targetCycle: any = null;
+    let foundRoomMember: any = null;
+
+    if (validIds.length > 0 && userObjId) {
       // 1. Check RoomMember
-      const roomMember = await RoomMember.findOne({
-        userId: new mongoose.Types.ObjectId(userId),
+      foundRoomMember = await RoomMember.findOne({
+        userId: userObjId,
         roomId: { $in: validIds },
         status: 'Active'
       });
 
-      if (roomMember) {
-        return {
-          success: true,
-          isJoined: true,
-          joined: true,
-          hasJoined: true,
-          message: 'User has already joined this room contest',
-          data: {
-            isJoined: true,
-            joined: true,
-            roomId,
-            contestId
-          }
-        };
+      if (foundRoomMember) {
+        isJoined = true;
       }
 
       // 2. Check RoomSubmission
       const submission = await RoomSubmission.findOne({
-        userId: new mongoose.Types.ObjectId(userId),
+        userId: userObjId,
         $or: [
           { roomId: { $in: validIds } },
           { contestId: { $in: validIds } },
@@ -883,77 +896,174 @@ export class BiWeeklyRoomCycleService {
       });
 
       if (submission) {
-        return {
-          success: true,
-          isJoined: true,
-          joined: true,
-          hasJoined: true,
-          message: 'User has already joined this room contest',
-          data: {
-            isJoined: true,
-            joined: true,
-            roomId,
-            contestId
-          }
-        };
+        isJoined = true;
       }
 
       // 3. Check Contest & GrandContest models
-      const Contest = require('../models/Contest').default;
-      const GrandContest = require('../models/GrandContest').default;
+      const Contest = require('../models/Contest').default || require('../models/Contest').Contest;
+      const GrandContest = require('../models/GrandContest').default || require('../models/GrandContest').GrandContest;
 
       const [cMatch, gMatch] = await Promise.all([
         Contest.findOne({
           _id: { $in: validIds },
           $or: [
-            { participants: new mongoose.Types.ObjectId(userId) },
-            { 'participants.userId': new mongoose.Types.ObjectId(userId) }
+            { participants: userObjId },
+            { 'participants.userId': userObjId }
           ]
         }).catch(() => null),
         GrandContest.findOne({
           _id: { $in: validIds },
           $or: [
-            { participants: new mongoose.Types.ObjectId(userId) },
-            { 'participants.userId': new mongoose.Types.ObjectId(userId) }
+            { participants: userObjId },
+            { 'participants.userId': userObjId }
           ]
         }).catch(() => null)
       ]);
 
       if (cMatch || gMatch) {
-        return {
-          success: true,
-          isJoined: true,
-          joined: true,
-          hasJoined: true,
-          message: 'User has already joined this room contest',
-          data: {
-            isJoined: true,
-            joined: true,
-            roomId,
-            contestId
-          }
-        };
+        isJoined = true;
       }
     }
 
-    // 4. Fallback: check any active room membership for this user
-    const anyMember = await RoomMember.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-      status: 'Active'
-    });
+    // 4. Fallback: check any active room membership for this user if not found yet
+    if (!isJoined && userObjId) {
+      const anyMember = await RoomMember.findOne({
+        userId: userObjId,
+        status: 'Active'
+      });
 
-    if (anyMember) {
+      if (anyMember) {
+        isJoined = true;
+        foundRoomMember = anyMember;
+      }
+    }
+
+    // ================= CALCULATE COMPLETION STATUS =================
+    if (isJoined && userObjId) {
+      // Find the target Room
+      if (validIds.length > 0) {
+        targetRoom = await Room.findOne({ _id: { $in: validIds } });
+      }
+      if (!targetRoom && foundRoomMember) {
+        targetRoom = await Room.findById(foundRoomMember.roomId);
+      }
+
+      if (targetRoom) {
+        // Find active cycle of this room
+        const currentCycleNum = Number(targetRoom.currentCycle) || 1;
+        targetCycle = await Cycle.findOne({
+          roomId: targetRoom._id,
+          cycleNumber: currentCycleNum
+        });
+
+        if (!targetCycle && targetRoom.cycleIds && targetRoom.cycleIds.length > 0) {
+          targetCycle = await Cycle.findOne({
+            _id: { $in: targetRoom.cycleIds },
+            status: { $in: ['Running', 'Active', 'Published'] }
+          });
+        }
+
+        if (!targetCycle) {
+          targetCycle = await Cycle.findOne({ roomId: targetRoom._id }).sort({ cycleNumber: -1 });
+        }
+
+        // Get total tasks in this cycle
+        let cycleTasks: any[] = [];
+        if (targetCycle && targetCycle.taskIds && targetCycle.taskIds.length > 0) {
+          cycleTasks = targetCycle.taskIds;
+        } else if (targetCycle) {
+          cycleTasks = await Task.find({ $or: [{ cycleId: targetCycle._id }, { roomId: targetRoom._id }] }).select('_id');
+        }
+
+        totalTasksCount = cycleTasks.length;
+
+        // Fetch user's submissions in this room/cycle
+        const queryConditions: any[] = [{ roomId: targetRoom._id }];
+        if (targetCycle) queryConditions.push({ cycleId: targetCycle._id });
+        if (validIds.length > 0) queryConditions.push({ contestId: { $in: validIds } });
+
+        const submissions = await RoomSubmission.find({
+          userId: userObjId,
+          $or: queryConditions,
+          status: { $in: ['Approved', 'Pending', 'Resubmit_Requested'] }
+        }).lean();
+
+        // Unique submitted tasks count
+        const submittedTaskIdSet = new Set<string>();
+        submissions.forEach((s: any) => {
+          if (s.taskId) {
+            submittedTaskIdSet.add(s.taskId.toString());
+          }
+        });
+
+        completedTasksCount = submittedTaskIdSet.size || submissions.length;
+
+        // Determine if all tasks in the cycle are completed
+        if (totalTasksCount > 0 && completedTasksCount >= totalTasksCount) {
+          isCompleted = true;
+        } else if (targetRoom.status === 'Completed' || targetCycle?.status === 'Completed') {
+          isCompleted = true;
+        } else if (foundRoomMember && foundRoomMember.completedTasksCount >= totalTasksCount && totalTasksCount > 0) {
+          isCompleted = true;
+        }
+      } else {
+        // Check GrandContest or Standard Contest
+        const GrandContest = require('../models/GrandContest').default || require('../models/GrandContest').GrandContest;
+        const grandContest = await GrandContest.findOne({ _id: { $in: validIds } });
+        if (grandContest) {
+          totalTasksCount = Number(grandContest.tasksCount || (grandContest.tasks ? grandContest.tasks.length : 0));
+          const gcSubmissions = await RoomSubmission.find({
+            userId: userObjId,
+            $or: [{ contestId: grandContest._id }, { grandContestId: grandContest._id }]
+          });
+          completedTasksCount = gcSubmissions.length;
+          if (totalTasksCount > 0 && completedTasksCount >= totalTasksCount) {
+            isCompleted = true;
+          } else if (grandContest.status === 'Completed') {
+            isCompleted = true;
+          }
+        } else {
+          // Standard / Daily Contest Quiz check in Result
+          const Result = require('../models/Result').default || require('../models/Result').Result;
+          const result = await Result.findOne({
+            userId: userObjId,
+            contestId: { $in: validIds }
+          });
+          if (result && (result.status === 'Completed' || result.status === 'Qualified' || result.status === 'Disqualified' || result.passed !== undefined)) {
+            isCompleted = true;
+            totalTasksCount = 1;
+            completedTasksCount = 1;
+          }
+        }
+      }
+    }
+
+    const pendingTasks = Math.max(0, totalTasksCount - completedTasksCount);
+
+    if (isJoined) {
       return {
         success: true,
         isJoined: true,
         joined: true,
         hasJoined: true,
-        message: 'User has active room membership',
+        completed: isCompleted,
+        isCompleted: isCompleted,
+        hasCompleted: isCompleted,
+        message: isCompleted
+          ? 'User has completed all tasks in this room cycle contest'
+          : 'User has already joined this room contest',
         data: {
           isJoined: true,
           joined: true,
-          roomId: anyMember.roomId.toString(),
-          contestId
+          hasJoined: true,
+          completed: isCompleted,
+          isCompleted: isCompleted,
+          hasCompleted: isCompleted,
+          roomId: targetRoom ? targetRoom._id.toString() : (roomId || ''),
+          contestId: contestId || (targetRoom ? targetRoom._id.toString() : ''),
+          totalTasks: totalTasksCount,
+          completedTasks: completedTasksCount,
+          pendingTasks: pendingTasks
         }
       };
     }
@@ -963,12 +1073,22 @@ export class BiWeeklyRoomCycleService {
       isJoined: false,
       joined: false,
       hasJoined: false,
+      completed: false,
+      isCompleted: false,
+      hasCompleted: false,
       message: 'User not joined',
       data: {
         isJoined: false,
         joined: false,
-        roomId,
-        contestId
+        hasJoined: false,
+        completed: false,
+        isCompleted: false,
+        hasCompleted: false,
+        roomId: roomId || '',
+        contestId: contestId || '',
+        totalTasks: 0,
+        completedTasks: 0,
+        pendingTasks: 0
       }
     };
   }

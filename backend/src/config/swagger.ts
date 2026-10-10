@@ -395,17 +395,27 @@ export const swaggerDocument = {
         type: 'object',
         properties: {
           success: { type: 'boolean', example: true },
-          isJoined: { type: 'boolean', example: true },
+          isJoined: { type: 'boolean', example: true, description: 'True if contestant has joined the room cohort/cycle' },
           joined: { type: 'boolean', example: true },
           hasJoined: { type: 'boolean', example: true },
-          message: { type: 'string', example: 'User has already joined this room contest' },
+          completed: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in the cycle' },
+          isCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in the cycle' },
+          hasCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in the cycle' },
+          message: { type: 'string', example: 'User has completed all tasks in this room cycle contest' },
           data: {
             type: 'object',
             properties: {
               isJoined: { type: 'boolean', example: true },
               joined: { type: 'boolean', example: true },
-              roomId: { type: 'string', example: '66bc91f24d9e123456789rm' },
-              contestId: { type: 'string', example: 'CNT-2026-1002' }
+              hasJoined: { type: 'boolean', example: true },
+              completed: { type: 'boolean', example: true },
+              isCompleted: { type: 'boolean', example: true },
+              hasCompleted: { type: 'boolean', example: true },
+              roomId: { type: 'string', example: '6a9805182c419f9617bb2ea2' },
+              contestId: { type: 'string', example: '6a9d21e7155a5b06743543b1' },
+              totalTasks: { type: 'number', example: 4 },
+              completedTasks: { type: 'number', example: 4 },
+              pendingTasks: { type: 'number', example: 0 }
             }
           }
         }

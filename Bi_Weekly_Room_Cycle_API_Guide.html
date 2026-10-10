@@ -220,14 +220,25 @@ Content-Type: application/json</pre>
     <p><span class="endpoint-badge post">POST</span> <code>/api/week/rooms/:roomId/contests/:contestId/join</code></p>
     <pre>{
   "success": true,
-  "message": "User has successfully joined this room contest",
   "isJoined": true,
   "joined": true,
+  "hasJoined": true,
+  "completed": true,
+  "isCompleted": true,
+  "hasCompleted": true,
+  "message": "User has completed all tasks in this room cycle contest",
   "data": {
     "isJoined": true,
     "joined": true,
-    "roomId": "66bc91f24d9e123456789rm1",
-    "contestId": "66bc91f24d9e123456789cnt1"
+    "hasJoined": true,
+    "completed": true,
+    "isCompleted": true,
+    "hasCompleted": true,
+    "roomId": "6a9805182c419f9617bb2ea2",
+    "contestId": "6a9d21e7155a5b06743543b1",
+    "totalTasks": 4,
+    "completedTasks": 4,
+    "pendingTasks": 0
   }
 }</pre>
 
