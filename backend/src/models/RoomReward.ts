@@ -56,4 +56,5 @@ const RoomRewardSchema: Schema = new Schema(
 
 RoomRewardSchema.index({ status: 1, rewardType: 1 });
 
-export default mongoose.model<IRoomReward>('RoomReward', RoomRewardSchema);
+export const RoomReward = mongoose.models.RoomReward || mongoose.model<IRoomReward>('RoomReward', RoomRewardSchema);
+export default RoomReward;

@@ -33,4 +33,5 @@ const RoomMemberSchema: Schema = new Schema(
 RoomMemberSchema.index({ roomId: 1, userId: 1 }, { unique: true });
 RoomMemberSchema.index({ roomId: 1, status: 1 });
 
-export default mongoose.model<IRoomMember>('RoomMember', RoomMemberSchema);
+export const RoomMember = mongoose.models.RoomMember || mongoose.model<IRoomMember>('RoomMember', RoomMemberSchema);
+export default RoomMember;

@@ -1424,10 +1424,55 @@ export const swaggerDocument = {
     // ----------------------------------------------------
     // 7. WALLET & TRANSACTIONS
     // ----------------------------------------------------
+    '/api/wallet': {
+      get: {
+        tags: ['7. Wallet & Transactions'],
+        summary: 'Get Full Contestant Wallet & Coins Overview',
+        description: 'Returns real-time cash balance (INR), coin balance 🪙, KYC eligibility, total deposits, winnings, and recent transactions.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Wallet details fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        walletBalance: { type: 'number', example: 1250 },
+                        coins: { type: 'number', example: 450 },
+                        kycStatus: { type: 'string', example: 'Approved' },
+                        isKycVerified: { type: 'boolean', example: true },
+                        isEligibleForWithdrawal: { type: 'boolean', example: true },
+                        currency: { type: 'string', example: 'INR' },
+                        summary: {
+                          type: 'object',
+                          properties: {
+                            totalDeposited: { type: 'number', example: 5000 },
+                            totalWon: { type: 'number', example: 2500 },
+                            totalSpent: { type: 'number', example: 800 },
+                            totalWithdrawn: { type: 'number', example: 2000 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          401: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
     '/api/wallet/deposit': {
       post: {
         tags: ['7. Wallet & Transactions'],
-        summary: 'Deposit Funds to Wallet',
+        summary: 'Deposit / Top-up Funds to Wallet',
+        description: 'Adds balance to contestant wallet and logs a Completed deposit transaction.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1438,7 +1483,8 @@ export const swaggerDocument = {
                 required: ['amount'],
                 properties: {
                   amount: { type: 'number', example: 500 },
-                  paymentMethod: { type: 'string', example: 'UPI' }
+                  description: { type: 'string', example: 'Razorpay UPI Topup' },
+                  paymentRef: { type: 'string', example: 'pay_9876543210' }
                 }
               }
             }
@@ -1446,7 +1492,121 @@ export const swaggerDocument = {
         },
         responses: {
           200: {
-            description: 'Deposit transaction initiated.'
+            description: 'Deposit successful.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: '₹500 deposited successfully to your wallet.' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        newBalance: { type: 'number', example: 1750 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
+    '/api/wallet/withdraw': {
+      post: {
+        tags: ['7. Wallet & Transactions'],
+        summary: 'Request Withdrawal to Bank / UPI',
+        description: 'Submits a withdrawal request (minimum ₹100, requires Approved KYC). Deducts balance and creates a Pending payout transaction.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['amount'],
+                properties: {
+                  amount: { type: 'number', example: 500 },
+                  method: { type: 'string', enum: ['UPI', 'Bank'], example: 'UPI' },
+                  upiId: { type: 'string', example: 'aarav@okaxis' },
+                  accountNumber: { type: 'string', example: '9876543210123' },
+                  ifsc: { type: 'string', example: 'HDFC0001234' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Withdrawal request submitted.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Withdrawal request of ₹500 submitted successfully.' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' },
+          403: { description: 'KYC not approved.' }
+        }
+      }
+    },
+    '/api/wallet/pay-entry': {
+      post: {
+        tags: ['7. Wallet & Transactions'],
+        summary: 'Pay Contest Entry Fee from Wallet / Coins',
+        description: 'Deducts contest entry fee from wallet cash or coins and records an Entry Fee transaction.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['amount'],
+                properties: {
+                  amount: { type: 'number', example: 100 },
+                  contestTitle: { type: 'string', example: 'Grand Championship Season 1' },
+                  currency: { type: 'string', enum: ['INR', 'Coins'], example: 'INR' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: { description: 'Entry fee paid successfully.' },
+          400: { description: 'Insufficient balance.' }
+        }
+      }
+    },
+    '/api/wallet/claim-daily': {
+      post: {
+        tags: ['7. Wallet & Transactions'],
+        summary: 'Claim Daily Login Bonus Coins',
+        description: 'Awards +50 daily check-in coins 🪙 to contestant account.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Daily bonus claimed successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: '+50 Daily Bonus Coins claimed! 🪙' }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1455,10 +1615,42 @@ export const swaggerDocument = {
       get: {
         tags: ['7. Wallet & Transactions'],
         summary: 'View Wallet Transactions History',
+        description: 'Fetches paginated list of contestant wallet transactions (Deposits, Entry Fees, Prize Payouts, Withdrawals, Bonuses).',
         security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'type', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Deposit', 'Withdrawal', 'Entry Fee', 'Prize Payout', 'Bonus'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', example: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', example: 20 } }
+        ],
         responses: {
           200: {
-            description: 'Transaction log history.'
+            description: 'Transaction log history.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          _id: { type: 'string', example: '66bc91f24d9e...' },
+                          amount: { type: 'number', example: 500 },
+                          currency: { type: 'string', example: 'INR' },
+                          type: { type: 'string', example: 'Deposit' },
+                          status: { type: 'string', example: 'Completed' },
+                          description: { type: 'string', example: 'Wallet Topup' },
+                          reference: { type: 'string', example: 'DEP-1723630000-1234' },
+                          createdAt: { type: 'string', format: 'date-time' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

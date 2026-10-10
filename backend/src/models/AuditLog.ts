@@ -7,6 +7,10 @@ export interface IAuditLog extends Document {
   deviceInfo?: string;
   browser?: string;
   details: string;
+  contestId?: string;
+  targetId?: string;
+  severity?: 'info' | 'warning' | 'critical' | 'success';
+  module?: string;
   createdAt: Date;
 }
 
@@ -17,7 +21,11 @@ const auditLogSchema = new Schema<IAuditLog>(
     ipAddress: { type: String },
     deviceInfo: { type: String },
     browser: { type: String },
-    details: { type: String, default: '' }
+    details: { type: String, default: '' },
+    contestId: { type: String, index: true },
+    targetId: { type: String },
+    severity: { type: String, enum: ['info', 'warning', 'critical', 'success'], default: 'info' },
+    module: { type: String, default: 'Platform', index: true }
   },
   {
     timestamps: { createdAt: true, updatedAt: false }

@@ -25,6 +25,7 @@ import { mobileContestantController } from './controllers/MobileContestantContro
 import { biWeeklyRoomCycleController } from './controllers/BiWeeklyRoomCycleController';
 import { grandContestController } from './controllers/GrandContestController';
 import { paymentController } from './controllers/PaymentController';
+import { reportController } from './controllers/ReportController';
 
 // Import Middlewares
 import { authenticate, authorize, requireNotGuest, optionalAuthenticate } from './middleware/AuthMiddleware';
@@ -197,9 +198,27 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/stages/:id/submit', authenticate, requireNotGuest, stageController.submitAttempt);
   router.post('/upload', authenticate, upload.single('file'), uploadController.uploadFile);
 
-  // Wallet routes
+  // Wallet routes (Contestant & Mobile V1)
+  router.get('/wallet', authenticate, walletController.getWallet);
+  router.get('/v1/mobile/wallet', authenticate, walletController.getWallet);
+  router.get('/mobile/wallet', authenticate, walletController.getWallet);
+
   router.post('/wallet/deposit', authenticate, requireNotGuest, walletController.deposit);
+  router.post('/wallet/topup', authenticate, requireNotGuest, walletController.deposit);
+  router.post('/v1/mobile/wallet/deposit', authenticate, requireNotGuest, walletController.deposit);
+
+  router.post('/wallet/withdraw', authenticate, requireNotGuest, walletController.withdraw);
+  router.post('/v1/mobile/wallet/withdraw', authenticate, requireNotGuest, walletController.withdraw);
+
+  router.post('/wallet/pay-entry', authenticate, requireNotGuest, walletController.payEntry);
+  router.post('/v1/mobile/wallet/pay-entry', authenticate, requireNotGuest, walletController.payEntry);
+
+  router.post('/wallet/claim-daily', authenticate, requireNotGuest, walletController.claimDailyBonus);
+  router.post('/v1/mobile/wallet/claim-daily', authenticate, requireNotGuest, walletController.claimDailyBonus);
+
   router.get('/wallet/transactions', authenticate, walletController.getTransactions);
+  router.get('/v1/mobile/wallet/transactions', authenticate, walletController.getTransactions);
+  router.get('/mobile/wallet/transactions', authenticate, walletController.getTransactions);
 
   // Question & Quiz Builder routes
   router.delete('/question-pools/clear-all', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), questionController.clearAllQuestions);
@@ -230,8 +249,15 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/categories/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager', 'Content Moderator'), validateRequest(updateCategorySchema), categoryController.updateCategory);
   router.delete('/categories/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager', 'Content Moderator'), categoryController.deleteCategory);
 
-  // Admin Audit & Overrides
-  router.get('/admin/audit-logs', authenticate, authorize('Super Admin', 'Analytics Manager'), adminController.getAuditLogs);
+  // Platform Reports & Audit Logs routes
+  router.get('/admin/reports/summary', authenticate, authorize('Super Admin', 'Admin', 'Analytics Manager', 'Finance Manager', 'Contest Manager'), reportController.getPlatformSummary);
+  router.get('/admin/reports/contests', authenticate, authorize('Super Admin', 'Admin', 'Analytics Manager', 'Finance Manager', 'Contest Manager'), reportController.getContestsReports);
+  router.get('/admin/reports/contest/:id', authenticate, authorize('Super Admin', 'Admin', 'Analytics Manager', 'Finance Manager', 'Contest Manager'), reportController.getContestReportDetail);
+  router.get('/admin/reports/export/:reportType', authenticate, authorize('Super Admin', 'Admin', 'Analytics Manager', 'Finance Manager', 'Contest Manager'), reportController.exportReportData);
+  router.get('/admin/audit-logs', authenticate, authorize('Super Admin', 'Admin', 'Analytics Manager', 'Finance Manager', 'Contest Manager'), reportController.getAuditLogs);
+  router.post('/admin/audit-logs', authenticate, authorize('Super Admin', 'Admin', 'Analytics Manager', 'Finance Manager', 'Contest Manager'), reportController.createAuditLog);
+
+  // Admin Overrides & User Management
   router.put('/admin/results/override', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), adminController.manualApproveQualification);
   router.put('/admin/users/role', authenticate, authorize('Super Admin'), adminController.promoteUser);
   router.get('/admin/users/:role', authenticate, authorize('Admin', 'Super Admin', 'Support Manager', 'KYC Officer'), adminController.listUsersByRole);

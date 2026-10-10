@@ -97,4 +97,5 @@ dailyContestSchema.index({ status: 1, category: 1 });
 export const DailyContest: Model<IDailyContest> =
   mongoose.models.DailyContest || mongoose.model<IDailyContest>('DailyContest', dailyContestSchema);
 
+export const DailyContests = DailyContest;
 export default DailyContest;

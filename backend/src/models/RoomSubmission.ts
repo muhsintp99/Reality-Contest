@@ -96,4 +96,5 @@ const RoomSubmissionSchema: Schema = new Schema(
 RoomSubmissionSchema.index({ roomId: 1, cycleId: 1, userId: 1, taskId: 1 });
 RoomSubmissionSchema.index({ status: 1, cycleId: 1 });
 
-export default mongoose.model<IRoomSubmission>('RoomSubmission', RoomSubmissionSchema);
+export const RoomSubmission = mongoose.models.RoomSubmission || mongoose.model<IRoomSubmission>('RoomSubmission', RoomSubmissionSchema);
+export default RoomSubmission;

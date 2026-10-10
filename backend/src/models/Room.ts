@@ -46,4 +46,5 @@ const RoomSchema: Schema = new Schema(
 
 RoomSchema.index({ status: 1, membersCount: 1 });
 
-export default mongoose.model<IRoom>('Room', RoomSchema);
+export const Room = mongoose.models.Room || mongoose.model<IRoom>('Room', RoomSchema);
+export default Room;
