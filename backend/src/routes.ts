@@ -568,12 +568,18 @@ export function createApiRouter(authLimiter: any): Router {
   // Room Cycle Join Status & Join Participation Endpoints
   router.get('/week/rooms/:roomId/contests/:contestId/check-status', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
   router.get('/v1/week/rooms/:roomId/contests/:contestId/check-status', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
+  router.get('/week/rooms/:roomId/contests/:contestId/join', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
+  router.get('/v1/week/rooms/:roomId/contests/:contestId/join', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
   router.get('/week/rooms/:roomId/join/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
   router.get('/v1/week/rooms/:roomId/join/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
+  router.get('/week/rooms/:roomId/contests/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
+  router.get('/v1/week/rooms/:roomId/contests/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
   router.post('/week/rooms/:roomId/contests/:contestId/join', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
   router.post('/v1/week/rooms/:roomId/contests/:contestId/join', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
   router.post('/week/rooms/:roomId/join/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
   router.post('/v1/week/rooms/:roomId/join/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
+  router.post('/week/rooms/:roomId/contests/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
+  router.post('/v1/week/rooms/:roomId/contests/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
 
   // Room Contest Attempt & Submission
   router.post('/week/rooms/:roomId/start/:contestId', authenticate, biWeeklyRoomCycleController.startAttempt);

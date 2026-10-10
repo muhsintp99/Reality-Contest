@@ -398,23 +398,31 @@ export const swaggerDocument = {
           isJoined: { type: 'boolean', example: true, description: 'True if contestant has joined the room cohort' },
           joined: { type: 'boolean', example: true },
           hasJoined: { type: 'boolean', example: true },
-          completed: { type: 'boolean', example: true, description: 'True if contestant has completed all cycles and tasks in this room' },
-          isCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all cycles and tasks in this room' },
-          hasCompleted: { type: 'boolean', example: true, description: 'True if contestant has completed all cycles and tasks in this room' },
-          message: { type: 'string', example: 'User has completed all cycles and tasks in this room contest' },
+          join: { type: 'boolean', example: true },
+          jin: { type: 'boolean', example: true },
+          completed: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in this cycle contest' },
+          complete: { type: 'boolean', example: true, description: 'True if contestant has completed all tasks in this cycle contest' },
+          isCompleted: { type: 'boolean', example: true },
+          hasCompleted: { type: 'boolean', example: true },
+          isComplete: { type: 'boolean', example: true },
+          message: { type: 'string', example: 'User has completed all tasks in this cycle contest' },
           data: {
             type: 'object',
             properties: {
               isJoined: { type: 'boolean', example: true },
               joined: { type: 'boolean', example: true },
               hasJoined: { type: 'boolean', example: true },
+              join: { type: 'boolean', example: true },
+              jin: { type: 'boolean', example: true },
               completed: { type: 'boolean', example: true },
+              complete: { type: 'boolean', example: true },
               isCompleted: { type: 'boolean', example: true },
               hasCompleted: { type: 'boolean', example: true },
+              isComplete: { type: 'boolean', example: true },
               roomId: { type: 'string', example: '6a9805182c419f9617bb2ea2' },
               contestId: { type: 'string', example: '6a9d21e7155a5b06743543b1' },
-              totalTasks: { type: 'number', example: 6 },
-              completedTasks: { type: 'number', example: 6 },
+              totalTasks: { type: 'number', example: 4 },
+              completedTasks: { type: 'number', example: 4 },
               pendingTasks: { type: 'number', example: 0 },
               totalCycles: { type: 'number', example: 2 },
               completedCycles: { type: 'number', example: 2 },
@@ -3288,6 +3296,26 @@ export const swaggerDocument = {
       }
     },
     '/api/week/rooms/{roomId}/contests/{contestId}/join': {
+      get: {
+        tags: ['8. Mobile App API (Contestant V1)'],
+        summary: 'Check Contestant Join Status for Room Cycle',
+        description: 'Checks whether the contestant has joined the specified room and contest, and calculates full task/cycle completion status.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '6a9805182c419f9617bb2ea2' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: '6a9d21e7155a5b06743543b1' } }
+        ],
+        responses: {
+          200: {
+            description: 'Join status and multi-cycle completion status fetched successfully.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RoomCycleJoinStatusResponse' }
+              }
+            }
+          }
+        }
+      },
       post: {
         tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Contestant Join Room Cycle & Contest',

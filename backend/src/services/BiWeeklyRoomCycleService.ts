@@ -1068,14 +1068,51 @@ export class BiWeeklyRoomCycleService {
           allCyclesCompleted = false;
         }
 
-        // ================= FINAL COMPLETED DECISION =================
-        // Only completed: true IF all cycles and all tasks in the room are completed
-        if (totalTasksCount > 0) {
-          if (allCyclesCompleted && completedTasksCount >= totalTasksCount) {
-            isCompleted = true;
-          } else {
-            isCompleted = false;
+        // ================= CYCLE-LEVEL & ROOM COMPLETION =================
+        let targetCycleDoc: any = null;
+        if (validIds.length > 0) {
+          targetCycleDoc = roomCycles.find((c: any) => validIds.some(v => v.equals(c._id)));
+        }
+        if (!targetCycleDoc && targetRoom) {
+          const currentCycleNum = Number(targetRoom.currentCycle) || 1;
+          targetCycleDoc = roomCycles.find((c: any) => c.cycleNumber === currentCycleNum);
+        }
+        if (!targetCycleDoc && roomCycles.length > 0) {
+          targetCycleDoc = roomCycles[0];
+        }
+
+        let cycleTasksCount = 0;
+        let cycleCompletedTasksCount = 0;
+        let cycleIsCompleted = false;
+
+        if (targetCycleDoc) {
+          const cId = (targetCycleDoc._id || '').toString();
+          const targetCycleTaskSet = taskMapByCycle.get(cId) || new Set<string>();
+          cycleTasksCount = targetCycleTaskSet.size;
+
+          if (cycleTasksCount > 0) {
+            let allCycleTasksDone = true;
+            for (const tId of targetCycleTaskSet) {
+              if (userSubmittedTaskIdSet.has(tId)) {
+                cycleCompletedTasksCount++;
+              } else {
+                allCycleTasksDone = false;
+              }
+            }
+            cycleIsCompleted = allCycleTasksDone && cycleCompletedTasksCount >= cycleTasksCount;
+          } else if (targetCycleDoc.status === 'Completed') {
+            cycleIsCompleted = true;
           }
+        }
+
+        // ================= FINAL COMPLETED DECISION =================
+        // If a specific cycle was targeted, check if all tasks in that cycle are completed
+        if (cycleTasksCount > 0) {
+          isCompleted = cycleIsCompleted;
+          totalTasksCount = cycleTasksCount;
+          completedTasksCount = cycleCompletedTasksCount;
+        } else if (totalTasksCount > 0) {
+          isCompleted = allCyclesCompleted && completedTasksCount >= totalTasksCount;
         } else if (totalCyclesCount > 0) {
           isCompleted = allCyclesCompleted && completedCyclesCount === totalCyclesCount;
         } else if (targetRoom.status === 'Completed') {
@@ -1126,19 +1163,27 @@ export class BiWeeklyRoomCycleService {
         isJoined: true,
         joined: true,
         hasJoined: true,
+        join: true,
+        jin: true,
         completed: isCompleted,
+        complete: isCompleted,
         isCompleted: isCompleted,
         hasCompleted: isCompleted,
+        isComplete: isCompleted,
         message: isCompleted
-          ? 'User has completed all cycles and tasks in this room contest'
-          : 'User has already joined this room contest (tasks/cycles pending)',
+          ? 'User has completed all tasks in this cycle contest'
+          : 'User has already joined this room contest',
         data: {
           isJoined: true,
           joined: true,
           hasJoined: true,
+          join: true,
+          jin: true,
           completed: isCompleted,
+          complete: isCompleted,
           isCompleted: isCompleted,
           hasCompleted: isCompleted,
+          isComplete: isCompleted,
           roomId: targetRoom ? targetRoom._id.toString() : (roomId || ''),
           contestId: contestId || (targetRoom ? targetRoom._id.toString() : ''),
           totalTasks: totalTasksCount,
@@ -1156,17 +1201,25 @@ export class BiWeeklyRoomCycleService {
       isJoined: false,
       joined: false,
       hasJoined: false,
+      join: false,
+      jin: false,
       completed: false,
+      complete: false,
       isCompleted: false,
       hasCompleted: false,
+      isComplete: false,
       message: 'User not joined',
       data: {
         isJoined: false,
         joined: false,
         hasJoined: false,
+        join: false,
+        jin: false,
         completed: false,
+        complete: false,
         isCompleted: false,
         hasCompleted: false,
+        isComplete: false,
         roomId: roomId || '',
         contestId: contestId || '',
         totalTasks: 0,
@@ -1215,10 +1268,25 @@ export class BiWeeklyRoomCycleService {
       isJoined: true,
       joined: true,
       hasJoined: true,
+      join: true,
+      jin: true,
+      completed: false,
+      complete: false,
+      isCompleted: false,
+      hasCompleted: false,
+      isComplete: false,
       message: 'User has successfully joined this room contest',
       data: {
         isJoined: true,
         joined: true,
+        hasJoined: true,
+        join: true,
+        jin: true,
+        completed: false,
+        complete: false,
+        isCompleted: false,
+        hasCompleted: false,
+        isComplete: false,
         roomId: targetRoomId,
         contestId
       }
