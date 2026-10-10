@@ -204,6 +204,55 @@ export class BiWeeklyRoomCycleController {
     return res.status(200).json({ success: true, message: 'Task management removed', data: null });
   }
 
+  // ================= ATTEMPTS & SUBMISSIONS =================
+  async startAttempt(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { roomId, contestId } = req.params;
+      const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      return res.status(200).json({
+        success: true,
+        message: 'Contest task attempt started successfully',
+        data: {
+          roomId,
+          contestId,
+          userId,
+          startedAt: new Date()
+        }
+      });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
+  async submitAttempt(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { roomId, contestId } = req.params;
+      const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      let uploadedMediaUrl = req.body.mediaUrl || '';
+      if (req.file) {
+        uploadedMediaUrl = `/uploads/${req.file.filename}`;
+      }
+      const { cycleId, taskId, submissionType, proofNotes, answers } = req.body;
+      const submission = await biWeeklyRoomCycleService.createSubmission({
+        cycleId: cycleId || undefined,
+        contestId: contestId || undefined,
+        roomId,
+        userId: userId ? userId.toString() : undefined,
+        taskId: taskId || 'general_proof',
+        submissionType: submissionType || (req.file ? 'File' : 'Link'),
+        mediaUrl: uploadedMediaUrl,
+        proofNotes: proofNotes || (typeof answers === 'string' ? answers : JSON.stringify(answers || ''))
+      });
+      return res.status(201).json({
+        success: true,
+        message: 'Task submission recorded for review',
+        data: submission
+      });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
   // ================= SUBMISSIONS =================
   async getSubmissions(req: Request, res: Response, next: NextFunction) {
     try {

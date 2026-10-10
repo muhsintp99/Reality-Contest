@@ -163,7 +163,7 @@ Content-Type: application/json</pre>
     <div class="module-banner">MODULE A: Bi-Weekly Room Cycle Module</div>
 
     <h3>Step 1: Browse Available Rooms</h3>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/week/rooms</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/week/rooms</code> | <span class="endpoint-badge get">GET</span> <code>/api/week/rooms</code></p>
     <pre>{
   "success": true,
   "data": {
@@ -177,7 +177,8 @@ Content-Type: application/json</pre>
         "isJoined": false,
         "status": "Active"
       }
-    ]
+    ],
+    "pagination": { "total": 1, "page": 1, "limit": 10, "totalPages": 1 }
   }
 }</pre>
 
@@ -202,14 +203,36 @@ Content-Type: application/json</pre>
     <p><span class="endpoint-badge post">POST</span> <code>/api/v1/week/rooms/:roomId/contests/:contestId/join</code></p>
     <pre>{
   "success": true,
-  "message": "Successfully joined room cycle",
-  "data": { "roomId": "66bc91f24d9e123456789rm1", "status": "Active" }
+  "message": "User has successfully joined this room contest",
+  "isJoined": true,
+  "joined": true,
+  "data": {
+    "isJoined": true,
+    "joined": true,
+    "roomId": "66bc91f24d9e123456789rm1",
+    "contestId": "66bc91f24d9e123456789cnt1"
+  }
 }</pre>
 
-    <h3>Step 4: Submissions, Leaderboard & Rewards</h3>
+    <h3>Step 4: Start Attempt & Submit Task Proof</h3>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/week/rooms/:roomId/start/:contestId</code></p>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/week/rooms/:roomId/submit/:contestId</code> | <span class="endpoint-badge post">POST</span> <code>/api/v1/mobile/room-cycle/submissions</code></p>
+    <pre>// Multipart/form-data request:
+{
+  "roomId": "66bc91f24d9e123456789rm1",
+  "taskId": "66bc91f24d9e123456789tsk1",
+  "cycleId": "66bc91f24d9e123456789cyc1",
+  "submissionType": "Image",
+  "mediaFile": "&lt;binary_file&gt;",
+  "proofNotes": "Completed Day 3 sprint challenge proof."
+}</pre>
+
+    <h3>Step 5: Submissions Review, Leaderboard & Rewards</h3>
     <p><span class="endpoint-badge get">GET</span> <code>/api/v1/admin/room-cycle/submissions?roomId=&lt;roomId&gt;</code></p>
-    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/admin/room-cycle/leaderboard?roomId=&lt;roomId&gt;</code></p>
+    <p><span class="endpoint-badge put">PUT</span> <code>/api/v1/admin/room-cycle/submissions/:id/review</code></p>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/v1/admin/room-cycle/leaderboard?scope=Room&roomId=&lt;roomId&gt;</code></p>
     <p><span class="endpoint-badge get">GET</span> <code>/api/v1/admin/room-cycle/rewards</code></p>
+    <p><span class="endpoint-badge post">POST</span> <code>/api/v1/admin/room-cycle/rewards/distribute</code></p>
 
     <div class="page-break"></div>
 
@@ -284,11 +307,19 @@ Content-Type: application/json</pre>
         <tr><td><b>Room Cycle</b></td><td>Browse Rooms</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Room Details</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms/:id</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Room Cycles Blueprint</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms/:id/cycles</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Check Eligibility</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms/:rId/contests/:cId/check-status</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Join Room Cycle</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/week/rooms/:rId/contests/:cId/join</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Check Eligibility</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/week/rooms/:roomId/contests/:contestId/check-status</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Join Room Cycle</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/week/rooms/:roomId/contests/:contestId/join</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Start Attempt</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/week/rooms/:roomId/start/:contestId</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Submit Task Proof</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/week/rooms/:roomId/submit/:contestId</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Assign Members</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/admin/room-cycle/members/assign</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Cycle Blueprints</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/cycles</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Get Submissions</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/submissions</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Review Submission</td><td><span class="endpoint-badge put">PUT</span></td><td><code>/api/v1/admin/room-cycle/submissions/:id/review</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Room Leaderboard</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/leaderboard</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Reward Rules</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/rewards</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Distribute Rewards</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/admin/room-cycle/rewards/distribute</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Module Settings</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/settings</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Module Analytics</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/admin/room-cycle/analytics</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>List Grand Contests</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/grand-contests</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Get Details & Rules</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/v1/grand-contests/:id</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Join Grand Contest</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/v1/grand-contests/:id/join</code></td></tr>

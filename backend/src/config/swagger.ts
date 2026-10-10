@@ -338,6 +338,78 @@ export const swaggerDocument = {
           joinedAt: { type: 'string', format: 'date-time', example: '2026-09-01T10:00:00.000Z' }
         }
       },
+      RoomLeaderboardEntryResponse: {
+        type: 'object',
+        properties: {
+          rank: { type: 'number', example: 1 },
+          userId: { type: 'string', example: '66bc91f24d9e123456789usr' },
+          name: { type: 'string', example: 'Aarav Sharma' },
+          username: { type: 'string', example: 'aarav_sharma' },
+          avatar: { type: 'string', example: '/uploads/general/avatar_1723630000.png' },
+          roomId: { type: 'string', example: '66bc91f24d9e123456789rm' },
+          roomName: { type: 'string', example: 'Alpha Strikers' },
+          points: { type: 'number', example: 1250 },
+          accumulatedPoints: { type: 'number', example: 1250 },
+          tasksCompleted: { type: 'number', example: 12 },
+          badge: { type: 'string', example: 'Gold' }
+        }
+      },
+      RoomRewardResponse: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string', example: '66bc91f24d9e123456789rew' },
+          title: { type: 'string', example: 'Top 3 Cash Pool' },
+          rewardType: { type: 'string', enum: ['Cash', 'Wallet Credit', 'Coupons', 'Badges', 'Certificates'], example: 'Cash' },
+          amountOrValue: { type: 'number', example: 500 },
+          minRank: { type: 'number', example: 1 },
+          maxRank: { type: 'number', example: 3 },
+          isActive: { type: 'boolean', example: true },
+          description: { type: 'string', example: 'Reward distributed to top 3 ranked contestants' }
+        }
+      },
+      RoomCycleSettingsResponse: {
+        type: 'object',
+        properties: {
+          autoLocking: { type: 'boolean', example: true },
+          maxRoomCapacity: { type: 'number', example: 50 },
+          cycleDurationDays: { type: 'number', example: 14 },
+          taskWeightPercentage: { type: 'number', example: 70 },
+          quizWeightPercentage: { type: 'number', example: 30 },
+          autoDistributeRewards: { type: 'boolean', example: false }
+        }
+      },
+      RoomCycleAnalyticsResponse: {
+        type: 'object',
+        properties: {
+          totalRooms: { type: 'number', example: 10 },
+          activeRooms: { type: 'number', example: 8 },
+          completedCycles: { type: 'number', example: 3 },
+          activeCycleNumber: { type: 'number', example: 1 },
+          pendingTasks: { type: 'number', example: 14 },
+          averageScore: { type: 'number', example: 84 },
+          completionRate: { type: 'number', example: 92 },
+          topRooms: { type: 'array', items: { $ref: '#/components/schemas/RoomResponse' } }
+        }
+      },
+      RoomCycleJoinStatusResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          isJoined: { type: 'boolean', example: true },
+          joined: { type: 'boolean', example: true },
+          hasJoined: { type: 'boolean', example: true },
+          message: { type: 'string', example: 'User has already joined this room contest' },
+          data: {
+            type: 'object',
+            properties: {
+              isJoined: { type: 'boolean', example: true },
+              joined: { type: 'boolean', example: true },
+              roomId: { type: 'string', example: '66bc91f24d9e123456789rm' },
+              contestId: { type: 'string', example: 'CNT-2026-1002' }
+            }
+          }
+        }
+      },
       KYCResponse: {
         type: 'object',
         properties: {
@@ -2686,13 +2758,41 @@ export const swaggerDocument = {
         description: 'Fetch paginated list of rooms. If Authorization Bearer token is provided, populates isJoined: true/false for each room card.',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
-          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'] } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'number', example: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'number', example: 10 } }
+          { name: 'search', in: 'query', required: false, schema: { type: 'string', example: 'Alpha' } },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'], default: 'Active' } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', example: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', example: 10 } }
         ],
         responses: {
-          200: { description: 'Rooms list fetched successfully.' }
+          200: {
+            description: 'Rooms list fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        rooms: { type: 'array', items: { $ref: '#/components/schemas/RoomResponse' } },
+                        pagination: {
+                          type: 'object',
+                          properties: {
+                            total: { type: 'integer', example: 5 },
+                            page: { type: 'integer', example: 1 },
+                            limit: { type: 'integer', example: 10 },
+                            totalPages: { type: 'integer', example: 1 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
         }
       }
     },
@@ -2700,22 +2800,49 @@ export const swaggerDocument = {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get All Competition Rooms',
-        description: 'Fetch paginated list of rooms with search, status filter, and capacity details.',
+        description: 'Fetch paginated list of competition rooms with search, status filter, and capacity details.',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'search', in: 'query', required: false, schema: { type: 'string', example: 'Alpha' } },
           { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'] } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'number', example: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'number', example: 10 } }
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', example: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', example: 10 } }
         ],
         responses: {
-          200: { description: 'Rooms list fetched successfully.' }
+          200: {
+            description: 'Rooms list fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        rooms: { type: 'array', items: { $ref: '#/components/schemas/RoomResponse' } },
+                        pagination: {
+                          type: 'object',
+                          properties: {
+                            total: { type: 'integer', example: 1 },
+                            page: { type: 'integer', example: 1 },
+                            limit: { type: 'integer', example: 10 },
+                            totalPages: { type: 'integer', example: 1 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       },
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Create New Room',
-        description: 'Create room with name, description, max members, current cycle, room image, and auto-assignment options.',
+        summary: 'Create New Competition Room',
+        description: 'Create a new room with name, description, max members, current cycle, room image, and auto-assignment options.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2733,7 +2860,7 @@ export const swaggerDocument = {
                   maxMembers: { type: 'number', example: 50 },
                   currentCycle: { type: 'number', example: 1 },
                   cycleIds: { type: 'array', items: { type: 'string' } },
-                  roomImage: { type: 'string', example: 'https://example.com/image.png' },
+                  roomImage: { type: 'string', example: '/uploads/room/banner_1723630000.png' },
                   status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' },
                   autoAssignment: { type: 'boolean', example: true }
                 }
@@ -2742,50 +2869,147 @@ export const swaggerDocument = {
           }
         },
         responses: {
-          201: { description: 'Room created successfully.' }
+          201: {
+            description: 'Room created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Room created successfully' },
+                    data: { $ref: '#/components/schemas/RoomResponse' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
         }
       }
     },
     '/api/week/rooms/{id}': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get Room Details, Members & Cycles by ID',
+        summary: 'Get Room Details & Active Members by ID',
+        description: 'Retrieves room configuration, assigned cycles, and active member leaderboard rankings.',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Room details, cycles, and assigned members.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } }],
+        responses: {
+          200: {
+            description: 'Room details and member roster retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/RoomResponse' }
+                  }
+                }
+              }
+            }
+          },
+          404: { description: 'Room not found.' }
+        }
       },
       put: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Update Room Details',
+        description: 'Updates room capacity, status, rules, description, and settings.',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } }],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { type: 'object' } } }
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Alpha Strikers Updated' },
+                  description: { type: 'string' },
+                  rules: { type: 'string' },
+                  maxMembers: { type: 'number', example: 60 },
+                  status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' },
+                  roomImage: { type: 'string' }
+                }
+              }
+            }
+          }
         },
-        responses: { 200: { description: 'Room updated.' } }
+        responses: {
+          200: {
+            description: 'Room updated successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Room updated successfully' },
+                    data: { $ref: '#/components/schemas/RoomResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       delete: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Delete Room',
+        description: 'Permanently removes the room and unlinks attached members.',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Room deleted.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } }],
+        responses: {
+          200: {
+            description: 'Room deleted successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Room deleted successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/week/rooms/{id}/cycles': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get All Cycles for a Specific Room',
+        summary: 'Get 14-Day Blueprint Cycles for Room',
+        description: 'Fetches the 14-day cycle blueprints attached to the specified room.',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'List of cycles for the specified room.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } }],
+        responses: {
+          200: {
+            description: 'List of cycles for the specified room.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    cycles: { type: 'array', items: { $ref: '#/components/schemas/CycleResponse' } },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/CycleResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/week/rooms/bulk-action': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Bulk Action on Rooms (Activate, Archive, Delete)',
+        description: 'Applies bulk operations across multiple room IDs at once.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2795,41 +3019,92 @@ export const swaggerDocument = {
                 type: 'object',
                 required: ['roomIds', 'action'],
                 properties: {
-                  roomIds: { type: 'array', items: { type: 'string' } },
-                  action: { type: 'string', enum: ['Activate', 'Archive', 'Deactivate', 'Delete'] }
+                  roomIds: { type: 'array', items: { type: 'string' }, example: ['66bc91f24d9e123456789rm1'] },
+                  action: { type: 'string', enum: ['Activate', 'Archive', 'Deactivate', 'Delete'], example: 'Activate' }
                 }
               }
             }
           }
         },
-        responses: { 200: { description: 'Bulk action completed.' } }
-      }
-    },
-    '/api/week/rooms/{roomId}/join/{contestId}': {
-      get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Check Contestant Join Status for Room Contest',
-        description: 'Checks whether the authenticated contestant has joined the specified room and contest.',
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' }, example: 'RM-001' },
-          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' }, example: 'CNT-2026-1002' }
-        ],
         responses: {
           200: {
-            description: 'Join status fetched successfully.',
+            description: 'Bulk action completed successfully.',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    isJoined: { type: 'boolean', example: true },
-                    joined: { type: 'boolean', example: true },
-                    hasJoined: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'User has already joined this room contest' }
+                    message: { type: 'string', example: 'Bulk action Activate executed' }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/week/rooms/{roomId}/contests/{contestId}/check-status': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Check Contestant Join Status for Room Cycle',
+        description: 'Checks whether the authenticated contestant has joined the specified room cohort and cycle contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cnt1' } }
+        ],
+        responses: {
+          200: {
+            description: 'Join status fetched successfully.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RoomCycleJoinStatusResponse' }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/week/rooms/{roomId}/contests/{contestId}/join': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Contestant Join Room Cycle & Contest',
+        description: 'Enrolls the authenticated contestant into the room cohort and unlocks cycle tasks and leaderboard participation.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cnt1' } }
+        ],
+        responses: {
+          200: {
+            description: 'Joined room cycle successfully.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RoomCycleJoinStatusResponse' }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
+    '/api/week/rooms/{roomId}/join/{contestId}': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Check Contestant Join Status (Alias)',
+        description: 'Checks whether the authenticated contestant has joined the specified room and contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: 'RM-001' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: 'CNT-2026-1002' } }
+        ],
+        responses: {
+          200: {
+            description: 'Join status fetched successfully.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RoomCycleJoinStatusResponse' }
               }
             }
           }
@@ -2837,15 +3112,22 @@ export const swaggerDocument = {
       },
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Contestant Join Room & Contest',
+        summary: 'Contestant Join Room & Contest (Alias)',
         description: 'Registers the authenticated contestant into the room cohort and associated contest.',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' }, example: 'RM-001' },
-          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' }, example: 'CNT-2026-1002' }
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: 'RM-001' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: 'CNT-2026-1002' } }
         ],
         responses: {
-          200: { description: 'Joined room and contest successfully.' }
+          200: {
+            description: 'Joined room cycle successfully.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RoomCycleJoinStatusResponse' }
+              }
+            }
+          }
         }
       }
     },
@@ -2856,11 +3138,32 @@ export const swaggerDocument = {
         description: 'Initializes and records the attempt for the contestant for the specified room and contest task.',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' } },
-          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' } }
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cnt1' } }
         ],
         responses: {
-          200: { description: 'Contest task attempt started successfully.' }
+          200: {
+            description: 'Contest task attempt started successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Contest task attempt started successfully' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        roomId: { type: 'string', example: '66bc91f24d9e123456789rm1' },
+                        contestId: { type: 'string', example: '66bc91f24d9e123456789cnt1' },
+                        startedAt: { type: 'string', format: 'date-time' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -2871,8 +3174,8 @@ export const swaggerDocument = {
         description: 'Submits contestant task proof (media file or text link) and answers for automatic or admin evaluation.',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' } },
-          { name: 'contestId', in: 'path', required: true, schema: { type: 'string' } }
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } },
+          { name: 'contestId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cnt1' } }
         ],
         requestBody: {
           required: true,
@@ -2882,10 +3185,10 @@ export const swaggerDocument = {
                 type: 'object',
                 properties: {
                   mediaFile: { type: 'string', format: 'binary', description: 'Proof image or video file' },
-                  cycleId: { type: 'string' },
-                  taskId: { type: 'string' },
-                  submissionType: { type: 'string', example: 'Image' },
-                  proofNotes: { type: 'string', example: 'Uploaded proof screenshot' },
+                  cycleId: { type: 'string', example: '66bc91f24d9e123456789cyc1' },
+                  taskId: { type: 'string', example: '66bc91f24d9e123456789tsk1' },
+                  submissionType: { type: 'string', enum: ['Link', 'File', 'Text', 'Image', 'Video'], example: 'Image' },
+                  proofNotes: { type: 'string', example: 'Uploaded proof screenshot of completed sprint challenge.' },
                   answers: { type: 'string', description: 'JSON stringified answer map' }
                 }
               }
@@ -2893,14 +3196,151 @@ export const swaggerDocument = {
           }
         },
         responses: {
-          201: { description: 'Task submission recorded for review.' }
+          201: {
+            description: 'Task submission recorded for review.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task submission recorded for review' },
+                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
+                  }
+                }
+              }
+            }
+          },
+          400: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
+    '/api/v1/mobile/room-cycle/submissions': {
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Mobile Contestant Task Proof Submission',
+        description: 'Contestant uploads proof attachment or video link for evaluation in active room cycle.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['roomId', 'taskId'],
+                properties: {
+                  roomId: { type: 'string', example: '66bc91f24d9e123456789rm1' },
+                  taskId: { type: 'string', example: '66bc91f24d9e123456789tsk1' },
+                  cycleId: { type: 'string', example: '66bc91f24d9e123456789cyc1' },
+                  contestId: { type: 'string', example: '66bc91f24d9e123456789cnt1' },
+                  submissionType: { type: 'string', enum: ['Link', 'File', 'Text', 'Image', 'Video'], example: 'Video' },
+                  mediaFile: { type: 'string', format: 'binary', description: 'Proof image or video file' },
+                  mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=demo' },
+                  proofNotes: { type: 'string', example: 'Here is my strategy video.' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Submission uploaded successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task submission uploaded successfully. Submitted for admin review.' },
+                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/room-cycle/rooms': {
+      get: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'List All Competition Rooms (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', example: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', example: 10 } }
+        ],
+        responses: {
+          200: {
+            description: 'Admin rooms list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        rooms: { type: 'array', items: { $ref: '#/components/schemas/RoomResponse' } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      post: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Create Room (Admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: { type: 'string', example: 'Beta Warriors' },
+                  description: { type: 'string' },
+                  rules: { type: 'string' },
+                  durationDays: { type: 'number', example: 14 },
+                  maxMembers: { type: 'number', example: 50 },
+                  status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Room created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Room created successfully' },
+                    data: { $ref: '#/components/schemas/RoomResponse' }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
     '/api/admin/room-cycle/members/assign': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Assign Members to Room',
+        summary: 'Assign Members to Room (Admin)',
+        description: 'Assigns contestant IDs to a specific room with role (Member or Leader).',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2910,29 +3350,74 @@ export const swaggerDocument = {
                 type: 'object',
                 required: ['roomId', 'userIds'],
                 properties: {
-                  roomId: { type: 'string' },
-                  userIds: { type: 'array', items: { type: 'string' } },
+                  roomId: { type: 'string', example: '66bc91f24d9e123456789rm1' },
+                  userIds: { type: 'array', items: { type: 'string' }, example: ['66bc91f24d9e123456789usr1'] },
                   role: { type: 'string', enum: ['Member', 'Leader'], default: 'Member' }
                 }
               }
             }
           }
         },
-        responses: { 200: { description: 'Members assigned.' } }
+        responses: {
+          200: {
+            description: 'Members assigned successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Members assigned successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/members/random-assign': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Randomly Assign Unassigned Members',
+        summary: 'Randomly Distribute Unassigned Members (Admin)',
+        description: 'Evenly distributes unassigned contestants across active rooms respecting max member limits.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Random member distribution completed.' } }
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  userIds: { type: 'array', items: { type: 'string' } }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Random member distribution completed.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Random assignment completed' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/members/transfer': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Transfer Member Between Rooms',
+        summary: 'Transfer Member Between Rooms (Admin)',
+        description: 'Transfers a contestant from one room cohort to another room.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2942,39 +3427,85 @@ export const swaggerDocument = {
                 type: 'object',
                 required: ['userId', 'fromRoomId', 'toRoomId'],
                 properties: {
-                  userId: { type: 'string' },
-                  fromRoomId: { type: 'string' },
-                  toRoomId: { type: 'string' }
+                  userId: { type: 'string', example: '66bc91f24d9e123456789usr1' },
+                  fromRoomId: { type: 'string', example: '66bc91f24d9e123456789rm1' },
+                  toRoomId: { type: 'string', example: '66bc91f24d9e123456789rm2' }
                 }
               }
             }
           }
         },
-        responses: { 200: { description: 'Member transferred.' } }
+        responses: {
+          200: {
+            description: 'Member transferred successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Member transferred successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/members/{roomId}/{userId}': {
       delete: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Remove Member from Room',
+        summary: 'Remove Member from Room (Admin)',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'roomId', in: 'path', required: true, schema: { type: 'string' } },
-          { name: 'userId', in: 'path', required: true, schema: { type: 'string' } }
+          { name: 'roomId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789rm1' } },
+          { name: 'userId', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789usr1' } }
         ],
-        responses: { 200: { description: 'Member removed.' } }
+        responses: {
+          200: {
+            description: 'Member removed from room.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Member removed from room' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/cycles': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get 10-Cycle Blueprint List',
+        summary: 'Get 10-Cycle Blueprint List (Admin)',
+        description: 'Retrieves the complete 10-cycle sprint blueprints with prize pools and duration details.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'All 10 bi-weekly cycles.' } }
+        responses: {
+          200: {
+            description: 'All 10 bi-weekly cycles retrieved.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/CycleResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Create New Cycle',
+        summary: 'Create New Blueprint Cycle (Admin)',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2986,40 +3517,64 @@ export const swaggerDocument = {
                 properties: {
                   cycleNumber: { type: 'number', example: 1 },
                   title: { type: 'string', example: 'Sprint Season 1' },
-                  description: { type: 'string' },
+                  description: { type: 'string', example: '14-day competitive sprint' },
                   rules: { type: 'string' },
                   guidelines: { type: 'string' },
-                  durationDays: { type: 'number', example: 14 }
+                  durationDays: { type: 'number', example: 14 },
+                  prizePoolCoins: { type: 'number', example: 5000 },
+                  timerMinutes: { type: 'number', example: 60 }
                 }
               }
             }
           }
         },
-        responses: { 201: { description: 'Cycle created.' } }
-      }
-    },
-    '/api/admin/room-cycle/cycles/{id}/set-active': {
-      put: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Set Active Cycle',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Active cycle updated.' } }
+        responses: {
+          201: {
+            description: 'Cycle created successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Cycle created successfully' },
+                    data: { $ref: '#/components/schemas/CycleResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/cycles/{id}': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get Cycle Details by ID',
+        summary: 'Get Cycle Details by ID (Admin)',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Cycle details object.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
+        responses: {
+          200: {
+            description: 'Cycle details object.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/CycleResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       put: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Update Cycle Details & Settings',
+        summary: 'Update Cycle Details & Schedule (Admin)',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
         requestBody: {
           required: true,
           content: {
@@ -3029,50 +3584,135 @@ export const swaggerDocument = {
                 properties: {
                   cycleNumber: { type: 'number', example: 1 },
                   title: { type: 'string', example: 'Bi-Weekly Sprint 1' },
-                  description: { type: 'string', example: 'Updated cycle sprint details' },
-                  rules: { type: 'string', example: 'Rules for this cycle' },
-                  guidelines: { type: 'string', example: 'Guidelines for this cycle' },
+                  description: { type: 'string' },
+                  rules: { type: 'string' },
                   durationDays: { type: 'number', example: 14 },
                   prizePoolCoins: { type: 'number', example: 5000 },
-                  timerMinutes: { type: 'number', example: 60 },
-                  maxSeats: { type: 'number', example: 100 },
-                  coverImage: { type: 'string', example: 'https://example.com/cover.png' },
-                  promoVideoUrl: { type: 'string', example: 'https://example.com/video.mp4' },
-                  rulesPdfUrl: { type: 'string', example: 'https://example.com/rules.pdf' },
-                  roomId: { type: 'string' },
-                  taskIds: { type: 'array', items: { type: 'string' } },
-                  startDate: { type: 'string', format: 'date-time' },
-                  endDate: { type: 'string', format: 'date-time' },
-                  status: { type: 'string', enum: ['Draft', 'Published', 'Running', 'Completed', 'Upcoming', 'Active', 'Archived'] }
+                  status: { type: 'string', enum: ['Draft', 'Published', 'Running', 'Completed', 'Upcoming', 'Active', 'Archived'], example: 'Active' }
                 }
               }
             }
           }
         },
-        responses: { 200: { description: 'Cycle details updated.' } }
+        responses: {
+          200: {
+            description: 'Cycle details updated.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Cycle updated' },
+                    data: { $ref: '#/components/schemas/CycleResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       delete: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Delete Cycle by ID',
+        summary: 'Delete Cycle by ID (Admin)',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Cycle deleted successfully.' } }
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
+        responses: {
+          200: {
+            description: 'Cycle deleted successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Cycle deleted successfully' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/admin/room-cycle/cycles/{id}/set-active': {
+      put: {
+        tags: ['11. Bi-Weekly Room Cycle Module'],
+        summary: 'Set Active Running Cycle (Admin)',
+        description: 'Marks the specified cycle as currently active across all cohort rooms.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
+        responses: {
+          200: {
+            description: 'Active cycle updated.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Active cycle updated' },
+                    data: { $ref: '#/components/schemas/CycleResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/submissions': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Task Submissions for Admin Review',
+        description: 'Fetches contestant task submissions with filters for roomId, cycleId, and status.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Submissions list.' } }
+        parameters: [
+          { name: 'roomId', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'cycleId', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Pending', 'Approved', 'Rejected'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', example: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', example: 10 } }
+        ],
+        responses: {
+          200: {
+            description: 'Submissions list retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        submissions: { type: 'array', items: { $ref: '#/components/schemas/RoomSubmissionResponse' } },
+                        pagination: {
+                          type: 'object',
+                          properties: {
+                            total: { type: 'integer', example: 1 },
+                            page: { type: 'integer', example: 1 },
+                            limit: { type: 'integer', example: 10 },
+                            totalPages: { type: 'integer', example: 1 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/submissions/{id}/review': {
       put: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Review & Grade Task Submission',
+        summary: 'Grade & Review Task Submission (Admin)',
+        description: 'Submits reviewer evaluation, points, bonus, penalty, and feedback on contestant task submissions.',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789sub1' } }],
         requestBody: {
           required: true,
           content: {
@@ -3081,48 +3721,131 @@ export const swaggerDocument = {
                 type: 'object',
                 required: ['status', 'score'],
                 properties: {
-                  status: { type: 'string', enum: ['Approved', 'Rejected', 'Resubmit_Requested'] },
+                  status: { type: 'string', enum: ['Approved', 'Rejected', 'Needs Revision'], example: 'Approved' },
                   score: { type: 'number', example: 100 },
                   bonus: { type: 'number', example: 10 },
                   penalty: { type: 'number', example: 0 },
-                  feedback: { type: 'string', example: 'Great submission!' }
+                  feedback: { type: 'string', example: 'Great submission and clear strategy!' }
                 }
               }
             }
           }
         },
-        responses: { 200: { description: 'Submission review recorded.' } }
+        responses: {
+          200: {
+            description: 'Submission review recorded.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Submission review recorded' },
+                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/leaderboard': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Leaderboard (Room, Cycle, or Overall Scope)',
+        description: 'Retrieves ranked leaderboard records filtered by Scope (Room, Cycle, Overall), cycleId, or roomId.',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'scope', in: 'query', required: false, schema: { type: 'string', enum: ['Room', 'Cycle', 'Overall'], default: 'Room' } }
+          { name: 'scope', in: 'query', required: false, schema: { type: 'string', enum: ['Room', 'Cycle', 'Overall'], default: 'Room' } },
+          { name: 'roomId', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'cycleId', in: 'query', required: false, schema: { type: 'string' } }
         ],
-        responses: { 200: { description: 'Leaderboard list.' } }
+        responses: {
+          200: {
+            description: 'Leaderboard list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/RoomLeaderboardEntryResponse' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/leaderboard/recalculate': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Recalculate Leaderboard Scores',
+        summary: 'Recalculate Leaderboard Scores (Admin)',
+        description: 'Triggers a full recalculation of member accumulated points and ranks across all rooms.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Leaderboard scores recalculated.' } }
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  cycleId: { type: 'string', example: '66bc91f24d9e123456789cyc1' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Leaderboard scores recalculated.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Leaderboard recalculation completed' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/rewards': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Reward Rules List',
+        description: 'Retrieves all active reward distribution rules for room cycles.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Reward rules.' } }
+        responses: {
+          200: {
+            description: 'Reward rules list.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'array', items: { $ref: '#/components/schemas/RoomRewardResponse' } }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Create Reward Rule',
+        summary: 'Create Reward Rule (Admin)',
+        description: 'Configures a new reward tier rule based on leaderboard ranking.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -3133,7 +3856,7 @@ export const swaggerDocument = {
                 required: ['title', 'rewardType', 'minRank', 'maxRank'],
                 properties: {
                   title: { type: 'string', example: 'Top 3 Cash Pool' },
-                  rewardType: { type: 'string', enum: ['Cash', 'Wallet Credit', 'Coupons', 'Badges', 'Certificates'] },
+                  rewardType: { type: 'string', enum: ['Cash', 'Wallet Credit', 'Coupons', 'Badges', 'Certificates'], example: 'Cash' },
                   amountOrValue: { type: 'number', example: 500 },
                   minRank: { type: 'number', example: 1 },
                   maxRank: { type: 'number', example: 3 }
@@ -3142,37 +3865,134 @@ export const swaggerDocument = {
             }
           }
         },
-        responses: { 201: { description: 'Reward rule created.' } }
+        responses: {
+          201: {
+            description: 'Reward rule created.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Reward rule created' },
+                    data: { $ref: '#/components/schemas/RoomRewardResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/rewards/distribute': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Distribute Rewards to Winners',
+        summary: 'Distribute Rewards to Qualified Winners (Admin)',
+        description: 'Executes automated credit/cash reward payouts to contestants according to leaderboard standings.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Rewards distributed.' } }
+        responses: {
+          200: {
+            description: 'Rewards distributed successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Rewards distribution executed' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/settings': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get Room Cycle Module Settings',
+        summary: 'Get Room Cycle Module Settings (Admin)',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Settings details.' } }
+        responses: {
+          200: {
+            description: 'Settings details.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/RoomCycleSettingsResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       put: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Update Settings (Auto-locking, Capacity, Point Weights)',
+        summary: 'Update Settings (Admin)',
+        description: 'Updates module settings including auto-locking, room capacity limits, and point weight percentages.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Settings updated.' } }
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  autoLocking: { type: 'boolean', example: true },
+                  maxRoomCapacity: { type: 'number', example: 50 },
+                  cycleDurationDays: { type: 'number', example: 14 },
+                  taskWeightPercentage: { type: 'number', example: 70 },
+                  quizWeightPercentage: { type: 'number', example: 30 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Settings updated successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Settings updated successfully' },
+                    data: { $ref: '#/components/schemas/RoomCycleSettingsResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/admin/room-cycle/analytics': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get Module Dashboard Analytics',
+        summary: 'Get Module Dashboard Analytics (Admin)',
+        description: 'Fetches module KPIs, active rooms, completion rate, average scores, and top performers.',
         security: [{ bearerAuth: [] }],
-        responses: { 200: { description: 'Module KPIs, top rooms, and top performers.' } }
+        responses: {
+          200: {
+            description: 'Module KPIs, top rooms, and top performers.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/RoomCycleAnalyticsResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     '/api/grand-contests': {
