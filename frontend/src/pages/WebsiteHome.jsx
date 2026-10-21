@@ -199,6 +199,32 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   // Contest Detail Modal state
   const [selectedContestModal, setSelectedContestModal] = useState(null);
   const [joinedContestIds, setJoinedContestIds] = useState([]);
+  const [contestStatusInfo, setContestStatusInfo] = useState(null);
+  const [contestStatusLoading, setContestStatusLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedContestModal) {
+      setContestStatusInfo(null);
+      return;
+    }
+    const cId = selectedContestModal._id || selectedContestModal.id || selectedContestModal.contestId;
+    if (!cId) return;
+
+    setContestStatusLoading(true);
+    axios.get(`/api/grand-contests/${cId}/check-status`, { withCredentials: true })
+      .catch(() => axios.get(`/api/week/rooms/${cId}/contests/${cId}/check-status`, { withCredentials: true }))
+      .then(res => {
+        if (res && res.data && res.data.success) {
+          const sData = res.data.data || res.data;
+          setContestStatusInfo(sData);
+          if (res.data.isJoined || sData.isJoined) {
+            setJoinedContestIds(prev => prev.includes(cId) ? prev : [...prev, cId]);
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setContestStatusLoading(false));
+  }, [selectedContestModal]);
 
   // Daily Wheel state
   const [isSpinning, setIsSpinning] = useState(false);
@@ -1392,6 +1418,33 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
                     <span className="text-sm font-black text-white">{selectedContestModal.entryFee}</span>
                   </div>
                 </div>
+
+                {contestStatusInfo && (
+                  <div className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between transition-all ${
+                    contestStatusInfo.completed
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                      : contestStatusInfo.isJoined
+                      ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300'
+                      : 'bg-white/5 border-white/10 text-white/70'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">
+                        {contestStatusInfo.completed
+                          ? '🏆 All Tasks Completed'
+                          : contestStatusInfo.isJoined
+                          ? '✓ Registered Contestant'
+                          : contestStatusInfo.canJoin
+                          ? '✨ Registration Open'
+                          : (contestStatusInfo.cannotJoinReason || 'Registration Closed')}
+                      </span>
+                    </div>
+                    {contestStatusInfo.totalTasks > 0 && (
+                      <span className="font-mono text-[11px] bg-black/50 px-2.5 py-0.5 rounded-full border border-white/10">
+                        {contestStatusInfo.completedTasks || 0} / {contestStatusInfo.totalTasks} Tasks
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {!isAuthenticated && (
                   <div className="bg-[#0D0714] border border-[#CEF500]/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">

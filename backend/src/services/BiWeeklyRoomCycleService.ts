@@ -18,10 +18,11 @@ export class BiWeeklyRoomCycleService {
   // ================= ROOM MANAGEMENT =================
   async createRoom(data: Partial<IRoom>) {
     const count = await Room.countDocuments();
-    const code = `RM-${String(count + 1).padStart(3, '0')}`;
+    const code = data.code && data.code.trim() ? data.code.trim().toUpperCase() : `RM-${String(count + 1).padStart(3, '0')}`;
 
     const roomImage = data.roomImage ? saveBase64File(data.roomImage, 'room', 'image') : '';
     const cycleIds = Array.isArray(data.cycleIds) ? data.cycleIds : [];
+    const taskIds = Array.isArray(data.taskIds) ? data.taskIds : [];
 
     const room = await Room.create({
       code,
@@ -30,8 +31,20 @@ export class BiWeeklyRoomCycleService {
       rules: data.rules || '',
       guidelines: data.guidelines || '',
       durationDays: Number(data.durationDays) || 14,
-      maxMembers: data.maxMembers || 50,
+      maxMembers: Number(data.maxMembers) || 50,
+      prizePool: Number(data.prizePool) || (data.entryFeeType === 'Cash' ? 50000 : (Number(data.coinsReward) || 10000)),
+      entryFee: Math.max(1, Number(data.entryFee !== undefined && data.entryFee !== null ? data.entryFee : data.entryFeeCoins) || (data.entryFeeType === 'Cash' ? 99 : 50)),
+      entryFeeType: data.entryFeeType === 'Cash' ? 'Cash' : 'Coins',
+      isFree: false,
+      entryFeeCoins: data.entryFeeType === 'Cash' ? 0 : Math.max(1, Number(data.entryFeeCoins !== undefined && data.entryFeeCoins !== null ? data.entryFeeCoins : data.entryFee) || 50),
+      coinsReward: Number(data.coinsReward) || (data.entryFeeType === 'Cash' ? 0 : (Number(data.prizePool) || 1000)),
+      timerLimit: Number(data.timerLimit) || 30,
+      startDate: data.startDate ? new Date(data.startDate) : new Date(),
+      endDate: data.endDate ? new Date(data.endDate) : new Date(Date.now() + (Number(data.durationDays) || 14) * 24 * 60 * 60 * 1000),
+      registrationStart: data.registrationStart ? new Date(data.registrationStart) : new Date(),
+      registrationEnd: data.registrationEnd ? new Date(data.registrationEnd) : new Date(Date.now() + (Number(data.durationDays) || 14) * 24 * 60 * 60 * 1000),
       cycleIds,
+      taskIds,
       roomImage,
       status: data.status || 'Active',
       autoAssignment: data.autoAssignment !== undefined ? data.autoAssignment : true
@@ -40,6 +53,13 @@ export class BiWeeklyRoomCycleService {
     if (cycleIds.length > 0) {
       await Cycle.updateMany(
         { _id: { $in: cycleIds } },
+        { roomId: room._id }
+      ).catch(() => null);
+    }
+
+    if (taskIds.length > 0) {
+      await Task.updateMany(
+        { _id: { $in: taskIds } },
         { roomId: room._id }
       ).catch(() => null);
     }
@@ -81,11 +101,13 @@ export class BiWeeklyRoomCycleService {
     const skip = (Number(page) - 1) * Number(limit);
     const rooms = await Room.find(filter)
       .populate('cycleIds', 'cycleNumber title status startDate endDate')
+      .populate('taskIds', 'title taskType submissionType points status order')
       .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
       .skip(skip)
       .limit(Number(limit));
 
-    const roomList = [];
+    const roomList: any[] = [];
+    let idx = 0;
     for (const rm of rooms) {
       if (rm.roomImage && rm.roomImage.startsWith('data:')) {
         const savedUrl = saveBase64File(rm.roomImage, 'room', 'image');
@@ -93,16 +115,72 @@ export class BiWeeklyRoomCycleService {
         await Room.findByIdAndUpdate(rm._id, { roomImage: savedUrl }).catch(() => null);
       }
 
+      // Respect configured fee and fee type. Never allow Free.
+      let needsHeal = false;
+      if (rm.entryFeeType === 'Cash') {
+        const cashFee = Math.max(1, Number(rm.entryFee) || 99);
+        rm.isFree = false;
+        rm.entryFeeType = 'Cash';
+        rm.entryFee = cashFee;
+        rm.entryFeeCoins = 0;
+        if (!rm.prizePool || rm.prizePool === 0) {
+          rm.prizePool = 50000;
+          needsHeal = true;
+        }
+      } else {
+        const coinsFee = Math.max(1, Number(rm.entryFee !== undefined && rm.entryFee !== null ? rm.entryFee : rm.entryFeeCoins) || 50);
+        rm.isFree = false;
+        rm.entryFeeType = 'Coins';
+        rm.entryFee = coinsFee;
+        rm.entryFeeCoins = coinsFee;
+        if (!rm.prizePool || rm.prizePool === 0) {
+          rm.prizePool = Number(rm.coinsReward) || 10000;
+          needsHeal = true;
+        }
+        if (!rm.coinsReward || rm.coinsReward === 0) {
+          rm.coinsReward = Number(rm.prizePool) || 1000;
+          needsHeal = true;
+        }
+      }
+
+      if (needsHeal) {
+        await Room.findByIdAndUpdate(rm._id, {
+          prizePool: rm.prizePool,
+          coinsReward: rm.coinsReward,
+          entryFee: rm.entryFee,
+          entryFeeCoins: rm.entryFeeCoins,
+          entryFeeType: rm.entryFeeType,
+          isFree: false
+        }).catch(() => null);
+      }
+
+      // Real active members count
+      const activeMembersCount = await RoomMember.countDocuments({ roomId: rm._id, status: 'Active' });
+      const membersCount = activeMembersCount > 0 ? activeMembersCount : (rm.membersCount || 0);
+
+      // Total points from all active members in this room
+      const pointsAgg = await RoomMember.aggregate([
+        { $match: { roomId: rm._id, status: 'Active' } },
+        { $group: { _id: null, totalPoints: { $sum: '$accumulatedPoints' } } }
+      ]);
+      const totalPoints = (pointsAgg[0] && pointsAgg[0].totalPoints) ? pointsAgg[0].totalPoints : (rm.totalPoints || 0);
+
       // Top Scorer / Leaderboard highlight
       const topMemberObj = await RoomMember.findOne({ roomId: rm._id, status: 'Active' })
         .populate('userId', 'name avatar email')
         .sort({ accumulatedPoints: -1 });
 
-      const topMember = topMemberObj && (topMemberObj.userId as any) ? {
-        name: (topMemberObj.userId as any).name || 'User',
-        avatar: (topMemberObj.userId as any).avatar || '',
-        points: topMemberObj.accumulatedPoints || 0
-      } : null;
+      let topMember: any = null;
+      if (topMemberObj) {
+        const u = topMemberObj.userId as any;
+        const uName = typeof u === 'object' && u ? (u.name || u.email || 'Member') : 'Member';
+        const uAvatar = typeof u === 'object' && u ? (u.avatar || '') : '';
+        topMember = {
+          name: uName,
+          avatar: uAvatar,
+          points: topMemberObj.accumulatedPoints || 0
+        };
+      }
 
       // Submissions Analytics
       const totalSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id });
@@ -111,10 +189,15 @@ export class BiWeeklyRoomCycleService {
       const pendingSubmissions = await RoomSubmission.countDocuments({ roomId: rm._id, status: 'Pending' });
       const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
 
-      const activeTasksCount = await Task.countDocuments({ status: { $in: ['Published', 'Running'] } }).catch(() => 0);
+      const activeTasksCount = Array.isArray(rm.taskIds) && rm.taskIds.length > 0
+        ? rm.taskIds.length
+        : await Task.countDocuments({ $or: [{ roomId: rm._id }, { status: { $in: ['Published', 'Running'] } }] }).catch(() => 0);
 
       const isJoined = userJoinedRoomIds.includes(rm._id.toString());
       const rmObj = rm.toObject();
+      (rmObj as any).membersCount = membersCount;
+      (rmObj as any).totalPoints = totalPoints;
+      (rmObj as any).rank = (rm.rank && rm.rank > 0) ? rm.rank : (skip + idx + 1);
       (rmObj as any).topMember = topMember;
       (rmObj as any).isJoined = isJoined;
       (rmObj as any).joined = isJoined;
@@ -129,6 +212,18 @@ export class BiWeeklyRoomCycleService {
       };
 
       roomList.push(rmObj);
+      idx++;
+    }
+
+    // Rank rooms dynamically by total points if multiple rooms share duplicate ranks
+    const allRanks = roomList.map((r: any) => r.rank);
+    const hasDuplicateRanks = new Set(allRanks).size !== allRanks.length;
+    if (hasDuplicateRanks) {
+      const sortedByPoints = [...roomList].sort((a: any, b: any) => (b.totalPoints || 0) - (a.totalPoints || 0));
+      sortedByPoints.forEach((r: any, i: number) => {
+        const found = roomList.find((x: any) => x._id.toString() === r._id.toString());
+        if (found) found.rank = skip + i + 1;
+      });
     }
 
     const total = await Room.countDocuments(filter);
@@ -185,24 +280,85 @@ export class BiWeeklyRoomCycleService {
   }
 
   async getRoomById(roomId: string) {
-    const room = await Room.findById(roomId).populate('cycleIds', 'cycleNumber title status startDate endDate');
+    let room: any = null;
+    if (mongoose.Types.ObjectId.isValid(roomId)) {
+      room = await Room.findById(roomId)
+        .populate('cycleIds', 'cycleNumber title status startDate endDate')
+        .populate('taskIds', 'title taskType submissionType points status order description instructions mediaUrl deadline reviewType');
+    }
+
+    if (!room) {
+      const allRooms = await Room.find()
+        .populate('cycleIds', 'cycleNumber title status startDate endDate')
+        .populate('taskIds', 'title taskType submissionType points status order description instructions mediaUrl deadline reviewType');
+      room = allRooms.find((r: any) => {
+        const slug = (r.title || '').toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+        const code = (r.roomCode || '').toLowerCase();
+        const target = roomId.toLowerCase().trim();
+        return slug === target || code === target || (r.title || '').toLowerCase() === decodeURIComponent(target);
+      }) || null;
+    }
+
     if (!room) throw new Error('Room not found');
 
-    const cycles = await this.getRoomCycles(roomId);
+    const realRoomId = room._id.toString();
 
-    const members = await RoomMember.find({ roomId, status: 'Active' })
+    let needsHeal = false;
+    if (room.entryFeeType === 'Cash') {
+      if (!room.prizePool || room.prizePool === 0) {
+        room.prizePool = 50000;
+        needsHeal = true;
+      }
+      room.entryFee = Math.max(1, Number(room.entryFee) || 99);
+      room.entryFeeCoins = 0;
+      room.isFree = false;
+    } else {
+      room.entryFeeType = 'Coins';
+      const coinsFee = Math.max(1, Number(room.entryFee !== undefined && room.entryFee !== null ? room.entryFee : room.entryFeeCoins) || 50);
+      room.entryFee = coinsFee;
+      room.entryFeeCoins = coinsFee;
+      room.isFree = false;
+      if (!room.prizePool || room.prizePool === 0) {
+        room.prizePool = Number(room.coinsReward) || 10000;
+        needsHeal = true;
+      }
+      if (!room.coinsReward || room.coinsReward === 0) {
+        room.coinsReward = Number(room.prizePool) || 1000;
+        needsHeal = true;
+      }
+    }
+
+    if (needsHeal) {
+      await Room.findByIdAndUpdate(realRoomId, {
+        prizePool: room.prizePool,
+        coinsReward: room.coinsReward,
+        entryFee: room.entryFee,
+        entryFeeCoins: room.entryFeeCoins,
+        entryFeeType: room.entryFeeType,
+        isFree: false
+      }).catch(() => null);
+    }
+
+    const cycles = await this.getRoomCycles(realRoomId);
+    const tasks = (room.taskIds && room.taskIds.length > 0)
+      ? room.taskIds
+      : await Task.find({ roomId: room._id }).sort({ order: 1 });
+
+    const members = await RoomMember.find({ roomId: realRoomId, status: 'Active' })
       .populate('userId', 'name email avatar phone')
       .sort({ accumulatedPoints: -1 });
 
-    const totalSubmissions = await RoomSubmission.countDocuments({ roomId });
-    const approvedSubmissions = await RoomSubmission.countDocuments({ roomId, status: 'Approved' });
-    const rejectedSubmissions = await RoomSubmission.countDocuments({ roomId, status: 'Rejected' });
-    const pendingSubmissions = await RoomSubmission.countDocuments({ roomId, status: 'Pending' });
+    const totalSubmissions = await RoomSubmission.countDocuments({ roomId: realRoomId });
+    const approvedSubmissions = await RoomSubmission.countDocuments({ roomId: realRoomId, status: 'Approved' });
+    const rejectedSubmissions = await RoomSubmission.countDocuments({ roomId: realRoomId, status: 'Rejected' });
+    const pendingSubmissions = await RoomSubmission.countDocuments({ roomId: realRoomId, status: 'Pending' });
     const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
 
-    const activeTasksCount = await Task.countDocuments({ status: { $in: ['Published', 'Running'] } }).catch(() => 0);
+    const activeTasksCount = tasks.length > 0
+      ? tasks.length
+      : await Task.countDocuments({ status: { $in: ['Published', 'Running'] } }).catch(() => 0);
 
-    const recentSubmissions = await RoomSubmission.find({ roomId })
+    const recentSubmissions = await RoomSubmission.find({ roomId: realRoomId })
       .populate('userId', 'name email avatar')
       .populate('taskId', 'title taskType points')
       .sort({ createdAt: -1 })
@@ -219,29 +375,97 @@ export class BiWeeklyRoomCycleService {
       recentSubmissions
     };
 
-    return { room, members, cycles, analytics };
+    return { room, members, cycles, tasks, analytics };
+  }
+
+  async getRoomTasks(roomId: string) {
+    let targetId = roomId;
+    if (!mongoose.Types.ObjectId.isValid(roomId)) {
+      const roomData = await this.getRoomById(roomId).catch(() => null);
+      if (roomData?.room?._id) targetId = roomData.room._id.toString();
+      else return [];
+    }
+    const room = await Room.findById(targetId).populate('taskIds');
+    if (room && room.taskIds && room.taskIds.length > 0) {
+      return room.taskIds;
+    }
+    return await Task.find({ roomId: new mongoose.Types.ObjectId(targetId) }).sort({ order: 1 });
   }
 
   async updateRoom(roomId: string, data: Partial<IRoom>) {
-    const updateData = { ...data };
+    let realRoomId = roomId;
+    if (!mongoose.Types.ObjectId.isValid(roomId)) {
+      const roomData = await this.getRoomById(roomId).catch(() => null);
+      if (roomData?.room?._id) realRoomId = roomData.room._id.toString();
+    }
+    const updateData: any = { ...data };
     if (updateData.roomImage) {
       updateData.roomImage = saveBase64File(updateData.roomImage, 'room', 'image');
     }
+    updateData.isFree = false;
+    if (updateData.entryFeeType === 'Cash') {
+      updateData.entryFeeType = 'Cash';
+      updateData.entryFee = Math.max(1, Number(updateData.entryFee) || 99);
+      updateData.entryFeeCoins = 0;
+      if (updateData.prizePool !== undefined) {
+        updateData.prizePool = Math.max(0, Number(updateData.prizePool) || 0);
+      }
+      if (updateData.coinsReward !== undefined) {
+        updateData.coinsReward = Math.max(0, Number(updateData.coinsReward) || 0);
+      }
+    } else {
+      updateData.entryFeeType = 'Coins';
+      const coins = Math.max(1, Number(updateData.entryFee !== undefined && updateData.entryFee !== null ? updateData.entryFee : updateData.entryFeeCoins) || 50);
+      updateData.entryFee = coins;
+      updateData.entryFeeCoins = coins;
 
-    const room = await Room.findByIdAndUpdate(roomId, updateData, { new: true }).populate(
-      'cycleIds',
-      'cycleNumber title status startDate endDate'
-    );
+      const pPool = updateData.prizePool !== undefined ? Math.max(0, Number(updateData.prizePool) || 0) : undefined;
+      const cReward = updateData.coinsReward !== undefined ? Math.max(0, Number(updateData.coinsReward) || 0) : undefined;
+
+      if (pPool !== undefined && pPool > 0) {
+        updateData.prizePool = pPool;
+        updateData.coinsReward = (cReward !== undefined && cReward > 0) ? cReward : pPool;
+      } else if (cReward !== undefined && cReward > 0) {
+        updateData.coinsReward = cReward;
+        updateData.prizePool = cReward;
+      } else if (pPool === 0 && (cReward === 0 || cReward === undefined)) {
+        updateData.prizePool = 10000;
+        updateData.coinsReward = 1000;
+      }
+    }
+    if (updateData.timerLimit !== undefined) updateData.timerLimit = Math.max(1, Number(updateData.timerLimit) || 30);
+    if (updateData.maxMembers !== undefined) updateData.maxMembers = Math.max(1, Number(updateData.maxMembers) || 50);
+    if (updateData.durationDays !== undefined) updateData.durationDays = Math.max(1, Number(updateData.durationDays) || 14);
+    if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
+    if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
+    if (updateData.registrationStart) updateData.registrationStart = new Date(updateData.registrationStart);
+    if (updateData.registrationEnd) updateData.registrationEnd = new Date(updateData.registrationEnd);
+
+    const room = await Room.findByIdAndUpdate(realRoomId, updateData, { new: true })
+      .populate('cycleIds', 'cycleNumber title status startDate endDate')
+      .populate('taskIds', 'title taskType submissionType points status order description instructions mediaUrl deadline reviewType');
     if (!room) throw new Error('Room not found');
 
     if (data.cycleIds && Array.isArray(data.cycleIds)) {
       const newCycleIds = data.cycleIds.map((id: any) => id.toString());
       await Cycle.updateMany(
         { _id: { $in: newCycleIds } },
-        { roomId: roomId }
+        { roomId: realRoomId }
       ).catch(() => null);
       await Cycle.updateMany(
-        { roomId: roomId, _id: { $nin: newCycleIds } },
+        { roomId: realRoomId, _id: { $nin: newCycleIds } },
+        { $unset: { roomId: 1 } }
+      ).catch(() => null);
+    }
+
+    if (data.taskIds && Array.isArray(data.taskIds)) {
+      const newTaskIds = data.taskIds.map((id: any) => id.toString());
+      await Task.updateMany(
+        { _id: { $in: newTaskIds } },
+        { roomId: roomId }
+      ).catch(() => null);
+      await Task.updateMany(
+        { roomId: roomId, _id: { $nin: newTaskIds } },
         { $unset: { roomId: 1 } }
       ).catch(() => null);
     }
@@ -360,7 +584,10 @@ export class BiWeeklyRoomCycleService {
 
   // ================= CYCLE MANAGEMENT =================
   async getCycles(): Promise<any[]> {
-    const cycles: any[] = await Cycle.find().sort({ cycleNumber: 1 });
+    const cycles: any[] = await Cycle.find()
+      .populate('roomId', 'name category status code')
+      .populate('taskIds', 'title taskType submissionType points status order')
+      .sort({ cycleNumber: 1 });
     for (const cycle of cycles) {
       let updated = false;
       if (cycle.coverImage && cycle.coverImage.startsWith('data:')) {
@@ -390,7 +617,9 @@ export class BiWeeklyRoomCycleService {
     if (!mongoose.Types.ObjectId.isValid(cycleId)) {
       throw new Error('Cycle not found');
     }
-    const cycle: any = await Cycle.findById(cycleId).populate('roomId', 'name category status');
+    const cycle: any = await Cycle.findById(cycleId)
+      .populate('roomId', 'name category status code')
+      .populate('taskIds', 'title taskType submissionType points status order');
     if (!cycle) throw new Error('Cycle not found');
 
     let updated = false;
@@ -436,9 +665,11 @@ export class BiWeeklyRoomCycleService {
   async createCycle(data: any) {
     const count = await Cycle.countDocuments();
     const cycleNumber = Number(data.cycleNumber) || count + 1;
-    const coverImage = data.coverImage ? saveBase64File(data.coverImage, 'cycle', 'cover') : '';
-    const promoVideoUrl = data.promoVideoUrl ? saveBase64File(data.promoVideoUrl, 'cycle', 'video') : '';
-    const rulesPdfUrl = data.rulesPdfUrl ? saveBase64File(data.rulesPdfUrl, 'cycle', 'pdf') : '';
+    const coverImage = data.coverImage && data.coverImage.startsWith('data:') ? saveBase64File(data.coverImage, 'cycle', 'cover') : (data.coverImage || '');
+    const promoVideoUrl = data.promoVideoUrl && data.promoVideoUrl.startsWith('data:') ? saveBase64File(data.promoVideoUrl, 'cycle', 'video') : (data.promoVideoUrl || '');
+    const rulesPdfUrl = data.rulesPdfUrl && data.rulesPdfUrl.startsWith('data:') ? saveBase64File(data.rulesPdfUrl, 'cycle', 'pdf') : (data.rulesPdfUrl || '');
+
+    const roomId = data.roomId && data.roomId !== 'All' && mongoose.Types.ObjectId.isValid(data.roomId) ? data.roomId : undefined;
 
     const cycle = await Cycle.create({
       cycleNumber,
@@ -453,7 +684,7 @@ export class BiWeeklyRoomCycleService {
       coverImage,
       promoVideoUrl,
       rulesPdfUrl,
-      roomId: data.roomId && mongoose.Types.ObjectId.isValid(data.roomId) ? data.roomId : undefined,
+      roomId,
       taskIds: Array.isArray(data.taskIds) ? data.taskIds : [],
       startDate: data.startDate ? new Date(data.startDate) : undefined,
       endDate: data.endDate ? new Date(data.endDate) : undefined,
@@ -467,16 +698,30 @@ export class BiWeeklyRoomCycleService {
       return { _id: cycleId, ...data };
     }
     const updateData = { ...data };
-    if (updateData.coverImage) {
+    if (updateData.coverImage && updateData.coverImage.startsWith('data:')) {
       updateData.coverImage = saveBase64File(updateData.coverImage, 'cycle', 'cover');
     }
-    if (updateData.promoVideoUrl) {
+    if (updateData.promoVideoUrl && updateData.promoVideoUrl.startsWith('data:')) {
       updateData.promoVideoUrl = saveBase64File(updateData.promoVideoUrl, 'cycle', 'video');
     }
-    if (updateData.rulesPdfUrl) {
+    if (updateData.rulesPdfUrl && updateData.rulesPdfUrl.startsWith('data:')) {
       updateData.rulesPdfUrl = saveBase64File(updateData.rulesPdfUrl, 'cycle', 'pdf');
     }
-    const cycle = await Cycle.findByIdAndUpdate(cycleId, updateData, { new: true });
+    if (updateData.roomId === 'All' || updateData.roomId === '' || !updateData.roomId) {
+      updateData.roomId = null;
+    } else if (!mongoose.Types.ObjectId.isValid(updateData.roomId)) {
+      delete updateData.roomId;
+    }
+    if (updateData.prizePoolCoins !== undefined) updateData.prizePoolCoins = Number(updateData.prizePoolCoins) || 0;
+    if (updateData.timerMinutes !== undefined) updateData.timerMinutes = Number(updateData.timerMinutes) || 0;
+    if (updateData.maxSeats !== undefined) updateData.maxSeats = Number(updateData.maxSeats) || 0;
+    if (updateData.durationDays !== undefined) updateData.durationDays = Number(updateData.durationDays) || 14;
+    if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
+    if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
+
+    const cycle = await Cycle.findByIdAndUpdate(cycleId, updateData, { new: true })
+      .populate('roomId', 'name category status code')
+      .populate('taskIds', 'title taskType submissionType points status order');
     if (!cycle) throw new Error('Cycle not found');
     return cycle;
   }
@@ -975,17 +1220,25 @@ export class BiWeeklyRoomCycleService {
 
         totalCyclesCount = roomCycles.length;
         const cycleIds = roomCycles.map((c: any) => c._id);
+        const directRoomTaskIds = Array.isArray(targetRoom.taskIds) ? targetRoom.taskIds : [];
 
         // 2. Fetch all tasks belonging to this room and its cycles
+        const taskQueryOr: any[] = [
+          { roomId: targetRoom._id },
+          ...(directRoomTaskIds.length > 0 ? [{ _id: { $in: directRoomTaskIds } }] : []),
+          ...(cycleIds.length > 0 ? [{ cycleId: { $in: cycleIds } }] : [])
+        ];
+
         const allTasks: any[] = await Task.find({
-          $or: [
-            { roomId: targetRoom._id },
-            { cycleId: { $in: cycleIds } }
-          ]
+          $or: taskQueryOr
         }).select('_id cycleId roomId status').lean();
 
         const allRoomTaskIdSet = new Set<string>();
         const taskMapByCycle = new Map<string, Set<string>>();
+
+        for (const tId of directRoomTaskIds) {
+          if (tId) allRoomTaskIdSet.add(tId.toString());
+        }
 
         for (const cycle of roomCycles) {
           const cId = (cycle._id || '').toString();
@@ -1112,7 +1365,7 @@ export class BiWeeklyRoomCycleService {
           totalTasksCount = cycleTasksCount;
           completedTasksCount = cycleCompletedTasksCount;
         } else if (totalTasksCount > 0) {
-          isCompleted = allCyclesCompleted && completedTasksCount >= totalTasksCount;
+          isCompleted = (totalCyclesCount > 0 ? allCyclesCompleted : true) && completedTasksCount >= totalTasksCount;
         } else if (totalCyclesCount > 0) {
           isCompleted = allCyclesCompleted && completedCyclesCount === totalCyclesCount;
         } else if (targetRoom.status === 'Completed') {

@@ -75,6 +75,17 @@ export class GrandContestController {
     }
   }
 
+  async checkGrandContestStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id || (req as any).user?._id || (req.query?.userId as string);
+      const contestId = req.params.id || (req.query?.contestId as string) || (req.query?.id as string);
+      const result = await grandContestService.checkGrandContestStatus(contestId, userId ? userId.toString() : undefined);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   // ================= TASKS & SUBMISSIONS =================
   async getGrandContestTasks(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

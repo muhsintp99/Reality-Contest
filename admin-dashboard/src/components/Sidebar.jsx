@@ -15,10 +15,10 @@ const MENU_ITEMS = [
   { id: 'user-management', label: 'User Management', icon: Users, hasSub: true },
   { id: 'contests', label: 'Contest Management', icon: Trophy },
   { id: 'daily-contest', label: 'Daily Contest Desk', icon: Clock },
-  { id: 'bi-weekly-room-cycle', label: 'Bi-Weekly Room Cycle', icon: Sparkles, hasSub: true },
-  { id: 'categories', label: 'Category Management', icon: Layers },
+  { id: 'bi-weekly-room', label: 'Bi-Weekly Room Cycle', icon: Sparkles, hasSub: true },
 
   { id: 'grand-contest', label: 'Grand Contest', icon: Crown },
+  { id: 'categories', label: 'Category Management', icon: Layers },
   { id: 'question-bank', label: 'Question Bank', icon: HelpCircle, hasSub: true },
   { id: 'surveys', label: 'Survey Management', icon: ClipboardList },
   { id: 'tasks', label: 'Task Management', icon: CheckSquare },
@@ -115,13 +115,12 @@ const ANALYTICS_SUBITEMS = [
 ];
 
 const ROOM_CYCLE_SUBITEMS = [
-  { id: 'bi-weekly-room-cycle/rooms', label: 'Rooms', icon: Layers },
-  { id: 'bi-weekly-room-cycle/cycles', label: 'Cycles', icon: Clock },
-  { id: 'bi-weekly-room-cycle/submissions', label: 'Submissions', icon: FileText },
-  { id: 'bi-weekly-room-cycle/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { id: 'bi-weekly-room-cycle/rewards', label: 'Rewards', icon: Gift },
-  { id: 'bi-weekly-room-cycle/analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'bi-weekly-room-cycle/settings', label: 'Settings', icon: Settings }
+  { id: 'bi-weekly-room/rooms', label: 'Rooms', icon: Layers },
+  { id: 'bi-weekly-room/submissions', label: 'Submissions', icon: FileText },
+  { id: 'bi-weekly-room/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'bi-weekly-room/rewards', label: 'Rewards', icon: Gift },
+  { id: 'bi-weekly-room/analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'bi-weekly-room/settings', label: 'Settings', icon: Settings }
 ];
 
 export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, role, isCollapsed, setIsCollapsed, counts }) => {
@@ -188,7 +187,7 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   React.useEffect(() => {
     if (!activeView) return;
     if (activeView.startsWith('user-management')) setIsUserMgmtOpen(true);
-    if (activeView.startsWith('bi-weekly-room-cycle')) setIsRoomCycleOpen(true);
+    if (activeView.startsWith('bi-weekly-room')) setIsRoomCycleOpen(true);
     if (activeView.startsWith('question-bank')) setIsQuestionBankOpen(true);
     if (activeView.startsWith('banners')) setIsBannerMgmtOpen(true);
     if (activeView.startsWith('cms')) setIsCmsOpen(true);
@@ -204,10 +203,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
       if (!isUserMgmtOpen && !location.pathname.includes('/user-management/')) {
         navigate(`/admin-dashboard/user-management/all-users`);
       }
-    } else if (id === 'bi-weekly-room-cycle') {
+    } else if (id === 'bi-weekly-room') {
       setIsRoomCycleOpen(!isRoomCycleOpen);
-      if (!isRoomCycleOpen && !location.pathname.includes('/bi-weekly-room-cycle/')) {
-        navigate(`/admin-dashboard/bi-weekly-room-cycle/rooms`);
+      if (!isRoomCycleOpen && !location.pathname.includes('/bi-weekly-room/')) {
+        navigate(`/admin-dashboard/bi-weekly-room/rooms`);
       }
     } else if (id === 'question-bank') {
 
@@ -354,12 +353,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isUserMgmtActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isUserMgmtActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isUserMgmtActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -375,11 +373,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown with CSS Smooth Expand/Collapse Transition */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isUserMgmtOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isUserMgmtOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -390,11 +387,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -408,20 +404,19 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
             );
           }
 
-          if (item.id === 'bi-weekly-room-cycle') {
-            const isRoomCycleActive = activeView.startsWith('bi-weekly-room-cycle');
+          if (item.id === 'bi-weekly-room') {
+            const isRoomCycleActive = activeView.startsWith('bi-weekly-room');
             return (
               <div key={item.id} className="space-y-1">
                 <button
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isRoomCycleActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isRoomCycleActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isRoomCycleActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -437,11 +432,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isRoomCycleOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isRoomCycleOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -452,11 +446,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -479,12 +472,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isQbActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isQbActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isQbActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -500,11 +492,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isQuestionBankOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isQuestionBankOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -515,11 +506,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -541,12 +531,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isBannerMgmtActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isBannerMgmtActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isBannerMgmtActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -562,11 +551,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isBannerMgmtOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isBannerMgmtOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -577,11 +565,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -603,12 +590,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isCmsActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isCmsActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isCmsActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -624,11 +610,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isCmsOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isCmsOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -639,11 +624,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -665,12 +649,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isAdsActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isAdsActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isAdsActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -686,11 +669,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isAdsOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isAdsOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -701,11 +683,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -727,12 +708,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isCouponsActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isCouponsActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isCouponsActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -748,11 +728,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isCouponsOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isCouponsOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -763,11 +742,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -789,12 +767,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isReferralsActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isReferralsActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isReferralsActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -810,11 +787,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isReferralsOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isReferralsOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -825,11 +801,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -851,12 +826,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                   onClick={() => handleMenuClick(item.id)}
                   onMouseEnter={(e) => handleMouseEnter(item, e)}
                   onMouseLeave={handleMouseLeave}
-                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                    isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-                  } ${isAnalyticsActive
-                    ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                    : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-                  }`}
+                  className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                    } ${isAnalyticsActive
+                      ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                      : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    }`}
                 >
                   {isAnalyticsActive && (
                     <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -872,11 +846,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
                 {/* Sub-Items Dropdown with CSS Smooth Expand/Collapse Transition */}
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isAnalyticsOpen && (!isCollapsed || isOpenMobile)
-                      ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
-                      : 'grid-rows-[0fr] opacity-0 pointer-events-none'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isAnalyticsOpen && (!isCollapsed || isOpenMobile)
+                    ? 'grid-rows-[1fr] opacity-100 mt-1 mb-1'
+                    : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="pl-2 space-y-1 border-l-2 border-brandPrimary/30 dark:border-white/10 ml-4 py-1">
@@ -887,11 +860,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
                           <button
                             key={sub.id}
                             onClick={() => handleSubItemClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${
-                              isSubActive
-                                ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
-                                : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
-                            }`}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] whitespace-nowrap transition-all duration-200 cursor-pointer ${isSubActive
+                              ? 'bg-brandPrimary text-white font-bold shadow-md shadow-brandPrimary/20 translate-x-0.5'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-brandPrimary dark:hover:text-white hover:bg-brandPrimary/10 dark:hover:bg-white/5 font-medium hover:translate-x-0.5'
+                              }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-white' : 'text-slate-400'}`} />
                             <span className="whitespace-nowrap truncate">{sub.label}</span>
@@ -911,12 +883,11 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
               onClick={() => handleMenuClick(item.id)}
               onMouseEnter={(e) => handleMouseEnter(item, e)}
               onMouseLeave={handleMouseLeave}
-              className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${
-                isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
-              } ${isActive
-                ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
-                : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
-              }`}
+              className={`w-full flex items-center rounded-2xl text-[13px] font-medium transition-all relative group ${isCollapsed ? 'justify-center py-3 px-0' : 'justify-between px-3.5 py-2.5'
+                } ${isActive
+                  ? 'bg-brandPrimary/10 text-brandPrimary dark:text-brandSecondary font-semibold'
+                  : 'hover:bg-slate-100/50 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                }`}
             >
               {isActive && (
                 <div className="absolute left-0 top-1/3 bottom-1/3 w-1 bg-brandPrimary dark:bg-brandSecondary rounded-r-full" />
@@ -935,9 +906,8 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
   return (
     <>
       <aside
-        className={`hidden md:block shrink-0 h-screen sticky top-0 border-r border-[#C4E2A8]/70 dark:border-white/5 transition-all duration-300 z-40 bg-[#E3F0D7]/90 backdrop-blur-md dark:bg-[#0B1120]/40 overflow-hidden ${
-          isCollapsed ? 'w-20' : 'w-64'
-        }`}
+        className={`hidden md:block shrink-0 h-screen sticky top-0 border-r border-[#C4E2A8]/70 dark:border-white/5 transition-all duration-300 z-40 bg-[#E3F0D7]/90 backdrop-blur-md dark:bg-[#0B1120]/40 overflow-hidden ${isCollapsed ? 'w-20' : 'w-64'
+          }`}
       >
         {sidebarContent}
       </aside>

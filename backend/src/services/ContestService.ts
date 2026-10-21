@@ -76,6 +76,20 @@ export class ContestService {
       contest = await Contest.findOne({ contestId: id }).populate('questions').exec();
     }
     if (!contest) {
+      // Attempt lookup by title slug
+      const slugSearch = id.replace(/-/g, ' ');
+      contest = await Contest.findOne({
+        title: { $regex: new RegExp(`^${slugSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+      }).populate('questions').exec();
+      if (!contest) {
+        const all = await Contest.find().populate('questions').limit(100).exec();
+        contest = all.find((c: any) => {
+          const s = (c.title || '').toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+          return s === id.toLowerCase();
+        }) || null;
+      }
+    }
+    if (!contest) {
       throw new NotFoundError('Contest not found.');
     }
     return contest;

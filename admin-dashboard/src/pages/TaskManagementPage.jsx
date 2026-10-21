@@ -85,9 +85,6 @@ export const TaskManagementPage = () => {
     setLoading(true);
     try {
       let res = await axios.get('/api/admin/tasks', { withCredentials: true }).catch(() => null);
-      if (!res || !res.data?.success) {
-        res = await axios.get('/api/admin/room-cycle/tasks', { withCredentials: true }).catch(() => null);
-      }
       if (res?.data?.success) {
         const raw = res.data.data;
         const list = Array.isArray(raw?.tasks) ? raw.tasks : Array.isArray(raw) ? raw : [];
@@ -133,10 +130,7 @@ export const TaskManagementPage = () => {
       const finalMediaUrl = await uploadPendingFile(taskForm.mediaUrl, 'tasks');
       const payload = { ...taskForm, mediaUrl: finalMediaUrl };
 
-      let res = await axios.post('/api/admin/tasks', payload, { withCredentials: true }).catch(() => null);
-      if (!res || !res.data?.success) {
-        res = await axios.post('/api/admin/room-cycle/tasks', payload, { withCredentials: true }).catch(() => null);
-      }
+      let res = await axios.post('/api/admin/tasks', payload, { withCredentials: true });
       showSnackbar(`Task "${taskForm.title}" created successfully!`, 'success');
       fetchTasks();
       setShowCreateDrawer(false);
@@ -158,10 +152,7 @@ export const TaskManagementPage = () => {
       const finalMediaUrl = await uploadPendingFile(editingTask.mediaUrl, 'tasks');
       const payload = { ...editingTask, mediaUrl: finalMediaUrl };
 
-      let res = await axios.put(`/api/admin/tasks/${id}`, payload, { withCredentials: true }).catch(() => null);
-      if (!res || !res.data?.success) {
-        await axios.put(`/api/admin/room-cycle/tasks/${id}`, payload, { withCredentials: true }).catch(() => null);
-      }
+      let res = await axios.put(`/api/admin/tasks/${id}`, payload, { withCredentials: true });
       showSnackbar(`Task "${editingTask.title}" updated successfully!`, 'success');
       fetchTasks();
       setEditingTask(null);
@@ -175,10 +166,7 @@ export const TaskManagementPage = () => {
     const id = task._id || task.id;
     showConfirm('Delete Task', `Are you sure you want to delete task "${task.title}"?`, async () => {
       try {
-        let res = await axios.delete(`/api/admin/tasks/${id}`, { withCredentials: true }).catch(() => null);
-        if (!res || !res.data?.success) {
-          await axios.delete(`/api/admin/room-cycle/tasks/${id}`, { withCredentials: true }).catch(() => null);
-        }
+        let res = await axios.delete(`/api/admin/tasks/${id}`, { withCredentials: true });
         showSnackbar(`Task deleted successfully`, 'success');
         fetchTasks();
       } catch (err) {

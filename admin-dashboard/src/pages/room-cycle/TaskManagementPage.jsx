@@ -58,7 +58,7 @@ export const TaskManagementPage = () => {
   const fetchTasks = async () => {
     try {
       dispatch(setLoading(true));
-      const res = await axios.get('/api/admin/room-cycle/tasks', {
+      const res = await axios.get('/api/admin/tasks', {
         params: { search, cycleId: selectedCycle, taskType: selectedType, page, limit: 10 }
       });
       if (res.data?.success) {
@@ -85,10 +85,10 @@ export const TaskManagementPage = () => {
       const payload = { ...taskFormData, mediaUrl: finalMediaUrl };
 
       if (editingTaskId) {
-        await axios.put(`/api/admin/room-cycle/tasks/${editingTaskId}`, payload);
+        await axios.put(`/api/admin/tasks/${editingTaskId}`, payload);
         showSnackbar('Task updated successfully!', 'success');
       } else {
-        await axios.post('/api/admin/room-cycle/tasks', payload);
+        await axios.post('/api/admin/tasks', payload);
         showSnackbar('Task created successfully!', 'success');
       }
       setIsTaskDrawerOpen(false);
@@ -101,7 +101,7 @@ export const TaskManagementPage = () => {
   const handleDeleteTaskClick = (task) => {
     showConfirm('Delete Task', `Are you sure you want to permanently delete task "${task.title}"?`, async () => {
       try {
-        await axios.delete(`/api/admin/room-cycle/tasks/${task._id}`);
+        await axios.delete(`/api/admin/tasks/${task._id}`);
         showSnackbar(`Task "${task.title}" deleted!`, 'success');
         fetchTasks();
       } catch (err) {

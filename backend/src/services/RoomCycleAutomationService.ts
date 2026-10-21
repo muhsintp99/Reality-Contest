@@ -68,7 +68,7 @@ export class RoomCycleAutomationService {
         await biWeeklyRoomCycleService.distributeRewards();
       }
     } catch (err: any) {
-      logger.error('[RoomCycleAutomationService] Error during automated cycle check:', err?.stack || err?.message || err);
+      logger.error(`[RoomCycleAutomationService] Error during automated cycle check: ${err?.message || err}`);
     }
   }
 

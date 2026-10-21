@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Task from '../models/Task';
 
 // Data Stores for Admin Management Modules
@@ -126,17 +127,40 @@ export class ModuleManagementController {
   // Tasks CRUD (Mongoose Model Integration)
   listTasks = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const { search, status } = req.query;
+      const { search, status, page, limit } = req.query;
       const filter: any = {};
       if (status && status !== 'All') filter.status = status;
       if (search) {
         filter.$or = [
-          { title: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } }
+          { title: { $regex: String(search), $options: 'i' } },
+          { description: { $regex: String(search), $options: 'i' } }
         ];
       }
-      const data = await Task.find(filter).sort({ createdAt: -1 });
-      return res.json({ success: true, count: data.length, data });
+      const pageNum = Math.max(1, Number(page) || 1);
+      const limitNum = limit ? Math.max(1, Number(limit)) : 0;
+
+      let query = Task.find(filter).sort({ order: 1, createdAt: -1 });
+      if (limitNum > 0) {
+        query = query.skip((pageNum - 1) * limitNum).limit(limitNum);
+      }
+      const tasksList = await query;
+      const total = await Task.countDocuments(filter);
+
+      return res.json({
+        success: true,
+        count: tasksList.length,
+        total,
+        data: {
+          tasks: tasksList,
+          pagination: {
+            total,
+            page: pageNum,
+            limit: limitNum || total,
+            totalPages: limitNum ? Math.ceil(total / limitNum) : 1
+          }
+        },
+        tasks: tasksList
+      });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: err.message });
     }
@@ -145,11 +169,23 @@ export class ModuleManagementController {
   getTaskById = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
-      const task = await Task.findById(id);
-      if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-      return res.json({ success: true, data: task });
+      if (!id || id === 'undefined' || id === 'null') {
+        return res.status(400).json({ success: false, message: 'Invalid task ID parameter' });
+      }
+
+      let task = null;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        task = await Task.findById(id);
+      }
+      if (!task) {
+        task = await Task.findOne({ title: id }).catch(() => null);
+      }
+      if (!task) {
+        return res.status(404).json({ success: false, message: `Task not found with ID: ${id}` });
+      }
+      return res.json({ success: true, data: task, task });
     } catch (err: any) {
-      return res.status(400).json({ success: false, message: err.message });
+      return res.status(500).json({ success: false, message: err.message });
     }
   };
 
@@ -161,17 +197,22 @@ export class ModuleManagementController {
         instructions: req.body.instructions || '',
         mediaUrl: req.body.mediaUrl || '',
         taskType: req.body.taskType || req.body.type || 'Quiz',
-        submissionType: req.body.submissionType || 'Video',
+        submissionType: req.body.submissionType || 'Text',
         points: Number(req.body.points) || 0,
         bonusPoints: Number(req.body.bonusPoints) || 0,
         penaltyPoints: Number(req.body.penaltyPoints) || 0,
         maxAttempts: Number(req.body.maxAttempts) || 1,
-        reviewType: req.body.reviewType === 'AI' || req.body.reviewType === 'AI Review' ? 'AI' : 'Manual',
+        reviewType: req.body.reviewType === 'AI' || req.body.reviewType === 'AI Review' ? 'AI' : (req.body.reviewType === 'Auto' ? 'Auto' : 'Manual'),
         status: req.body.status || 'Published',
         isMandatory: req.body.isMandatory !== false,
         order: Number(req.body.order) || 1
       });
-      return res.status(201).json({ success: true, data: task });
+      return res.status(201).json({
+        success: true,
+        message: 'Task created successfully',
+        data: task,
+        task
+      });
     } catch (err: any) {
       return res.status(400).json({ success: false, message: err.message });
     }
@@ -180,9 +221,62 @@ export class ModuleManagementController {
   updateTask = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
-      const task = await Task.findByIdAndUpdate(id, req.body, { new: true });
-      if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-      return res.json({ success: true, data: task });
+      if (!id || id === 'undefined' || id === 'null') {
+        return res.status(400).json({ success: false, message: 'Invalid task ID parameter' });
+      }
+
+      let task = null;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        task = await Task.findById(id);
+      }
+      if (!task) {
+        task = await Task.findOne({ title: id }).catch(() => null);
+      }
+      if (!task) {
+        return res.status(404).json({ success: false, message: `Task not found with ID: ${id}` });
+      }
+
+      const updates: any = {};
+      const allowedFields = [
+        'title',
+        'description',
+        'instructions',
+        'mediaUrl',
+        'taskType',
+        'submissionType',
+        'points',
+        'bonusPoints',
+        'penaltyPoints',
+        'maxAttempts',
+        'reviewType',
+        'status',
+        'isMandatory',
+        'order'
+      ];
+
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          if (field === 'points' || field === 'bonusPoints' || field === 'penaltyPoints' || field === 'maxAttempts' || field === 'order') {
+            updates[field] = Number(req.body[field]) || 0;
+          } else if (field === 'reviewType') {
+            updates[field] = req.body.reviewType === 'AI' || req.body.reviewType === 'AI Review' ? 'AI' : (req.body.reviewType === 'Auto' ? 'Auto' : 'Manual');
+          } else if (field === 'isMandatory') {
+            updates[field] = req.body.isMandatory === true || req.body.isMandatory === 'true';
+          } else {
+            updates[field] = req.body[field];
+          }
+        }
+      }
+
+      Object.assign(task, updates);
+      await task.save();
+
+      return res.json({
+        success: true,
+        message: 'Task updated successfully',
+        data: task,
+        task
+      });
     } catch (err: any) {
       return res.status(400).json({ success: false, message: err.message });
     }
@@ -191,22 +285,58 @@ export class ModuleManagementController {
   deleteTask = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
-      const task = await Task.findByIdAndDelete(id);
-      if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-      return res.json({ success: true, message: 'Task deleted successfully' });
+      if (!id || id === 'undefined' || id === 'null') {
+        return res.status(400).json({ success: false, message: 'Invalid task ID parameter' });
+      }
+
+      let deleted = null;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        deleted = await Task.findByIdAndDelete(id);
+      }
+      if (!deleted) {
+        deleted = await Task.findOneAndDelete({ title: id }).catch(() => null);
+      }
+      if (!deleted) {
+        return res.status(404).json({ success: false, message: `Task not found with ID: ${id}` });
+      }
+      return res.json({
+        success: true,
+        message: 'Task deleted successfully',
+        data: { id: deleted._id || id }
+      });
     } catch (err: any) {
-      return res.status(400).json({ success: false, message: err.message });
+      return res.status(500).json({ success: false, message: err.message });
     }
   };
 
   toggleTaskStatus = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
-      const task = await Task.findById(id);
-      if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-      task.status = task.status === 'Published' || task.status === 'Running' ? 'Archived' : 'Published';
+      if (!id || id === 'undefined' || id === 'null') {
+        return res.status(400).json({ success: false, message: 'Invalid task ID parameter' });
+      }
+
+      let task = null;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        task = await Task.findById(id);
+      }
+      if (!task) {
+        task = await Task.findOne({ title: id }).catch(() => null);
+      }
+      if (!task) {
+        return res.status(404).json({ success: false, message: `Task not found with ID: ${id}` });
+      }
+
+      const newStatus = req.body?.status || (task.status === 'Published' || task.status === 'Running' ? 'Archived' : 'Published');
+      task.status = newStatus;
       await task.save();
-      return res.json({ success: true, data: task });
+
+      return res.json({
+        success: true,
+        message: `Task status updated to ${task.status}`,
+        data: task,
+        task
+      });
     } catch (err: any) {
       return res.status(400).json({ success: false, message: err.message });
     }

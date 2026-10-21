@@ -8,7 +8,13 @@ const getQueryForId = (id: string) => {
   if (mongoose.Types.ObjectId.isValid(id)) {
     return { $or: [{ _id: id }, { dailyContestId: id }] };
   }
-  return { dailyContestId: id };
+  const cleanTitle = id.replace(/-/g, ' ');
+  return {
+    $or: [
+      { dailyContestId: id },
+      { title: { $regex: new RegExp(`^${cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+    ]
+  };
 };
 
 export class DailyContestsController {

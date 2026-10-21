@@ -130,6 +130,12 @@ export const swaggerDocument = {
           rules: { type: 'string', example: '1. Maintain top submission score.' },
           guidelines: { type: 'string', example: '1. Follow sportsmanship guidelines.' },
           durationDays: { type: 'number', example: 14 },
+          prizePool: { type: 'number', example: 10000, description: 'Prize pool in Coins 🪙 or INR ₹ depending on entryFeeType' },
+          entryFee: { type: 'number', example: 50, description: 'Entry fee amount' },
+          entryFeeType: { type: 'string', enum: ['Coins', 'Cash', 'Free'], example: 'Coins' },
+          isFree: { type: 'boolean', example: false },
+          entryFeeCoins: { type: 'number', example: 50, description: 'Entry fee in Coins 🪙' },
+          coinsReward: { type: 'number', example: 1000, description: 'Milestone / bonus Coins 🪙 reward' },
           maxMembers: { type: 'number', example: 50 },
           membersCount: { type: 'number', example: 12 },
           currentCycle: { type: 'number', example: 1 },
@@ -2204,7 +2210,7 @@ export const swaggerDocument = {
     },
     '/api/v1/mobile/room-cycle/{roomId}/join/{contestId}': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Check Room & Contest Join Status (GET)',
         description: 'Checks if the user has already joined the specified room and contest. Returns isJoined: true if enrolled, or isJoined: false if not joined.',
         security: [{ bearerAuth: [] }],
@@ -2242,7 +2248,7 @@ export const swaggerDocument = {
         }
       },
       post: {
-        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Join Specific Room and Contest (POST)',
         description: 'Assigns the authenticated contestant to a room and registers them for a contest simultaneously. Accepts contest MongoDB _id or custom contestId string.',
         security: [{ bearerAuth: [] }],
@@ -2259,7 +2265,7 @@ export const swaggerDocument = {
     },
     '/api/v1/mobile/room-cycle/join-status/{roomId}/{contestId}': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Check Room & Contest Join Status Alias',
         description: 'Checks if the user has joined the specified room and contest. Returns isJoined: true if enrolled, or isJoined: false if not joined.',
         security: [{ bearerAuth: [] }],
@@ -2290,7 +2296,7 @@ export const swaggerDocument = {
     },
     '/api/v1/mobile/room-cycle/submissions': {
       post: {
-        tags: ['8. Mobile App API (Contestant V1)', '11. Bi-Weekly Room Cycle Module'],
+        tags: ['8. Mobile App API (Contestant V1)'],
         summary: 'Submit Room Cycle Task Proof',
         description: 'Uploads a contestant task submission with proof notes, URL links, base64 data, or attached file.',
         security: [{ bearerAuth: [] }],
@@ -2980,54 +2986,9 @@ export const swaggerDocument = {
     // ----------------------------------------------------
     // 11. BI-WEEKLY ROOM CYCLE MODULE
     // ----------------------------------------------------
-    '/api/public/room-cycles': {
-      get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get Public Competition Rooms List',
-        description: 'Fetch paginated list of rooms. If Authorization Bearer token is provided, populates isJoined: true/false for each room card.',
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'search', in: 'query', required: false, schema: { type: 'string', example: 'Alpha' } },
-          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'], default: 'Active' } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', example: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', example: 10 } }
-        ],
-        responses: {
-          200: {
-            description: 'Rooms list fetched successfully.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        rooms: { type: 'array', items: { $ref: '#/components/schemas/RoomResponse' } },
-                        pagination: {
-                          type: 'object',
-                          properties: {
-                            total: { type: 'integer', example: 5 },
-                            page: { type: 'integer', example: 1 },
-                            limit: { type: 'integer', example: 10 },
-                            totalPages: { type: 'integer', example: 1 }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          400: { $ref: '#/components/schemas/ErrorResponse' }
-        }
-      }
-    },
     '/api/week/rooms': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get All Competition Rooms',
         description: 'Fetch paginated list of competition rooms with search, status filter, and capacity details.',
         security: [{ bearerAuth: [] }],
@@ -3069,7 +3030,7 @@ export const swaggerDocument = {
         }
       },
       post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Create New Competition Room',
         description: 'Create a new room with name, description, max members, current cycle, room image, and auto-assignment options.',
         security: [{ bearerAuth: [] }],
@@ -3086,6 +3047,12 @@ export const swaggerDocument = {
                   rules: { type: 'string', example: 'Maintain high accuracy score.' },
                   guidelines: { type: 'string', example: 'Verify submissions before uploading.' },
                   durationDays: { type: 'number', example: 14 },
+                  prizePool: { type: 'number', example: 10000, description: 'Prize pool in Coins 🪙 or INR ₹' },
+                  entryFee: { type: 'number', example: 50, description: 'Entry fee amount' },
+                  entryFeeType: { type: 'string', enum: ['Coins', 'Cash', 'Free'], example: 'Coins' },
+                  isFree: { type: 'boolean', example: false },
+                  entryFeeCoins: { type: 'number', example: 50, description: 'Entry fee in Coins 🪙' },
+                  coinsReward: { type: 'number', example: 1000, description: 'Milestone / bonus Coins 🪙 reward' },
                   maxMembers: { type: 'number', example: 50 },
                   currentCycle: { type: 'number', example: 1 },
                   cycleIds: { type: 'array', items: { type: 'string' } },
@@ -3119,7 +3086,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{id}': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Room Details & Active Members by ID',
         description: 'Retrieves room configuration, assigned cycles, and active member leaderboard rankings.',
         security: [{ bearerAuth: [] }],
@@ -3143,7 +3110,7 @@ export const swaggerDocument = {
         }
       },
       put: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Update Room Details',
         description: 'Updates room capacity, status, rules, description, and settings.',
         security: [{ bearerAuth: [] }],
@@ -3158,6 +3125,13 @@ export const swaggerDocument = {
                   name: { type: 'string', example: 'Alpha Strikers Updated' },
                   description: { type: 'string' },
                   rules: { type: 'string' },
+                  guidelines: { type: 'string' },
+                  prizePool: { type: 'number', example: 10000, description: 'Prize pool in Coins 🪙 or INR ₹' },
+                  entryFee: { type: 'number', example: 50, description: 'Entry fee amount' },
+                  entryFeeType: { type: 'string', enum: ['Coins', 'Cash', 'Free'], example: 'Coins' },
+                  isFree: { type: 'boolean', example: false },
+                  entryFeeCoins: { type: 'number', example: 50, description: 'Entry fee in Coins 🪙' },
+                  coinsReward: { type: 'number', example: 1000, description: 'Milestone / bonus Coins 🪙 reward' },
                   maxMembers: { type: 'number', example: 60 },
                   status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' },
                   roomImage: { type: 'string' }
@@ -3185,7 +3159,7 @@ export const swaggerDocument = {
         }
       },
       delete: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Delete Room',
         description: 'Permanently removes the room and unlinks attached members.',
         security: [{ bearerAuth: [] }],
@@ -3210,7 +3184,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{id}/cycles': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get 14-Day Blueprint Cycles for Room',
         description: 'Fetches the 14-day cycle blueprints attached to the specified room.',
         security: [{ bearerAuth: [] }],
@@ -3236,7 +3210,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/bulk-action': {
       post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Bulk Action on Rooms (Activate, Archive, Delete)',
         description: 'Applies bulk operations across multiple room IDs at once.',
         security: [{ bearerAuth: [] }],
@@ -3275,7 +3249,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/contests/{contestId}/check-status': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Check Contestant Join Status for Room Cycle',
         description: 'Checks whether the authenticated contestant has joined the specified room cohort and cycle contest.',
         security: [{ bearerAuth: [] }],
@@ -3297,7 +3271,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/contests/{contestId}/join': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Check Contestant Join Status for Room Cycle',
         description: 'Checks whether the contestant has joined the specified room and contest, and calculates full task/cycle completion status.',
         security: [{ bearerAuth: [] }],
@@ -3317,7 +3291,7 @@ export const swaggerDocument = {
         }
       },
       post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Contestant Join Room Cycle & Contest',
         description: 'Enrolls the authenticated contestant into the room cohort and unlocks cycle tasks and leaderboard participation.',
         security: [{ bearerAuth: [] }],
@@ -3340,7 +3314,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/join/{contestId}': {
       get: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Check Contestant Join Status (Alias)',
         description: 'Checks whether the authenticated contestant has joined the specified room and contest.',
         security: [{ bearerAuth: [] }],
@@ -3360,7 +3334,7 @@ export const swaggerDocument = {
         }
       },
       post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Contestant Join Room & Contest (Alias)',
         description: 'Registers the authenticated contestant into the room cohort and associated contest.',
         security: [{ bearerAuth: [] }],
@@ -3382,7 +3356,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/start/{contestId}': {
       post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Start Contest Task Attempt',
         description: 'Initializes and records the attempt for the contestant for the specified room and contest task.',
         security: [{ bearerAuth: [] }],
@@ -3418,7 +3392,7 @@ export const swaggerDocument = {
     },
     '/api/week/rooms/{roomId}/submit/{contestId}': {
       post: {
-        tags: ['8. Mobile App API (Contestant V1)'],
+        tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Submit Task Proof & Answers for Room Contest',
         description: 'Submits contestant task proof (media file or text link) and answers for automatic or admin evaluation.',
         security: [{ bearerAuth: [] }],
@@ -3464,82 +3438,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/rooms': {
-      get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'List All Competition Rooms (Admin)',
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
-          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'] } },
-          { name: 'page', in: 'query', required: false, schema: { type: 'integer', example: 1 } },
-          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', example: 10 } }
-        ],
-        responses: {
-          200: {
-            description: 'Admin rooms list.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        rooms: { type: 'array', items: { $ref: '#/components/schemas/RoomResponse' } }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Create Room (Admin)',
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['name'],
-                properties: {
-                  name: { type: 'string', example: 'Beta Warriors' },
-                  description: { type: 'string' },
-                  rules: { type: 'string' },
-                  durationDays: { type: 'number', example: 14 },
-                  maxMembers: { type: 'number', example: 50 },
-                  status: { type: 'string', enum: ['Active', 'Inactive', 'Archived'], example: 'Active' }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          201: {
-            description: 'Room created successfully.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Room created successfully' },
-                    data: { $ref: '#/components/schemas/RoomResponse' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/admin/room-cycle/members/assign': {
+    '/api/admin/members/assign': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Assign Members to Room (Admin)',
@@ -3579,7 +3478,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/members/random-assign': {
+    '/api/admin/members/random-assign': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Randomly Distribute Unassigned Members (Admin)',
@@ -3616,7 +3515,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/members/transfer': {
+    '/api/admin/members/transfer': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Transfer Member Between Rooms (Admin)',
@@ -3656,7 +3555,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/members/{roomId}/{userId}': {
+    '/api/admin/members/{roomId}/{userId}': {
       delete: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Remove Member from Room (Admin)',
@@ -3683,188 +3582,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/cycles': {
-      get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get 10-Cycle Blueprint List (Admin)',
-        description: 'Retrieves the complete 10-cycle sprint blueprints with prize pools and duration details.',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: 'All 10 bi-weekly cycles retrieved.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    data: { type: 'array', items: { $ref: '#/components/schemas/CycleResponse' } }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      post: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Create New Blueprint Cycle (Admin)',
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['title'],
-                properties: {
-                  cycleNumber: { type: 'number', example: 1 },
-                  title: { type: 'string', example: 'Sprint Season 1' },
-                  description: { type: 'string', example: '14-day competitive sprint' },
-                  rules: { type: 'string' },
-                  guidelines: { type: 'string' },
-                  durationDays: { type: 'number', example: 14 },
-                  prizePoolCoins: { type: 'number', example: 5000 },
-                  timerMinutes: { type: 'number', example: 60 }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          201: {
-            description: 'Cycle created successfully.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Cycle created successfully' },
-                    data: { $ref: '#/components/schemas/CycleResponse' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/admin/room-cycle/cycles/{id}': {
-      get: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Get Cycle Details by ID (Admin)',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
-        responses: {
-          200: {
-            description: 'Cycle details object.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    data: { $ref: '#/components/schemas/CycleResponse' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      put: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Update Cycle Details & Schedule (Admin)',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  cycleNumber: { type: 'number', example: 1 },
-                  title: { type: 'string', example: 'Bi-Weekly Sprint 1' },
-                  description: { type: 'string' },
-                  rules: { type: 'string' },
-                  durationDays: { type: 'number', example: 14 },
-                  prizePoolCoins: { type: 'number', example: 5000 },
-                  status: { type: 'string', enum: ['Draft', 'Published', 'Running', 'Completed', 'Upcoming', 'Active', 'Archived'], example: 'Active' }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          200: {
-            description: 'Cycle details updated.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Cycle updated' },
-                    data: { $ref: '#/components/schemas/CycleResponse' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      delete: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Delete Cycle by ID (Admin)',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
-        responses: {
-          200: {
-            description: 'Cycle deleted successfully.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Cycle deleted successfully' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/admin/room-cycle/cycles/{id}/set-active': {
-      put: {
-        tags: ['11. Bi-Weekly Room Cycle Module'],
-        summary: 'Set Active Running Cycle (Admin)',
-        description: 'Marks the specified cycle as currently active across all cohort rooms.',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '66bc91f24d9e123456789cyc1' } }],
-        responses: {
-          200: {
-            description: 'Active cycle updated.',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Active cycle updated' },
-                    data: { $ref: '#/components/schemas/CycleResponse' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/admin/room-cycle/submissions': {
+    '/api/admin/submissions': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Task Submissions for Admin Review',
@@ -3909,7 +3627,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/submissions/{id}/review': {
+    '/api/admin/submissions/{id}/review': {
       put: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Grade & Review Task Submission (Admin)',
@@ -3953,7 +3671,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/leaderboard': {
+    '/api/admin/leaderboard': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Leaderboard (Room, Cycle, or Overall Scope)',
@@ -3985,7 +3703,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/leaderboard/recalculate': {
+    '/api/admin/leaderboard/recalculate': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Recalculate Leaderboard Scores (Admin)',
@@ -4022,7 +3740,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/rewards': {
+    '/api/admin/rewards': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Reward Rules List',
@@ -4087,7 +3805,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/rewards/distribute': {
+    '/api/admin/rewards/distribute': {
       post: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Distribute Rewards to Qualified Winners (Admin)',
@@ -4111,7 +3829,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/settings': {
+    '/api/admin/settings': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Room Cycle Module Settings (Admin)',
@@ -4174,7 +3892,7 @@ export const swaggerDocument = {
         }
       }
     },
-    '/api/admin/room-cycle/analytics': {
+    '/api/admin/analytics': {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get Module Dashboard Analytics (Admin)',
@@ -4641,11 +4359,61 @@ export const swaggerDocument = {
         }
       }
     },
+    '/api/grand-contests/{id}/check-status': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Check Contestant Participation & Completion Status (Contestant / Admin)',
+        description: 'Checks if user is registered for the specified Grand Contest, returns completion status, total tasks, completed tasks, pending tasks, and entry eligibility flags.',
+        security: [{ bearerAuth: [] }, {}],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' }, description: 'Grand Contest ID or Mongo ObjectId' },
+          { name: 'userId', in: 'query', required: false, schema: { type: 'string' }, description: 'Optional user ID to check status for (admin / debug)' }
+        ],
+        responses: {
+          200: {
+            description: 'Participation status and eligibility retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    isJoined: { type: 'boolean', example: true },
+                    joined: { type: 'boolean', example: true },
+                    hasJoined: { type: 'boolean', example: true },
+                    completed: { type: 'boolean', example: false },
+                    isCompleted: { type: 'boolean', example: false },
+                    message: { type: 'string', example: 'User has already joined this grand contest' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        isJoined: { type: 'boolean', example: true },
+                        completed: { type: 'boolean', example: false },
+                        contestId: { type: 'string', example: '66bc91f24d9e123456789gnc1' },
+                        grandContestId: { type: 'string', example: '66bc91f24d9e123456789gnc1' },
+                        customContestId: { type: 'string', example: 'GNC-2026-98124' },
+                        title: { type: 'string', example: 'Grand Championship Season 1' },
+                        status: { type: 'string', example: 'Registration Open' },
+                        totalTasks: { type: 'number', example: 5 },
+                        completedTasks: { type: 'number', example: 2 },
+                        pendingTasks: { type: 'number', example: 3 },
+                        canJoin: { type: 'boolean', example: false }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          404: { $ref: '#/components/schemas/ErrorResponse' }
+        }
+      }
+    },
     '/api/grand-contests/{id}/join': {
       post: {
         tags: ['12. Grand Contest Management'],
         summary: 'Join Grand Contest (Contestant)',
-        description: 'Registers contestant for the Grand Contest. Validates registration window dates, deducts entry fee in Coins or Cash, and logs payment transaction.',
+        description: 'Registers contestant for the Grand Contest. Validates registration window dates, deducts entry fee in Cash (INR ₹) from wallet balance, and logs payment transaction.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
         responses: {

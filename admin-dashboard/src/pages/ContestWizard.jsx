@@ -10,6 +10,7 @@ import { CustomSelect } from '../components/CustomSelect';
 import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { usePageTitle } from '../context/PageTitleContext';
 
 const getLocalDateString = (date) => {
   if (!date) return '';
@@ -58,6 +59,7 @@ export const ContestWizard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { showAlert, showSnackbar } = useAlert();
+  const { setCustomTitle } = usePageTitle();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
 
   const queryParams = new URLSearchParams(location.search);
@@ -327,6 +329,10 @@ export const ContestWizard = () => {
           tEndDate: tEndSplit.date,
           tEndTime: tEndSplit.time
         });
+
+        if (c.title) {
+          setCustomTitle(`Edit ${c.title}`);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -339,6 +345,13 @@ export const ContestWizard = () => {
     fetchCategories();
     fetchContestDetails();
   }, [contestId, isMockMode]);
+
+  useEffect(() => {
+    if (!contestId) {
+      setCustomTitle(isDailyType ? 'Create Daily Contest' : 'Create Contest');
+    }
+    return () => setCustomTitle(null);
+  }, [contestId, isDailyType, setCustomTitle]);
 
   if (loading) {
     return (

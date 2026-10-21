@@ -269,9 +269,9 @@ Content-Type: application/json</pre>
     <div class="sub-banner">Part 2: Admin Room Cycle Management APIs (27 Endpoints)</div>
     <p>All admin endpoints are routed through <code>/api/admin/room-cycle/...</code>:</p>
     <ul>
-      <li><b>Rooms:</b> <code>GET /api/admin/room-cycle/rooms</code>, <code>POST /api/admin/room-cycle/rooms</code>, <code>GET /api/admin/room-cycle/rooms/:id</code>, <code>PUT /api/admin/room-cycle/rooms/:id</code>, <code>DELETE /api/admin/room-cycle/rooms/:id</code>, <code>GET /api/admin/room-cycle/rooms/:id/cycles</code>, <code>POST /api/admin/room-cycle/rooms/bulk-action</code></li>
+      <li><b>Rooms:</b> <code>GET /api/week/rooms</code>, <code>POST /api/week/rooms</code>, <code>GET /api/week/rooms/:id</code>, <code>PUT /api/week/rooms/:id</code>, <code>DELETE /api/week/rooms/:id</code>, <code>GET /api/week/rooms/:id/cycles</code>, <code>POST /api/week/rooms/bulk-action</code></li>
       <li><b>Members:</b> <code>POST /api/admin/room-cycle/members/assign</code>, <code>POST /api/admin/room-cycle/members/random-assign</code>, <code>POST /api/admin/room-cycle/members/transfer</code>, <code>DELETE /api/admin/room-cycle/members/:roomId/:userId</code></li>
-      <li><b>Cycles:</b> <code>GET /api/admin/room-cycle/cycles</code>, <code>POST /api/admin/room-cycle/cycles</code>, <code>PUT /api/admin/room-cycle/cycles/:id/set-active</code>, <code>GET /api/admin/room-cycle/cycles/:id</code>, <code>PUT /api/admin/room-cycle/cycles/:id</code>, <code>DELETE /api/admin/room-cycle/cycles/:id</code></li>
+      <li><b>Tasks &amp; Challenges:</b> <code>GET /api/admin/room-cycle/tasks</code>, <code>POST /api/admin/room-cycle/tasks</code>, <code>PUT /api/admin/room-cycle/tasks/:id</code>, <code>DELETE /api/admin/room-cycle/tasks/:id</code></li>
       <li><b>Submissions & Grading:</b> <code>GET /api/admin/room-cycle/submissions</code>, <code>PUT /api/admin/room-cycle/submissions/:id/review</code></li>
       <li><b>Leaderboard & Scores:</b> <code>GET /api/admin/room-cycle/leaderboard</code>, <code>POST /api/admin/room-cycle/leaderboard/recalculate</code></li>
       <li><b>Rewards Distribution:</b> <code>GET /api/admin/room-cycle/rewards</code>, <code>POST /api/admin/room-cycle/rewards</code>, <code>POST /api/admin/room-cycle/rewards/distribute</code></li>
@@ -284,6 +284,9 @@ Content-Type: application/json</pre>
     <div class="module-banner">MODULE B: Grand Contest Module</div>
 
     <div class="sub-banner">Part 1: Contestant & Mobile App Grand Contest APIs</div>
+    <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 10px 15px; margin: 15px 0; border-radius: 6px; font-size: 13px;">
+      💡 <b>Payment Rule:</b> Grand Contests strictly require <b>Entry Fee Type: Cash (INR ₹)</b> deducted directly from contestant cash wallet balance. Coin entry fee is disabled for Grand Contests.
+    </div>
 
     <h3>Step 1: List Grand Contests</h3>
     <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests</code> <i>(or <code>/api/public/grand-contests</code>)</i></p>
@@ -317,7 +320,60 @@ Content-Type: application/json</pre>
   }
 }</pre>
 
-    <h3>Step 3: Join Grand Contest</h3>
+    <h3>Step 3: Check Eligibility & Participation Status</h3>
+    <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id/check-status</code> <i>(or <code>/api/grand-contests/:id/check-statuse</code>, <code>/api/grand-contests/:id/join</code>)</i></p>
+    <pre>{
+  "success": true,
+  "isJoined": true,
+  "joined": true,
+  "hasJoined": true,
+  "join": true,
+  "jin": true,
+  "completed": false,
+  "complete": false,
+  "isCompleted": false,
+  "hasCompleted": false,
+  "isComplete": false,
+  "message": "User has already joined this grand contest",
+  "data": {
+    "isJoined": true,
+    "joined": true,
+    "hasJoined": true,
+    "join": true,
+    "jin": true,
+    "completed": false,
+    "complete": false,
+    "isCompleted": false,
+    "hasCompleted": false,
+    "isComplete": false,
+    "roomId": "66bc91f24d9e123456789gnc1",
+    "contestId": "66bc91f24d9e123456789gnc1",
+    "grandContestId": "66bc91f24d9e123456789gnc1",
+    "customContestId": "GNC-2026-98124",
+    "title": "Grand Championship Season 1",
+    "status": "Registration Open",
+    "totalTasks": 5,
+    "completedTasks": 2,
+    "pendingTasks": 3,
+    "submittedTasks": 2,
+    "approvedTasks": 2,
+    "pendingReviewTasks": 0,
+    "rejectedTasks": 0,
+    "totalCycles": 1,
+    "completedCycles": 0,
+    "pendingCycles": 1,
+    "totalParticipants": 142,
+    "maxParticipants": 500,
+    "entryFee": 499,
+    "entryFeeCoins": 0,
+    "entryFeeType": "Cash",
+    "isFree": false,
+    "canJoin": false,
+    "cannotJoinReason": "User has already joined this grand contest"
+  }
+}</pre>
+
+    <h3>Step 4: Join Grand Contest</h3>
     <p><span class="endpoint-badge post">POST</span> <code>/api/grand-contests/:id/join</code> <i>(or <code>/api/v1/mobile/grand-contests/:id/join</code>)</i></p>
     <pre>{
   "success": true,
@@ -325,7 +381,7 @@ Content-Type: application/json</pre>
   "data": { "contestId": "66bc91f24d9e123456789gnc1", "status": "Registered" }
 }</pre>
 
-    <h3>Step 4: Fetch Tasks & Submit Proof</h3>
+    <h3>Step 5: Fetch Tasks & Submit Proof</h3>
     <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id/tasks</code></p>
     <p><span class="endpoint-badge post">POST</span> <code>/api/grand-contests/:id/tasks/:taskId/submit</code> <i>(or <code>/api/grand-contests/:id/submissions</code>)</i></p>
     <pre>// Request Body:
@@ -335,13 +391,14 @@ Content-Type: application/json</pre>
   "proofNotes": "Here is my 30-second strategy pitch video."
 }</pre>
 
-    <h3>Step 5: View Submissions & Analytics</h3>
+    <h3>Step 6: View Submissions & Analytics</h3>
     <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id/submissions</code></p>
     <p><span class="endpoint-badge get">GET</span> <code>/api/grand-contests/:id/analytics</code></p>
 
     <div class="sub-banner">Part 2: Admin Grand Contest Management APIs</div>
     <ul>
       <li><b>Contest CRUD:</b> <code>POST /api/admin/grand-contests</code>, <code>GET /api/admin/grand-contests</code>, <code>GET /api/admin/grand-contests/:id</code>, <code>PUT /api/admin/grand-contests/:id</code>, <code>DELETE /api/admin/grand-contests/:id</code>, <code>POST /api/admin/grand-contests/:id/duplicate</code></li>
+      <li><b>Status Verification:</b> <code>GET /api/admin/grand-contests/:id/check-status</code></li>
       <li><b>Tasks Connection:</b> <code>GET /api/admin/grand-contests/:id/tasks</code>, <code>POST /api/admin/grand-contests/:id/tasks</code>, <code>DELETE /api/admin/grand-contests/:id/tasks/:taskId</code></li>
       <li><b>Review Submissions:</b> <code>GET /api/admin/grand-contests/:id/submissions</code>, <code>PUT /api/admin/grand-contests/submissions/:id/review</code></li>
     </ul>
@@ -365,10 +422,9 @@ Content-Type: application/json</pre>
         <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Join Room Cycle</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/week/rooms/:roomId/contests/:contestId/join</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Start Attempt</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/week/rooms/:roomId/start/:contestId</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Contestant</td><td>Submit Task Proof</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/week/rooms/:roomId/submit/:contestId</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>List Rooms</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/rooms</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Create Room</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/admin/room-cycle/rooms</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>List Rooms</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/week/rooms</code></td></tr>
+        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Create Room</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/week/rooms</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Assign Members</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/admin/room-cycle/members/assign</code></td></tr>
-        <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Cycle Blueprints</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/cycles</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Get Submissions</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/submissions</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Review Submission</td><td><span class="endpoint-badge put">PUT</span></td><td><code>/api/admin/room-cycle/submissions/:id/review</code></td></tr>
         <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Room Leaderboard</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/leaderboard</code></td></tr>
@@ -378,12 +434,14 @@ Content-Type: application/json</pre>
         <tr><td><b>Room Cycle</b></td><td>Admin</td><td>Module Analytics</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/room-cycle/analytics</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>List Grand Contests</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Get Details & Rules</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Check Status & Eligibility</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id/check-status</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Join Grand Contest</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/grand-contests/:id/join</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Fetch Contest Tasks</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id/tasks</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Submit Task Proof</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/grand-contests/:id/tasks/:taskId/submit</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>View Submissions</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id/submissions</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Contestant</td><td>Contest Analytics</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/grand-contests/:id/analytics</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Admin</td><td>Create Grand Contest</td><td><span class="endpoint-badge post">POST</span></td><td><code>/api/admin/grand-contests</code></td></tr>
+        <tr><td><b>Grand Contest</b></td><td>Admin</td><td>Check User Contest Status</td><td><span class="endpoint-badge get">GET</span></td><td><code>/api/admin/grand-contests/:id/check-status</code></td></tr>
         <tr><td><b>Grand Contest</b></td><td>Admin</td><td>Review Submission</td><td><span class="endpoint-badge put">PUT</span></td><td><code>/api/admin/grand-contests/submissions/:id/review</code></td></tr>
       </tbody>
     </table>

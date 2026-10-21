@@ -42,7 +42,7 @@ export const RoomCycleSettingsPage = () => {
   const fetchSettings = async () => {
     try {
       dispatch(setLoading(true));
-      const res = await axios.get('/api/admin/room-cycle/settings');
+      const res = await axios.get('/api/admin/settings');
       if (res.data?.success && res.data.data) {
         dispatch(setSettings(res.data.data));
         setFormData(res.data.data);
@@ -59,7 +59,7 @@ export const RoomCycleSettingsPage = () => {
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.put('/api/admin/room-cycle/settings', formData);
+      const res = await axios.put('/api/admin/settings', formData);
       if (res.data?.success) {
         showAlert('success', 'Room cycle settings saved successfully!');
         dispatch(setSettings(res.data.data));

@@ -7,12 +7,15 @@ import {
   HelpCircle, CheckCircle, FileText, Video, Image as ImageIcon, Search, Filter, ShieldCheck, DollarSign
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
+import { usePageTitle } from '../context/PageTitleContext';
 import { CustomSelect } from '../components/CustomSelect';
+import { slugifyTitle } from '../utils/routeUtils';
 
 export const DailyContestDetailsPage = () => {
   const { contestId } = useParams();
   const navigate = useNavigate();
   const { showAlert, showConfirm, showSnackbar } = useAlert();
+  const { setCustomTitle } = usePageTitle();
   const isMockMode = useSelector((state) => state.auth?.isMockMode);
 
   const [contest, setContest] = useState(null);
@@ -84,6 +87,9 @@ export const DailyContestDetailsPage = () => {
       if (res?.data?.success && res?.data?.data) {
         const data = res.data.data;
         setContest(data);
+        if (data.title) {
+          setCustomTitle(data.title);
+        }
         setQuestions(Array.isArray(data.questions) ? data.questions : []);
       } else {
         setContest(null);
@@ -98,6 +104,7 @@ export const DailyContestDetailsPage = () => {
 
   useEffect(() => {
     fetchContestDetails();
+    return () => setCustomTitle('');
   }, [contestId, isMockMode]);
 
   const handleReset = () => {
@@ -182,7 +189,7 @@ export const DailyContestDetailsPage = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => navigate(`/admin-dashboard/daily-contests/${contest._id || contestId}/analytics`)}
+            onClick={() => navigate(`/admin-dashboard/daily-contests/${slugifyTitle(contest.title, contest._id || contestId)}/analytics`)}
             className="px-3 py-2 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
           >
             <BarChart2 className="w-4 h-4" /> Analytics

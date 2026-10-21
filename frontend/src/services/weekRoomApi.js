@@ -23,17 +23,9 @@ export const weekRoomApi = {
     return response.data;
   },
 
-  // 4. Fetch Cycle Details by ID
+  // 4. Fetch Cycle Details by ID (Deprecated: cycles endpoints removed)
   getCycleDetails: async (cycleId) => {
-    try {
-      const response = await api.get(`/admin/room-cycle/cycles/${cycleId}`);
-      return response.data;
-    } catch (err) {
-      const response = await api.get('/admin/room-cycle/cycles');
-      const cycles = response.data?.data || response.data?.cycles || [];
-      const found = cycles.find((c) => (c._id || c.id) === cycleId);
-      return { success: true, data: found };
-    }
+    return { success: true, data: null };
   },
 
   // 5. Fetch Task Details by ID

@@ -11,6 +11,7 @@ import { useAlert } from '../context/AlertContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
 import { FileUploadPicker, uploadPendingFile } from '../components/FileUploadPicker';
+import { slugifyTitle } from '../utils/routeUtils';
 
 export const DailyContestPage = () => {
   const navigate = useNavigate();
@@ -496,7 +497,7 @@ export const DailyContestPage = () => {
                       )}
                     </span>
                     <button
-                      onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id}/analytics`)}
+                      onClick={() => navigate(`/admin-dashboard/daily-contests/${slugifyTitle(c.title, c._id || c.id || c.dailyContestId)}/analytics`)}
                       className="p-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 border border-indigo-500/20 rounded-lg transition-all cursor-pointer"
                       title="Contest Analytics 📊"
                     >
@@ -507,7 +508,7 @@ export const DailyContestPage = () => {
 
                 <div>
                   <h3
-                    onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id || c.dailyContestId}/details`)}
+                    onClick={() => navigate(`/admin-dashboard/daily-contests/${slugifyTitle(c.title, c._id || c.id || c.dailyContestId)}/details`)}
                     className="text-base font-extrabold text-slate-900 dark:text-white hover:text-amber-500 cursor-pointer transition-colors"
                   >
                     {c.title}
@@ -529,14 +530,14 @@ export const DailyContestPage = () => {
 
               <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex items-center justify-between gap-1 flex-wrap">
                 <button
-                  onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id}/analytics`)}
+                  onClick={() => navigate(`/admin-dashboard/daily-contests/${slugifyTitle(c.title, c._id || c.id || c.dailyContestId)}/analytics`)}
                   className="p-1.5 px-2 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all"
                   title="Daily Contest Analytics"
                 >
                   <BarChart2 className="w-3.5 h-3.5" /> Analytics
                 </button>
                 <button
-                  onClick={() => navigate(`/admin-dashboard/daily-contests/${c._id || c.id || c.dailyContestId}/details`)}
+                  onClick={() => navigate(`/admin-dashboard/daily-contests/${slugifyTitle(c.title, c._id || c.id || c.dailyContestId)}/details`)}
                   className="p-1.5 px-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-xl text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                   title="View Specs & Question Details Page"
                 >

@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import axios from 'axios';
 import * as Icons from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
+import { usePageTitle } from '../context/PageTitleContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
 import { ChevronRight, Plus, Clock, Play, Trash2, Edit, GripVertical, BarChart2 } from 'lucide-react';
@@ -21,6 +22,7 @@ export const ContestDetails = () => {
   const { contestId } = useParams();
   const navigate = useNavigate();
   const { showAlert, showSnackbar, showConfirm } = useAlert();
+  const { setCustomTitle } = usePageTitle();
   const isMockMode = useSelector((state) => state.auth.isMockMode);
 
   const [contest, setContest] = useState(null);
@@ -60,7 +62,11 @@ export const ContestDetails = () => {
       ]);
       let stageData = sRes.data.stages || [];
       stageData.sort((a, b) => new Date(b.createdAt || b._id).getTime() - new Date(a.createdAt || a._id).getTime());
-      setContest(cRes.data.contest);
+      const cData = cRes.data.contest;
+      setContest(cData);
+      if (cData?.title) {
+        setCustomTitle(cData.title);
+      }
       setStages(stageData);
     } catch (err) {
       console.error(err);
@@ -72,6 +78,7 @@ export const ContestDetails = () => {
 
   useEffect(() => {
     fetchDetails();
+    return () => setCustomTitle('');
   }, [contestId, isMockMode]);
 
   const handleCreateStage = async (e) => {

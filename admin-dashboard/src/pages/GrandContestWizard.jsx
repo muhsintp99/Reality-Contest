@@ -38,14 +38,24 @@ export const GrandContestWizard = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
+        let list = [];
         let res = await axios.get('/api/admin/tasks', { withCredentials: true }).catch(() => null);
-        if (!res?.data?.success) {
-          res = await axios.get('/api/admin/room-cycle/tasks', { withCredentials: true }).catch(() => null);
-        }
         if (res?.data?.success) {
           const raw = res.data.data;
-          const list = Array.isArray(raw?.tasks) ? raw.tasks : Array.isArray(raw) ? raw : [];
-          setAvailableTasks(list.map((t) => ({ value: t._id || t.id, label: `${t.title || t.name || 'Task'} (${t.taskType || 'Task'})` })));
+          list = Array.isArray(raw?.tasks) ? raw.tasks : Array.isArray(raw) ? raw : [];
+        }
+        if (list.length === 0) {
+          res = await axios.get('/api/tasks', { withCredentials: true }).catch(() => null);
+          if (res?.data?.success) {
+            const raw = res.data.data;
+            list = Array.isArray(raw?.tasks) ? raw.tasks : Array.isArray(raw) ? raw : [];
+          }
+        }
+        if (list.length > 0) {
+          setAvailableTasks(list.map((t) => ({
+            value: String(t._id || t.id),
+            label: `${t.title || t.name || 'Task'} (${t.taskType || t.submissionType || 'Task'} • ${t.points || 0} pts)`
+          })));
         }
       } catch (err) {
         console.error('Error loading tasks:', err);
@@ -89,10 +99,10 @@ export const GrandContestWizard = () => {
           guidelines: values.guidelines,
           durationDays: Number(values.durationDays) || 14,
           prizePool: Number(values.prizePool) || 0,
-          entryFee: values.entryFeeType === 'Free' ? 0 : (Number(values.entryFee) || 0),
-          entryFeeType: values.entryFeeType,
-          isFree: values.entryFeeType === 'Free' || values.isFree,
-          entryFeeCoins: values.entryFeeType === 'Coins' ? (Number(values.entryFee) || 0) : 0,
+          entryFee: Number(values.entryFee) || 0,
+          entryFeeType: 'Cash',
+          isFree: (Number(values.entryFee) || 0) === 0,
+          entryFeeCoins: 0,
           tasks: values.selectedTasks,
           bannerUrl: finalBannerUrl,
           imageUrl: finalBannerUrl,
@@ -148,12 +158,24 @@ export const GrandContestWizard = () => {
             entryFee: String(c.entryFee || 0),
             entryFeeType: c.entryFeeType || (c.isFree ? 'Free' : 'Cash'),
             isFree: Boolean(c.isFree),
-            selectedTasks: Array.isArray(c.tasks) ? c.tasks.map((t) => (typeof t === 'object' ? t._id || t.id : t)) : [],
+            selectedTasks: Array.isArray(c.tasks) ? c.tasks.map((t) => String(typeof t === 'object' ? (t._id || t.id) : t)) : [],
             bannerUrl: c.bannerUrl || c.imageUrl || '',
             status: c.status || 'Registration Open',
             startDate: getLocalDateString(c.startDate || new Date()),
             endDate: getLocalDateString(c.endDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000))
           });
+
+          if (Array.isArray(c.tasks) && c.tasks.length > 0 && typeof c.tasks[0] === 'object') {
+            const taskOpts = c.tasks.map((t) => ({
+              value: String(t._id || t.id),
+              label: `${t.title || t.name || 'Task'} (${t.taskType || t.submissionType || 'Task'} • ${t.points || 0} pts)`
+            }));
+            setAvailableTasks((prev) => {
+              const map = new Map(prev.map(p => [p.value, p]));
+              taskOpts.forEach(o => map.set(o.value, o));
+              return Array.from(map.values());
+            });
+          }
         }
       } catch (err) {
         console.error('Error fetching contest for edit:', err);
@@ -279,16 +301,10 @@ export const GrandContestWizard = () => {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Entry Fee Type</label>
-                <CustomSelect
-                  options={[
-                    { value: 'Free', label: 'Free Entry' },
-                    { value: 'Coins', label: 'Coins' },
-                    { value: 'Cash', label: 'Cash (₹)' }
-                  ]}
-                  value={formik.values.entryFeeType}
-                  onChange={handleEntryFeeTypeChange}
-                  className="w-full"
-                />
+                <div className="flex items-center gap-2 p-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm">
+                  <span className="font-bold text-emerald-400">Cash (₹)</span>
+                  <span className="text-xs text-slate-400">— Grand Contest strictly requires Cash</span>
+                </div>
               </div>
             </div>
 
@@ -368,14 +384,14 @@ export const GrandContestWizard = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Entry Fee ({formik.values.entryFeeType === 'Coins' ? 'Coins' : '₹'})</label>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Entry Fee (₹ Cash)</label>
                 <input
                   type="number"
                   name="entryFee"
-                  disabled={formik.values.entryFeeType === 'Free'}
                   value={formik.values.entryFee}
                   onChange={formik.handleChange}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                  placeholder="e.g. 499 (0 for Free)"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>

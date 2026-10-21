@@ -129,14 +129,12 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/public/contests/completed', (req: any, res: any, next: any) => { req.query = { ...req.query, status: 'Completed' }; contestController.listContests(req, res, next); });
   router.get('/public/daily-contests', dailyContestsController.listDailyContests);
   router.get('/public/grand-contests', grandContestController.listGrandContests);
-  router.get('/public/bi-weekly-contests', biWeeklyRoomCycleController.getCycles);
-  router.get('/bi-weekly-contests', biWeeklyRoomCycleController.getCycles);
-  router.get('/public/biweekly-contests', biWeeklyRoomCycleController.getCycles);
-  router.get('/biweekly-contests', biWeeklyRoomCycleController.getCycles);
-  router.get('/public/room-cycles', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/room-cycles', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/public/bi-weekly', biWeeklyRoomCycleController.getCycles);
-  router.get('/bi-weekly', biWeeklyRoomCycleController.getCycles);
+  router.get('/public/bi-weekly-contests', biWeeklyRoomCycleController.getRooms);
+  router.get('/bi-weekly-contests', biWeeklyRoomCycleController.getRooms);
+  router.get('/public/biweekly-contests', biWeeklyRoomCycleController.getRooms);
+  router.get('/biweekly-contests', biWeeklyRoomCycleController.getRooms);
+  router.get('/public/bi-weekly', biWeeklyRoomCycleController.getRooms);
+  router.get('/bi-weekly', biWeeklyRoomCycleController.getRooms);
   router.get('/public/coupons', couponController.listCoupons);
 
   // Contest routes
@@ -164,6 +162,29 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/admin/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
   router.post('/v1/mobile/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
   router.post('/mobile/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
+
+  // Grand Contest Check Status & Eligibility routes
+  router.get('/grand-contests/:id/check-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/grand-contests/:id/check-statuse', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/grand-contests/:id/status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/grand-contests/:id/join-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/grand-contests/:id/join', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+
+  router.get('/admin/grand-contests/:id/check-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/admin/grand-contests/:id/check-statuse', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/admin/grand-contests/:id/status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/admin/grand-contests/:id/join-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/admin/grand-contests/:id/join', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+
+  router.get('/v1/mobile/grand-contests/:id/check-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/v1/mobile/grand-contests/:id/check-statuse', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/mobile/grand-contests/:id/check-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/mobile/grand-contests/:id/check-statuse', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/v1/mobile/grand-contests/:id/join', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/mobile/grand-contests/:id/join', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/v1/mobile/grand-contests/:id/join-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+  router.get('/mobile/grand-contests/:id/join-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
+
   router.get('/grand-contests/:id/analytics', authenticate, grandContestController.getGrandContestAnalytics);
 
   router.post('/admin/grand-contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContest);
@@ -303,8 +324,8 @@ export function createApiRouter(authLimiter: any): Router {
   router.patch('/admin/surveys/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Marketing Manager'), moduleManagementController.toggleSurveyStatus);
 
   // Tasks REST APIs (/api/tasks & /api/admin/tasks)
-  router.get('/tasks', authenticate, moduleManagementController.listTasks);
-  router.get('/tasks/:id', authenticate, moduleManagementController.getTaskById);
+  router.get('/tasks', optionalAuthenticate, moduleManagementController.listTasks);
+  router.get('/tasks/:id', optionalAuthenticate, moduleManagementController.getTaskById);
   router.post('/tasks', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.createTask);
   router.put('/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.updateTask);
   router.delete('/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.deleteTask);
@@ -316,6 +337,12 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/admin/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.updateTask);
   router.delete('/admin/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.deleteTask);
   router.patch('/admin/tasks/:id/status', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.toggleTaskStatus);
+
+  // Mobile Task Endpoints
+  router.get('/v1/mobile/tasks', optionalAuthenticate, moduleManagementController.listTasks);
+  router.get('/mobile/tasks', optionalAuthenticate, moduleManagementController.listTasks);
+  router.get('/v1/mobile/tasks/:id', optionalAuthenticate, moduleManagementController.getTaskById);
+  router.get('/mobile/tasks/:id', optionalAuthenticate, moduleManagementController.getTaskById);
 
   // Challenges REST APIs
   router.get('/admin/challenges', authenticate, moduleManagementController.listChallenges);
@@ -526,44 +553,23 @@ export function createApiRouter(authLimiter: any): Router {
   // ==================================================================
   // BI-WEEKLY ROOM CYCLE MODULE API ENDPOINTS
   // ==================================================================
-  // Room Management & Contestant Participation
+  // Room Management & Contestant Participation (Canonical: /api/week/rooms)
   router.get('/week/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
   router.get('/v1/week/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/admin/room-cycle/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/admin/room-cycles/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/admin/bi-weekly-room-cycle/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/v1/mobile/room-cycle/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/mobile/room-cycle/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/week/rooms/:id/cycles', authenticate, biWeeklyRoomCycleController.getRoomCycles);
-  router.get('/v1/week/rooms/:id/cycles', authenticate, biWeeklyRoomCycleController.getRoomCycles);
-  router.get('/admin/room-cycle/rooms/:id/cycles', authenticate, biWeeklyRoomCycleController.getRoomCycles);
-  router.get('/admin/room-cycles/rooms/:id/cycles', authenticate, biWeeklyRoomCycleController.getRoomCycles);
-  router.get('/admin/bi-weekly-room-cycle/rooms/:id/cycles', authenticate, biWeeklyRoomCycleController.getRoomCycles);
-  router.get('/week/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
-  router.get('/v1/week/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
-  router.get('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
-  router.get('/admin/room-cycles/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
-  router.get('/admin/bi-weekly-room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.getRoomById);
+  router.get('/week/rooms/:id/cycles', optionalAuthenticate, biWeeklyRoomCycleController.getRoomCycles);
+  router.get('/v1/week/rooms/:id/cycles', optionalAuthenticate, biWeeklyRoomCycleController.getRoomCycles);
+  router.get('/week/rooms/:id/tasks', optionalAuthenticate, biWeeklyRoomCycleController.getRoomTasks);
+  router.get('/v1/week/rooms/:id/tasks', optionalAuthenticate, biWeeklyRoomCycleController.getRoomTasks);
+  router.get('/week/rooms/:id', optionalAuthenticate, biWeeklyRoomCycleController.getRoomById);
+  router.get('/v1/week/rooms/:id', optionalAuthenticate, biWeeklyRoomCycleController.getRoomById);
   router.post('/week/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
   router.post('/v1/week/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
-  router.post('/admin/room-cycle/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
-  router.post('/admin/room-cycles/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
-  router.post('/admin/bi-weekly-room-cycle/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
   router.put('/week/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
   router.put('/v1/week/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
-  router.put('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
-  router.put('/admin/room-cycles/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
-  router.put('/admin/bi-weekly-room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
   router.delete('/week/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
   router.delete('/v1/week/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
-  router.delete('/admin/room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
-  router.delete('/admin/room-cycles/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
-  router.delete('/admin/bi-weekly-room-cycle/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
   router.post('/week/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
   router.post('/v1/week/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
-  router.post('/admin/room-cycle/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
-  router.post('/admin/room-cycles/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
-  router.post('/admin/bi-weekly-room-cycle/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
 
   // Room Cycle Join Status & Join Participation Endpoints
   router.get('/week/rooms/:roomId/contests/:contestId/check-status', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
@@ -587,97 +593,51 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/week/rooms/:roomId/submit/:contestId', authenticate, upload.single('mediaFile'), biWeeklyRoomCycleController.submitAttempt);
   router.post('/v1/week/rooms/:roomId/submit/:contestId', authenticate, upload.single('mediaFile'), biWeeklyRoomCycleController.submitAttempt);
 
-  // Member Assignment & Transfer
+  // Member Assignment & Transfer (Canonical: /admin/members/...)
+  router.post('/admin/members/assign', authenticate, biWeeklyRoomCycleController.assignMembers);
+  router.post('/admin/members/random-assign', authenticate, biWeeklyRoomCycleController.randomAssign);
+  router.post('/admin/members/transfer', authenticate, biWeeklyRoomCycleController.transferMember);
+  router.delete('/admin/members/:roomId/:userId', authenticate, biWeeklyRoomCycleController.removeMember);
   router.post('/admin/room-cycle/members/assign', authenticate, biWeeklyRoomCycleController.assignMembers);
-  router.post('/admin/room-cycles/members/assign', authenticate, biWeeklyRoomCycleController.assignMembers);
-  router.post('/admin/bi-weekly-room-cycle/members/assign', authenticate, biWeeklyRoomCycleController.assignMembers);
   router.post('/admin/room-cycle/members/random-assign', authenticate, biWeeklyRoomCycleController.randomAssign);
-  router.post('/admin/room-cycles/members/random-assign', authenticate, biWeeklyRoomCycleController.randomAssign);
-  router.post('/admin/bi-weekly-room-cycle/members/random-assign', authenticate, biWeeklyRoomCycleController.randomAssign);
   router.post('/admin/room-cycle/members/transfer', authenticate, biWeeklyRoomCycleController.transferMember);
-  router.post('/admin/room-cycles/members/transfer', authenticate, biWeeklyRoomCycleController.transferMember);
-  router.post('/admin/bi-weekly-room-cycle/members/transfer', authenticate, biWeeklyRoomCycleController.transferMember);
   router.delete('/admin/room-cycle/members/:roomId/:userId', authenticate, biWeeklyRoomCycleController.removeMember);
-  router.delete('/admin/room-cycles/members/:roomId/:userId', authenticate, biWeeklyRoomCycleController.removeMember);
-  router.delete('/admin/bi-weekly-room-cycle/members/:roomId/:userId', authenticate, biWeeklyRoomCycleController.removeMember);
 
-  // Cycle Management
-  router.get('/admin/room-cycle/cycles', authenticate, biWeeklyRoomCycleController.getCycles);
-  router.get('/admin/room-cycles/cycles', authenticate, biWeeklyRoomCycleController.getCycles);
-  router.get('/admin/bi-weekly-room-cycle/cycles', authenticate, biWeeklyRoomCycleController.getCycles);
-  router.get('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.getCycleById);
-  router.get('/admin/room-cycles/cycles/:id', authenticate, biWeeklyRoomCycleController.getCycleById);
-  router.get('/admin/bi-weekly-room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.getCycleById);
-  router.post('/admin/room-cycle/cycles', authenticate, biWeeklyRoomCycleController.createCycle);
-  router.post('/admin/room-cycles/cycles', authenticate, biWeeklyRoomCycleController.createCycle);
-  router.post('/admin/bi-weekly-room-cycle/cycles', authenticate, biWeeklyRoomCycleController.createCycle);
-  router.put('/admin/room-cycle/cycles/:id/set-active', authenticate, biWeeklyRoomCycleController.setActiveCycle);
-  router.put('/admin/room-cycles/cycles/:id/set-active', authenticate, biWeeklyRoomCycleController.setActiveCycle);
-  router.put('/admin/bi-weekly-room-cycle/cycles/:id/set-active', authenticate, biWeeklyRoomCycleController.setActiveCycle);
-  router.put('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.updateCycle);
-  router.put('/admin/room-cycles/cycles/:id', authenticate, biWeeklyRoomCycleController.updateCycle);
-  router.put('/admin/bi-weekly-room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.updateCycle);
-  router.delete('/admin/room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.deleteCycle);
-  router.delete('/admin/room-cycles/cycles/:id', authenticate, biWeeklyRoomCycleController.deleteCycle);
-  router.delete('/admin/bi-weekly-room-cycle/cycles/:id', authenticate, biWeeklyRoomCycleController.deleteCycle);
 
-  // Task Management (/admin/tasks & /admin/room-cycle/tasks)
-  router.get('/admin/tasks', authenticate, biWeeklyRoomCycleController.getTasks);
-  router.get('/admin/tasks/:id', authenticate, biWeeklyRoomCycleController.getTasks);
-  router.post('/admin/tasks', authenticate, biWeeklyRoomCycleController.createTask);
-  router.put('/admin/tasks/:id', authenticate, biWeeklyRoomCycleController.updateTask);
-  router.delete('/admin/tasks/:id', authenticate, biWeeklyRoomCycleController.deleteTask);
+  // Room Cycle Task Management Aliases (Canonical: /admin/tasks)
+  router.get('/admin/room-cycle/tasks', authenticate, moduleManagementController.listTasks);
+  router.get('/admin/room-cycle/tasks/:id', authenticate, moduleManagementController.getTaskById);
+  router.post('/admin/room-cycle/tasks', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.createTask);
+  router.put('/admin/room-cycle/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.updateTask);
+  router.delete('/admin/room-cycle/tasks/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), moduleManagementController.deleteTask);
 
-  router.get('/admin/room-cycle/tasks', authenticate, biWeeklyRoomCycleController.getTasks);
-  router.get('/admin/room-cycles/tasks', authenticate, biWeeklyRoomCycleController.getTasks);
-  router.get('/admin/bi-weekly-room-cycle/tasks', authenticate, biWeeklyRoomCycleController.getTasks);
-  router.post('/admin/room-cycle/tasks', authenticate, biWeeklyRoomCycleController.createTask);
-  router.post('/admin/room-cycles/tasks', authenticate, biWeeklyRoomCycleController.createTask);
-  router.post('/admin/bi-weekly-room-cycle/tasks', authenticate, biWeeklyRoomCycleController.createTask);
-  router.put('/admin/room-cycle/tasks/:id', authenticate, biWeeklyRoomCycleController.updateTask);
-  router.put('/admin/room-cycles/tasks/:id', authenticate, biWeeklyRoomCycleController.updateTask);
-  router.put('/admin/bi-weekly-room-cycle/tasks/:id', authenticate, biWeeklyRoomCycleController.updateTask);
-  router.delete('/admin/room-cycle/tasks/:id', authenticate, biWeeklyRoomCycleController.deleteTask);
-  router.delete('/admin/room-cycles/tasks/:id', authenticate, biWeeklyRoomCycleController.deleteTask);
-  router.delete('/admin/bi-weekly-room-cycle/tasks/:id', authenticate, biWeeklyRoomCycleController.deleteTask);
-
-  // Submission Management
+  // Submission Management (Canonical: /admin/submissions)
+  router.get('/admin/submissions', authenticate, biWeeklyRoomCycleController.getSubmissions);
+  router.put('/admin/submissions/:id/review', authenticate, biWeeklyRoomCycleController.reviewSubmission);
   router.get('/admin/room-cycle/submissions', authenticate, biWeeklyRoomCycleController.getSubmissions);
-  router.get('/admin/room-cycles/submissions', authenticate, biWeeklyRoomCycleController.getSubmissions);
-  router.get('/admin/bi-weekly-room-cycle/submissions', authenticate, biWeeklyRoomCycleController.getSubmissions);
   router.put('/admin/room-cycle/submissions/:id/review', authenticate, biWeeklyRoomCycleController.reviewSubmission);
-  router.put('/admin/room-cycles/submissions/:id/review', authenticate, biWeeklyRoomCycleController.reviewSubmission);
-  router.put('/admin/bi-weekly-room-cycle/submissions/:id/review', authenticate, biWeeklyRoomCycleController.reviewSubmission);
 
-  // Leaderboard & Recalculation
+  // Leaderboard & Recalculation (Canonical: /admin/leaderboard)
+  router.get('/admin/leaderboard', authenticate, biWeeklyRoomCycleController.getLeaderboard);
+  router.post('/admin/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
   router.get('/admin/room-cycle/leaderboard', authenticate, biWeeklyRoomCycleController.getLeaderboard);
-  router.get('/admin/room-cycles/leaderboard', authenticate, biWeeklyRoomCycleController.getLeaderboard);
-  router.get('/admin/bi-weekly-room-cycle/leaderboard', authenticate, biWeeklyRoomCycleController.getLeaderboard);
   router.post('/admin/room-cycle/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
-  router.post('/admin/room-cycles/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
-  router.post('/admin/bi-weekly-room-cycle/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
 
-  // Rewards Management
+  // Rewards Management (Canonical: /admin/rewards)
+  router.get('/admin/rewards', authenticate, biWeeklyRoomCycleController.getRewards);
+  router.post('/admin/rewards', authenticate, biWeeklyRoomCycleController.createRewardRule);
+  router.post('/admin/rewards/distribute', authenticate, biWeeklyRoomCycleController.distributeRewards);
   router.get('/admin/room-cycle/rewards', authenticate, biWeeklyRoomCycleController.getRewards);
-  router.get('/admin/room-cycles/rewards', authenticate, biWeeklyRoomCycleController.getRewards);
-  router.get('/admin/bi-weekly-room-cycle/rewards', authenticate, biWeeklyRoomCycleController.getRewards);
   router.post('/admin/room-cycle/rewards', authenticate, biWeeklyRoomCycleController.createRewardRule);
-  router.post('/admin/room-cycles/rewards', authenticate, biWeeklyRoomCycleController.createRewardRule);
-  router.post('/admin/bi-weekly-room-cycle/rewards', authenticate, biWeeklyRoomCycleController.createRewardRule);
   router.post('/admin/room-cycle/rewards/distribute', authenticate, biWeeklyRoomCycleController.distributeRewards);
-  router.post('/admin/room-cycles/rewards/distribute', authenticate, biWeeklyRoomCycleController.distributeRewards);
-  router.post('/admin/bi-weekly-room-cycle/rewards/distribute', authenticate, biWeeklyRoomCycleController.distributeRewards);
 
-  // Analytics & Settings
+  // Analytics & Settings (Canonical: /admin/analytics & /admin/settings)
+  router.get('/admin/analytics', authenticate, biWeeklyRoomCycleController.getAnalytics);
   router.get('/admin/room-cycle/analytics', authenticate, biWeeklyRoomCycleController.getAnalytics);
-  router.get('/admin/room-cycles/analytics', authenticate, biWeeklyRoomCycleController.getAnalytics);
-  router.get('/admin/bi-weekly-room-cycle/analytics', authenticate, biWeeklyRoomCycleController.getAnalytics);
+  router.get('/admin/settings', authenticate, biWeeklyRoomCycleController.getSettings);
   router.get('/admin/room-cycle/settings', authenticate, biWeeklyRoomCycleController.getSettings);
-  router.get('/admin/room-cycles/settings', authenticate, biWeeklyRoomCycleController.getSettings);
-  router.get('/admin/bi-weekly-room-cycle/settings', authenticate, biWeeklyRoomCycleController.getSettings);
+  router.put('/admin/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
   router.put('/admin/room-cycle/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
-  router.put('/admin/room-cycles/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
-  router.put('/admin/bi-weekly-room-cycle/settings', authenticate, biWeeklyRoomCycleController.updateSettings);
 
   // Razorpay Payment Setup Routes
   router.get('/payments/settings', paymentController.getSettings);

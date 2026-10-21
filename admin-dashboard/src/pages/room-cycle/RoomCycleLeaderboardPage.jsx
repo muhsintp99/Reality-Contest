@@ -32,7 +32,7 @@ export const RoomCycleLeaderboardPage = () => {
   const fetchLeaderboard = async (scope) => {
     try {
       dispatch(setLoading(true));
-      const res = await axios.get('/api/admin/room-cycle/leaderboard', {
+      const res = await axios.get('/api/admin/leaderboard', {
         params: { scope }
       });
       if (res.data?.success) {
@@ -92,7 +92,7 @@ export const RoomCycleLeaderboardPage = () => {
   const handleRecalculate = async () => {
     try {
       setRecalculating(true);
-      await axios.post('/api/admin/room-cycle/leaderboard/recalculate');
+      await axios.post('/api/admin/leaderboard/recalculate');
       showAlert('success', 'Leaderboard scores recalculated!');
       if (leaderboardScope === 'Room' && selectedRoomId !== 'All') {
         fetchSpecificRoomLeaderboard(selectedRoomId);

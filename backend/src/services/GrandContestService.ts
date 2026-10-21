@@ -25,9 +25,14 @@ export class GrandContestService {
 
     const tasks = Array.isArray(data.tasks) ? data.tasks : [];
     const tasksCount = tasks.length > 0 ? tasks.length : Number(data.tasksCount) || 0;
+    const cashFee = Number(data.entryFee) || 0;
 
     const payload: Partial<IGrandContest> = {
       ...data,
+      entryFee: cashFee,
+      entryFeeType: 'Cash',
+      isFree: cashFee === 0,
+      entryFeeCoins: 0,
       tasks,
       tasksCount,
       registrationStart: data.registrationStart ? new Date(data.registrationStart) : new Date(),
@@ -91,6 +96,15 @@ export class GrandContestService {
     }
 
     if (!contest) {
+      const allContests = await GrandContest.find().populate('tasks');
+      contest = allContests.find((c: any) => {
+        const slug = (c.title || '').toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+        const target = id.toLowerCase().trim();
+        return slug === target || (c.title || '').toLowerCase() === decodeURIComponent(target);
+      }) || null;
+    }
+
+    if (!contest) {
       throw new NotFoundError('Grand Contest not found');
     }
 
@@ -109,6 +123,13 @@ export class GrandContestService {
 
     if (Array.isArray(data.tasks)) {
       data.tasksCount = data.tasks.length;
+    }
+
+    data.entryFeeType = 'Cash';
+    data.entryFeeCoins = 0;
+    if (data.entryFee !== undefined) {
+      data.entryFee = Number(data.entryFee) || 0;
+      data.isFree = data.entryFee === 0;
     }
 
     const updated = await GrandContest.findByIdAndUpdate(contestIdToUpdate, data, { new: true, runValidators: true }).populate('tasks');
@@ -203,54 +224,26 @@ export class GrandContestService {
           };
         }
 
-        // 4. Entry Fee / Price & Coin Payment Processing
-        const isFreeEntry = contest.isFree || contest.entryFeeType === 'Free' || (contest.entryFee === 0 && contest.entryFeeCoins === 0);
+        // 4. Entry Fee Payment Processing: Grand Contests STRICTLY require Entry Fee Type 'Cash' (INR ₹)
+        const cashFee = Number(contest.entryFee) || 0;
 
-        if (!isFreeEntry) {
-          const isCoinFee = contest.entryFeeType === 'Coins' || (contest.entryFeeCoins && contest.entryFeeCoins > 0);
-
-          if (isCoinFee) {
-            const coinFee = contest.entryFeeCoins || contest.entryFee || 0;
-            const userCoins = userObj.coins || 0;
-
-            if (userCoins < coinFee && userObj.walletBalance < coinFee) {
-              throw new BadRequestError(`Insufficient balance. This Grand Contest requires ${coinFee} Coins 🪙 for entry fee.`);
-            }
-
-            if (userCoins >= coinFee) {
-              userObj.coins = userCoins - coinFee;
-            } else {
-              userObj.walletBalance -= coinFee;
-            }
-            await userObj.save();
-
-            await Transaction.create({
-              userId: userObj._id,
-              amount: -coinFee,
-              type: 'Entry Fee',
-              status: 'Completed',
-              description: `Coin entry fee for Grand Contest (${contest.contestId}): ${contest.title} (${coinFee} Coins 🪙)`,
-              reference: `GNC-COIN-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
-            });
-          } else {
-            // Cash Fee
-            const cashFee = contest.entryFee || 0;
-            if (userObj.walletBalance < cashFee) {
-              throw new BadRequestError(`Insufficient wallet balance. This Grand Contest requires ₹${cashFee} entry fee.`);
-            }
-
-            userObj.walletBalance -= cashFee;
-            await userObj.save();
-
-            await Transaction.create({
-              userId: userObj._id,
-              amount: -cashFee,
-              type: 'Entry Fee',
-              status: 'Completed',
-              description: `Cash entry fee for Grand Contest (${contest.contestId}): ${contest.title} (₹${cashFee})`,
-              reference: `GNC-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
-            });
+        if (cashFee > 0) {
+          const userWallet = Number(userObj.walletBalance) || 0;
+          if (userWallet < cashFee) {
+            throw new BadRequestError(`Insufficient wallet balance. This Grand Contest requires ₹${cashFee} cash entry fee.`);
           }
+
+          userObj.walletBalance = userWallet - cashFee;
+          await userObj.save();
+
+          await Transaction.create({
+            userId: userObj._id,
+            amount: -cashFee,
+            type: 'Entry Fee',
+            status: 'Completed',
+            description: `Cash entry fee for Grand Contest (${contest.contestId}): ${contest.title} (₹${cashFee})`,
+            reference: `GNC-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+          });
         }
 
         // Add user to contest participants
@@ -272,10 +265,230 @@ export class GrandContestService {
     };
   }
 
+  async checkGrandContestStatus(id: string, userId?: string) {
+    const contest = await this.getGrandContestById(id);
+    const now = new Date();
+
+    const allowedStatuses = ['Registration Open', 'Active', 'Live', 'Upcoming', 'In Progress'];
+    const isOpen = allowedStatuses.includes(contest.status);
+    const registrationStarted = !contest.registrationStart || now >= new Date(contest.registrationStart);
+    const registrationEnded = Boolean(contest.registrationEnd && now > new Date(contest.registrationEnd));
+    const contestEnded = Boolean(contest.endDate && now > new Date(contest.endDate));
+
+    const tasks = Array.isArray(contest.tasks) ? contest.tasks : [];
+    const totalTasksCount = tasks.length > 0 ? tasks.length : Number(contest.tasksCount || 0);
+
+    const cashFee = Number(contest.entryFee) || 0;
+    const isFree = cashFee === 0;
+
+    // If no userId, return clean unauthenticated payload
+    if (!userId) {
+      const canJoin = isOpen && registrationStarted && !registrationEnded && !contestEnded;
+      return {
+        success: true,
+        isJoined: false,
+        joined: false,
+        hasJoined: false,
+        join: false,
+        jin: false,
+        completed: false,
+        complete: false,
+        isCompleted: false,
+        hasCompleted: false,
+        isComplete: false,
+        message: 'User not authenticated',
+        data: {
+          isJoined: false,
+          joined: false,
+          hasJoined: false,
+          join: false,
+          jin: false,
+          completed: false,
+          complete: false,
+          isCompleted: false,
+          hasCompleted: false,
+          isComplete: false,
+          roomId: (contest._id as any).toString(),
+          contestId: (contest._id as any).toString(),
+          grandContestId: (contest._id as any).toString(),
+          customContestId: contest.contestId,
+          title: contest.title,
+          status: contest.status,
+          totalTasks: totalTasksCount,
+          completedTasks: 0,
+          pendingTasks: totalTasksCount,
+          submittedTasks: 0,
+          approvedTasks: 0,
+          pendingReviewTasks: 0,
+          rejectedTasks: 0,
+          totalCycles: 1,
+          completedCycles: 0,
+          pendingCycles: 1,
+          totalParticipants: contest.participants ? contest.participants.length : 0,
+          maxParticipants: contest.maxParticipants || 0,
+          entryFee: cashFee,
+          entryFeeCoins: 0,
+          entryFeeType: 'Cash',
+          isFree,
+          canJoin,
+          requiresAuth: true
+        }
+      };
+    }
+
+    // Check user & join state
+    const userObjId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : null;
+    let userObj: any = null;
+    if (userObjId) {
+      userObj = await User.findById(userObjId);
+    }
+
+    let isJoined = false;
+    const uIdStr = userId.toString();
+    contest.participants = contest.participants || [];
+    isJoined = contest.participants.some((p: any) => (p._id ? p._id.toString() === uIdStr : p.toString() === uIdStr));
+
+    // Fetch user submissions for this grand contest
+    const submissionsQuery: any = {
+      userId: userObjId || userId,
+      $or: [
+        { contestId: contest._id },
+        { grandContestId: contest._id }
+      ]
+    };
+    if (mongoose.Types.ObjectId.isValid(contest.contestId)) {
+      submissionsQuery.$or.push({ contestId: new mongoose.Types.ObjectId(contest.contestId) });
+    }
+
+    const submissions = await RoomSubmission.find(submissionsQuery).lean();
+    if (submissions.length > 0) {
+      isJoined = true;
+    }
+
+    // Task & submission metrics
+    const userSubmittedTaskIdSet = new Set<string>();
+    let approvedTasksCount = 0;
+    let pendingReviewTasksCount = 0;
+    let rejectedTasksCount = 0;
+
+    for (const sub of submissions) {
+      if (sub.taskId) {
+        userSubmittedTaskIdSet.add(sub.taskId.toString());
+      }
+      if (sub.status === 'Approved') {
+        approvedTasksCount++;
+      } else if (sub.status === 'Pending') {
+        pendingReviewTasksCount++;
+      } else if (sub.status === 'Rejected') {
+        rejectedTasksCount++;
+      }
+    }
+
+    const submittedTasksCount = userSubmittedTaskIdSet.size || submissions.length;
+    const completedTasksCount = approvedTasksCount > 0 ? approvedTasksCount : submittedTasksCount;
+    const pendingTasks = Math.max(0, totalTasksCount - submittedTasksCount);
+
+    let isCompleted = false;
+    if (totalTasksCount > 0) {
+      isCompleted = submittedTasksCount >= totalTasksCount || approvedTasksCount >= totalTasksCount;
+    } else if (contest.status === 'Completed' && isJoined) {
+      isCompleted = true;
+    }
+
+    // Determine eligibility to join
+    let canJoin = !isJoined && isOpen && registrationStarted && !registrationEnded && !contestEnded;
+    let cannotJoinReason: string | null = null;
+
+    if (isJoined) {
+      cannotJoinReason = isCompleted 
+        ? 'User has completed all tasks in this grand contest' 
+        : 'User has already joined this grand contest';
+    } else if (!isOpen) {
+      cannotJoinReason = `Registration is closed for status: ${contest.status}`;
+    } else if (!registrationStarted) {
+      cannotJoinReason = `Registration opens on ${new Date(contest.registrationStart).toLocaleString()}`;
+    } else if (registrationEnded) {
+      cannotJoinReason = 'Registration deadline has passed';
+    } else if (contestEnded) {
+      cannotJoinReason = 'Grand contest has already ended';
+    } else if (contest.maxParticipants && contest.participants && contest.participants.length >= contest.maxParticipants) {
+      canJoin = false;
+      cannotJoinReason = 'Grand contest participant capacity reached';
+    } else if (userObj && cashFee > 0) {
+      if ((Number(userObj.walletBalance) || 0) < cashFee) {
+        canJoin = false;
+        cannotJoinReason = `Insufficient wallet balance. This Grand Contest requires ₹${cashFee} cash entry fee.`;
+      }
+    }
+
+    let message = 'User not joined';
+    if (isCompleted) {
+      message = 'User has completed all tasks in this grand contest';
+    } else if (isJoined) {
+      message = 'User has already joined this grand contest';
+    }
+
+    return {
+      success: true,
+      isJoined,
+      joined: isJoined,
+      hasJoined: isJoined,
+      join: isJoined,
+      jin: isJoined,
+      completed: isCompleted,
+      complete: isCompleted,
+      isCompleted,
+      hasCompleted: isCompleted,
+      isComplete: isCompleted,
+      message,
+      data: {
+        isJoined,
+        joined: isJoined,
+        hasJoined: isJoined,
+        join: isJoined,
+        jin: isJoined,
+        completed: isCompleted,
+        complete: isCompleted,
+        isCompleted,
+        hasCompleted: isCompleted,
+        isComplete: isCompleted,
+        roomId: (contest._id as any).toString(),
+        contestId: (contest._id as any).toString(),
+        grandContestId: (contest._id as any).toString(),
+        customContestId: contest.contestId,
+        title: contest.title,
+        status: contest.status,
+        totalTasks: totalTasksCount,
+        completedTasks: completedTasksCount,
+        pendingTasks,
+        submittedTasks: submittedTasksCount,
+        approvedTasks: approvedTasksCount,
+        pendingReviewTasks: pendingReviewTasksCount,
+        rejectedTasks: rejectedTasksCount,
+        totalCycles: 1,
+        completedCycles: isCompleted ? 1 : 0,
+        pendingCycles: isCompleted ? 0 : 1,
+        totalParticipants: contest.participants ? contest.participants.length : 0,
+        maxParticipants: contest.maxParticipants || 0,
+        entryFee: cashFee,
+        entryFeeCoins: 0,
+        entryFeeType: 'Cash',
+        isFree,
+        canJoin,
+        cannotJoinReason,
+        submissionsCount: submissions.length
+      }
+    };
+  }
+
   // ================= TASK MANAGEMENT FOR GRAND CONTEST =================
   async getTasksForGrandContest(id: string) {
     const contest = await this.getGrandContestById(id);
-    const taskIds = contest.tasks || [];
+    const rawTasks = contest.tasks || [];
+    if (Array.isArray(rawTasks) && rawTasks.length > 0 && typeof rawTasks[0] === 'object' && (rawTasks[0] as any).title) {
+      return rawTasks;
+    }
+    const taskIds = rawTasks.map((t: any) => (t && typeof t === 'object' && t._id) ? t._id : t).filter(Boolean);
     const tasks = await Task.find({ _id: { $in: taskIds } }).sort({ order: 1, createdAt: -1 });
     return tasks;
   }

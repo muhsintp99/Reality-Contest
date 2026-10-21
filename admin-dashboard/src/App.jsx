@@ -8,6 +8,7 @@ import { AdminDashboardLayout } from './layouts/AdminDashboardLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PermissionGuard } from './components/PermissionGuard';
 import { NotificationProvider } from './context/NotificationContext';
+import { PageTitleProvider } from './context/PageTitleContext';
 import { PageSkeleton } from './components/PageSkeleton';
 
 // Lazy-loaded page components for route-based code splitting and fast bundle initialization
@@ -91,12 +92,13 @@ const ReferralAbusePage = lazy(() => import('./pages/ReferralAbusePage').then(m 
 // Bi-Weekly Room Cycle Module Pages
 const RoomCycleDashboardPage = lazy(() => import('./pages/room-cycle/RoomCycleDashboardPage').then(m => ({ default: m.RoomCycleDashboardPage })));
 const RoomManagementPage = lazy(() => import('./pages/room-cycle/RoomManagementPage').then(m => ({ default: m.RoomManagementPage })));
-const CycleManagementPage = lazy(() => import('./pages/room-cycle/CycleManagementPage').then(m => ({ default: m.CycleManagementPage })));
+const RoomDetailsPage = lazy(() => import('./pages/room-cycle/RoomDetailsPage').then(m => ({ default: m.RoomDetailsPage })));
 const RoomCycleTaskPage = lazy(() => import('./pages/room-cycle/TaskManagementPage').then(m => ({ default: m.TaskManagementPage })));
 const RoomCycleSubmissionPage = lazy(() => import('./pages/room-cycle/SubmissionManagementPage').then(m => ({ default: m.SubmissionManagementPage })));
 const RoomCycleLeaderboardPage = lazy(() => import('./pages/room-cycle/RoomCycleLeaderboardPage').then(m => ({ default: m.RoomCycleLeaderboardPage })));
 const RewardManagementPage = lazy(() => import('./pages/room-cycle/RewardManagementPage').then(m => ({ default: m.RewardManagementPage })));
 const RoomCycleSettingsPage = lazy(() => import('./pages/room-cycle/RoomCycleSettingsPage').then(m => ({ default: m.RoomCycleSettingsPage })));
+const CreateRoomPage = lazy(() => import('./pages/room-cycle/CreateRoomPage').then(m => ({ default: m.CreateRoomPage })));
 
 
 const AppContent = () => {
@@ -182,16 +184,19 @@ const AppContent = () => {
                 <Routes>
                   <Route path="dashboard" element={<DashboardHome onViewChange={(view) => navigate(`/admin-dashboard/${view}`)} selectedRole={selectedRole} />} />
                   {/* Bi-Weekly Room Cycle Module Routes */}
-                  <Route path="bi-weekly-room-cycle" element={<Navigate to="bi-weekly-room-cycle/rooms" replace />} />
-                  <Route path="bi-weekly-room-cycle/dashboard" element={<Navigate to="/admin-dashboard/bi-weekly-room-cycle/rooms" replace />} />
-                  <Route path="bi-weekly-room-cycle/rooms" element={<RoomManagementPage />} />
-                  <Route path="bi-weekly-room-cycle/cycles" element={<CycleManagementPage />} />
-                  <Route path="bi-weekly-room-cycle/tasks" element={<Navigate to="/admin-dashboard/tasks" replace />} />
-                  <Route path="bi-weekly-room-cycle/submissions" element={<RoomCycleSubmissionPage />} />
-                  <Route path="bi-weekly-room-cycle/leaderboard" element={<RoomCycleLeaderboardPage />} />
-                  <Route path="bi-weekly-room-cycle/rewards" element={<RewardManagementPage />} />
-                  <Route path="bi-weekly-room-cycle/analytics" element={<RoomCycleDashboardPage />} />
-                  <Route path="bi-weekly-room-cycle/settings" element={<RoomCycleSettingsPage />} />
+                  <Route path="bi-weekly-room" element={<Navigate to="bi-weekly-room/rooms" replace />} />
+                  <Route path="bi-weekly-room/dashboard" element={<Navigate to="/admin-dashboard/bi-weekly-room/rooms" replace />} />
+                  <Route path="bi-weekly-room/rooms" element={<RoomManagementPage />} />
+                  <Route path="bi-weekly-room/rooms/create" element={<CreateRoomPage />} />
+                  <Route path="bi-weekly-room/rooms/edit/:roomId" element={<CreateRoomPage />} />
+                  <Route path="bi-weekly-room/rooms/:roomId" element={<RoomDetailsPage />} />
+                  <Route path="bi-weekly-room/cycles" element={<Navigate to="/admin-dashboard/bi-weekly-room/rooms" replace />} />
+                  <Route path="bi-weekly-room/tasks" element={<TaskManagementPage />} />
+                  <Route path="bi-weekly-room/submissions" element={<RoomCycleSubmissionPage />} />
+                  <Route path="bi-weekly-room/leaderboard" element={<RoomCycleLeaderboardPage />} />
+                  <Route path="bi-weekly-room/rewards" element={<RewardManagementPage />} />
+                  <Route path="bi-weekly-room/analytics" element={<RoomCycleDashboardPage />} />
+                  <Route path="bi-weekly-room/settings" element={<RoomCycleSettingsPage />} />
 
                   <Route path="user-management" element={<Navigate to="user-management/all-users" replace />} />
 
@@ -204,6 +209,8 @@ const AppContent = () => {
                   <Route path="user-management/referral-details" element={<ReferralDetailsPage />} />
                   <Route path="grand-contest" element={<GrandContestManagement />} />
                   <Route path="grand-contests" element={<GrandContestManagement />} />
+                  <Route path="grand-contest/:id" element={<GrandContestManagement />} />
+                  <Route path="grand-contests/:id" element={<GrandContestManagement />} />
                   <Route path="grand-contests/wizard" element={<GrandContestWizard />} />
                   <Route path="question-bank" element={<Navigate to="question-bank/pool" replace />} />
                   <Route path="question-bank/pool" element={<QuestionPoolPage />} />
@@ -300,7 +307,9 @@ export const App = () => (
   <ThemeProvider>
     <AlertProvider>
       <NotificationProvider>
-        <AppContent />
+        <PageTitleProvider>
+          <AppContent />
+        </PageTitleProvider>
       </NotificationProvider>
     </AlertProvider>
   </ThemeProvider>

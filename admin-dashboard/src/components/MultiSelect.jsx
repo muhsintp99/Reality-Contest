@@ -55,10 +55,12 @@ export const MultiSelect = ({
 
   const handleToggle = (val) => {
     if (disabled) return;
-    if (activeValue.includes(val)) {
-      onChange(activeValue.filter(v => v !== val));
+    const targetVal = typeof val === 'object' ? (val.value || val._id || val.id) : val;
+    const exists = activeValue.some(v => String(typeof v === 'object' ? (v.value || v._id || v.id) : v) === String(targetVal));
+    if (exists) {
+      onChange(activeValue.filter(v => String(typeof v === 'object' ? (v.value || v._id || v.id) : v) !== String(targetVal)));
     } else {
-      onChange([...activeValue, val]);
+      onChange([...activeValue, targetVal]);
     }
   };
 
@@ -97,15 +99,20 @@ export const MultiSelect = ({
           </span>
         )}
 
-        {activeValue.map(val => {
-          const opt = options.find(o => o.value === val) || { value: val, label: val };
+        {activeValue.map((val, idx) => {
+          const valKey = typeof val === 'object' ? String(val.value || val._id || val.id || '') : String(val);
+          const opt = options.find(o => String(o.value) === valKey) ||
+                      (typeof val === 'object' ? { value: valKey, label: val.label || val.title || val.name } : null);
+          const displayLabel = opt?.label ||
+                               (typeof val === 'object' ? (val.label || val.title || val.name) : null) ||
+                               (valKey.length === 24 ? `Task #${valKey.slice(-4)}` : valKey);
           return (
             <span
-              key={val}
+              key={valKey || idx}
               className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-bold shadow-xs transition-all hover:bg-emerald-500/25"
             >
-              {getCategoryIcon(opt)}
-              <span>{opt.label}</span>
+              {getCategoryIcon(opt || { label: displayLabel })}
+              <span>{displayLabel}</span>
               <X
                 className="w-3 h-3 cursor-pointer hover:text-rose-400 transition-colors ml-0.5"
                 onClick={(e) => { e.stopPropagation(); handleToggle(val); }}
@@ -171,7 +178,7 @@ export const MultiSelect = ({
               <div className="px-4 py-4 text-xs text-slate-400 text-center font-medium">No matching items found.</div>
             ) : (
               filteredOptions.map((opt) => {
-                const isSelected = activeValue.includes(opt.value);
+                const isSelected = activeValue.some(v => String(typeof v === 'object' ? (v.value || v._id || v.id) : v) === String(opt.value));
                 return (
                   <div
                     key={opt.value}

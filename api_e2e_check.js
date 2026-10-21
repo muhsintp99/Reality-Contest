@@ -346,6 +346,72 @@ async function runE2ETests() {
 
   console.log(`SUCCESS: Joined contest in single API call! Assigned Group: ${singleJoinRes.body.joinedGroup}, Stages Count: ${singleJoinRes.body.stages.length}`);
 
+  // Step 12: Grand Contest check-status & Participation Verification
+  console.log('\nStep 12: Testing Grand Contest check-status endpoint (/api/grand-contests/:id/check-status)...');
+  const createGrandRes = await makeRequest('/api/admin/grand-contests', 'POST', {
+    title: 'E2E Grand Contest Check Status Test',
+    description: 'Testing grand contest check-status verification flow',
+    entryFee: 0,
+    isFree: true,
+    prizePool: 100000,
+    status: 'Registration Open'
+  }, 'admin');
+
+  if (createGrandRes.statusCode !== 201 || !createGrandRes.body.data) {
+    console.error('FAIL: Admin Grand Contest creation failed:', createGrandRes.body);
+    process.exit(1);
+  }
+
+  const grandContestId = createGrandRes.body.data._id || createGrandRes.body.data.contestId;
+  console.log(`Created test Grand Contest ID: ${grandContestId}`);
+
+  // 12a: Check status before joining (should be isJoined: false)
+  const preCheck = await makeRequest(`/api/grand-contests/${grandContestId}/check-status`, 'GET', null, 'contestant');
+  console.log('Pre-join check-status response code:', preCheck.statusCode);
+  console.log('Pre-join check-status body:', preCheck.body);
+
+  if (preCheck.statusCode !== 200 || !preCheck.body.success || preCheck.body.isJoined !== false) {
+    console.error('FAIL: Pre-join check-status expected isJoined: false, got:', preCheck.body);
+    process.exit(1);
+  }
+  console.log('SUCCESS: Pre-join check-status correctly indicates contestant is not yet joined.');
+
+  // Also test check-statuse alias
+  const typoCheck = await makeRequest(`/api/grand-contests/${grandContestId}/check-statuse`, 'GET', null, 'contestant');
+  if (typoCheck.statusCode !== 200 || !typoCheck.body.success) {
+    console.error('FAIL: /check-statuse alias endpoint failed:', typoCheck.body);
+    process.exit(1);
+  }
+  console.log('SUCCESS: /check-statuse route alias verified.');
+
+  // 12b: Contestant joins Grand Contest
+  const joinGrandRes = await makeRequest(`/api/grand-contests/${grandContestId}/join`, 'POST', {}, 'contestant');
+  console.log('Join Grand Contest response code:', joinGrandRes.statusCode);
+  if (joinGrandRes.statusCode !== 200 || !joinGrandRes.body.success) {
+    console.error('FAIL: Joining Grand Contest failed:', joinGrandRes.body);
+    process.exit(1);
+  }
+  console.log('SUCCESS: Contestant joined Grand Contest.');
+
+  // 12c: Check status after joining (should be isJoined: true)
+  const postCheck = await makeRequest(`/api/grand-contests/${grandContestId}/check-status`, 'GET', null, 'contestant');
+  console.log('Post-join check-status response code:', postCheck.statusCode);
+  console.log('Post-join check-status body:', postCheck.body);
+
+  if (postCheck.statusCode !== 200 || !postCheck.body.success || postCheck.body.isJoined !== true) {
+    console.error('FAIL: Post-join check-status expected isJoined: true, got:', postCheck.body);
+    process.exit(1);
+  }
+  console.log('SUCCESS: Post-join check-status correctly indicates contestant is registered.');
+
+  // 12d: Admin checks contestant status using userId query parameter
+  const adminCheck = await makeRequest(`/api/admin/grand-contests/${grandContestId}/check-status?userId=${contestantId}`, 'GET', null, 'admin');
+  if (adminCheck.statusCode !== 200 || !adminCheck.body.success || adminCheck.body.isJoined !== true) {
+    console.error('FAIL: Admin check-status for user failed:', adminCheck.body);
+    process.exit(1);
+  }
+  console.log('SUCCESS: Admin check-status by userId verified successfully.');
+
   console.log('\n====================================================');
   console.log('SUCCESS: ALL PROGRAMMATIC E2E API VERIFICATION TESTS PASSED');
   console.log('====================================================');

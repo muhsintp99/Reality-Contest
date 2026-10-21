@@ -8,6 +8,7 @@ import {
   Sparkles, ShieldAlert, ArrowUpRight, ArrowDownRight, Layers
 } from 'lucide-react';
 import { useAlert } from '../context/AlertContext';
+import { usePageTitle } from '../context/PageTitleContext';
 import { CustomSelect } from '../components/CustomSelect';
 
 export const DailyContestAnalyticsPage = () => {
@@ -15,6 +16,7 @@ export const DailyContestAnalyticsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { showSnackbar } = useAlert();
+  const { setCustomTitle } = usePageTitle();
 
   const isStandardContest = location.pathname.includes('/contests/');
 
@@ -75,6 +77,13 @@ export const DailyContestAnalyticsPage = () => {
   useEffect(() => {
     fetchAnalytics();
   }, [contestId]);
+
+  useEffect(() => {
+    if (analyticsData?.contest?.title) {
+      setCustomTitle(`${analyticsData.contest.title} Analytics`);
+    }
+    return () => setCustomTitle(null);
+  }, [analyticsData?.contest?.title, setCustomTitle]);
 
   const generateFallbackAnalytics = (id) => {
     const now = Date.now();

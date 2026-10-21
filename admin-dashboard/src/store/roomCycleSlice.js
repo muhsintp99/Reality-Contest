@@ -44,9 +44,16 @@ export const roomCycleSlice = createSlice({
       state.loading = false;
     },
     setRooms: (state, action) => {
-      state.rooms = action.payload.rooms || action.payload;
-      if (action.payload.pagination) {
-        state.pagination = action.payload.pagination;
+      const payload = action.payload;
+      if (Array.isArray(payload)) {
+        state.rooms = payload;
+      } else if (payload && Array.isArray(payload.rooms)) {
+        state.rooms = payload.rooms;
+      } else {
+        state.rooms = [];
+      }
+      if (payload && payload.pagination) {
+        state.pagination = payload.pagination;
       }
       state.loading = false;
     },

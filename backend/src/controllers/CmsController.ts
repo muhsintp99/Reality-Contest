@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { CMSDocument, CMSFaq, CMSHelp, CMSBlog, CMSNews, CMSSocial } from '../models/CMS';
 import { NotFoundError, BadRequestError } from '../core/errors';
 import { saveBase64File } from './UploadController';
+import { seedCmsData } from '../scripts/seedCms';
 
 export class CMSController {
   // -------------------------------------------------------------
@@ -337,7 +338,6 @@ export class CMSController {
 
   async seedCms(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { seedCmsData } = require('../scripts/seedCms');
       const result = await seedCmsData();
       res.status(200).json({ success: true, message: 'CMS Database Seeded successfully.', data: result });
     } catch (err) {

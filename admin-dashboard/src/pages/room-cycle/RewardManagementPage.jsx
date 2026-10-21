@@ -33,7 +33,7 @@ export const RewardManagementPage = () => {
   const fetchRewards = async () => {
     try {
       dispatch(setLoading(true));
-      const res = await axios.get('/api/admin/room-cycle/rewards');
+      const res = await axios.get('/api/admin/rewards');
       if (res.data?.success) {
         dispatch(setRewards(res.data.data));
       } else {
@@ -54,7 +54,7 @@ export const RewardManagementPage = () => {
   const handleCreateReward = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/api/admin/room-cycle/rewards', rewardFormData);
+      const res = await axios.post('/api/admin/rewards', rewardFormData);
       if (res.data?.success) {
         showSnackbar('Reward rule created!', 'success');
         setIsRewardDrawerOpen(false);
@@ -68,7 +68,7 @@ export const RewardManagementPage = () => {
   const handleDistributeRewardsClick = () => {
     showConfirm('Distribute Rewards', 'Are you sure you want to trigger payout distribution for all pending rewards?', async () => {
       try {
-        const res = await axios.post('/api/admin/room-cycle/rewards/distribute');
+        const res = await axios.post('/api/admin/rewards/distribute');
         if (res.data?.success) {
           showSnackbar('Rewards distribution completed!', 'success');
           fetchRewards();

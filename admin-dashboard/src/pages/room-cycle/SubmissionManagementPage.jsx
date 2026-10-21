@@ -53,7 +53,7 @@ export const SubmissionManagementPage = () => {
   const fetchSubmissions = async () => {
     try {
       dispatch(setLoading(true));
-      const res = await axios.get('/api/admin/room-cycle/submissions', {
+      const res = await axios.get('/api/admin/submissions', {
         params: { search, status: selectedStatus, cycleId: selectedCycle, page, limit: 10 }
       });
       if (res.data?.success) {
@@ -77,7 +77,7 @@ export const SubmissionManagementPage = () => {
     e.preventDefault();
     if (!selectedSubmission) return;
     try {
-      const res = await axios.put(`/api/admin/room-cycle/submissions/${selectedSubmission._id}/review`, reviewFormData);
+      const res = await axios.put(`/api/admin/submissions/${selectedSubmission._id}/review`, reviewFormData);
       if (res.data?.success) {
         showSnackbar(`Submission ${reviewFormData.status.toLowerCase()}!`, 'success');
         setIsReviewDrawerOpen(false);

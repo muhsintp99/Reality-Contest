@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Layers, Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, ShieldCheck, Award, Calendar, Grid, List, Trophy, TrendingUp, BarChart3, CheckCircle2, Target, Crown, Medal, Clock, XCircle
+  Layers, Plus, Search, Edit3, Trash2, Users, UserPlus, RefreshCw, Eye, Upload, Link as LinkIcon, Image as ImageIcon, X, ShieldCheck, Award, Calendar, Grid, List, Trophy, TrendingUp, BarChart3, CheckCircle2, Target, Crown, Medal, Clock, XCircle, CheckSquare, Coins, Sparkles, AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { setRooms, setActiveRoom, setLoading } from '../../store/roomCycleSlice';
@@ -9,8 +10,51 @@ import { useAlert } from '../../context/AlertContext';
 import { RightDrawer } from '../../components/RightDrawer';
 import { CustomSelect } from '../../components/CustomSelect';
 import { MultiSelect } from '../../components/MultiSelect';
+import { slugifyTitle } from '../../utils/routeUtils';
+
+const formatDateForInput = (d) => {
+  if (!d) return '';
+  try {
+    const date = new Date(d);
+    return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+  } catch (e) {
+    return '';
+  }
+};
+
+const getSafeImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  if (url.startsWith('/')) return url;
+  return `/${url}`;
+};
+
+const RoomCoverImage = ({ src, alt, code, className = 'w-full h-36' }) => {
+  const [error, setError] = useState(false);
+  const safeSrc = getSafeImageUrl(src);
+
+  if (!safeSrc || error) {
+    return (
+      <div className={`rounded-xl bg-gradient-to-tr from-brandPrimary/20 via-emerald-500/10 to-indigo-500/20 border border-slate-200 dark:border-white/10 flex items-center justify-center font-black text-brandPrimary group-hover:scale-[1.01] transition-transform ${className}`}>
+        {code || 'ROOM'}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={safeSrc}
+      loading="lazy"
+      decoding="async"
+      className={`${className} object-cover rounded-xl border border-slate-200 dark:border-white/10 group-hover:scale-[1.01] transition-transform`}
+      alt={alt}
+      onError={() => setError(true)}
+    />
+  );
+};
 
 export const RoomManagementPage = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { showAlert, showConfirm, showSnackbar } = useAlert();
   const { rooms, activeRoom, roomMembers, loading, pagination } = useSelector((state) => state.roomCycle);
@@ -20,10 +64,9 @@ export const RoomManagementPage = () => {
   const [selectedRooms, setSelectedRooms] = useState([]);
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+  const [brokenImageIds, setBrokenImageIds] = useState(new Set());
 
   // Drawer states
-  const [isRoomDrawerOpen, setIsRoomDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState('create'); // 'create' | 'edit'
   const [isMemberDrawerOpen, setIsMemberDrawerOpen] = useState(false);
   const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState(false);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
@@ -31,23 +74,7 @@ export const RoomManagementPage = () => {
   const [detailsTab, setDetailsTab] = useState('overview'); // 'overview' | 'analytics' | 'leaderboard' | 'members'
   const [roomAnalytics, setRoomAnalytics] = useState(null);
 
-  // Form states
-  const [roomFormData, setRoomFormData] = useState({
-    name: '',
-    description: '',
-    rules: '',
-    guidelines: '',
-    durationDays: 14,
-    maxMembers: 50,
-    currentCycle: 1,
-    cycleIds: [],
-    roomImage: '',
-    status: 'Active',
-    autoAssignment: true
-  });
-  const [editingRoomId, setEditingRoomId] = useState(null);
-  const [imageInputMode, setImageInputMode] = useState('upload'); // 'upload' | 'url'
-  const [availableCycles, setAvailableCycles] = useState([]);
+  const [availableTasks, setAvailableTasks] = useState([]);
 
   // Member assignment state
   const [assignUserIds, setAssignUserIds] = useState('');
@@ -71,67 +98,26 @@ export const RoomManagementPage = () => {
     }
   };
 
-  const fetchCycles = async () => {
+  const fetchTasks = async () => {
     try {
-      const res = await axios.get('/api/admin/room-cycle/cycles');
-      if (res.data?.success) {
+      let list = [];
+      const res = await axios.get('/api/admin/tasks?limit=100').catch(() => null);
+      if (res?.data?.success) {
         const raw = res.data.data;
-        const list = Array.isArray(raw?.cycles) ? raw.cycles : Array.isArray(raw) ? raw : [];
-        setAvailableCycles(list);
+        list = Array.isArray(raw?.tasks) ? raw.tasks : Array.isArray(raw) ? raw : (Array.isArray(res.data.tasks) ? res.data.tasks : []);
       }
+      setAvailableTasks(list);
     } catch (err) {
-      console.error('Error fetching cycles:', err);
+      console.error('Error fetching tasks for room:', err);
     }
   };
 
   useEffect(() => {
     fetchRooms();
-    fetchCycles();
+    fetchTasks();
   }, [search, statusFilter, page]);
 
-  const handleImageFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      showAlert('Please select a valid image file', 'error');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      showAlert('Image size should be less than 5MB', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setRoomFormData((prev) => ({ ...prev, roomImage: event.target?.result || '' }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSaveRoom = async (e) => {
-    e.preventDefault();
-    try {
-      if (drawerMode === 'create') {
-        const res = await axios.post('/api/week/rooms', roomFormData);
-        if (res.data?.success) {
-          showSnackbar('Room created successfully!', 'success');
-          setIsRoomDrawerOpen(false);
-          fetchRooms();
-        }
-      } else {
-        const res = await axios.put(`/api/week/rooms/${editingRoomId}`, roomFormData);
-        if (res.data?.success) {
-          showSnackbar('Room updated successfully!', 'success');
-          setIsRoomDrawerOpen(false);
-          fetchRooms();
-        }
-      }
-    } catch (err) {
-      showAlert(err.response?.data?.message || 'Failed to save room', 'error');
-    }
-  };
 
   const handleDeleteRoomClick = (room) => {
     showConfirm('Delete Room', `Are you sure you want to permanently delete room "${room.name}"?`, async () => {
@@ -149,7 +135,7 @@ export const RoomManagementPage = () => {
     const memberName = member.userId?.name || 'User';
     showConfirm('Remove Member', `Are you sure you want to remove user "${memberName}" from this room?`, async () => {
       try {
-        await axios.delete(`/api/admin/room-cycle/members/${activeRoom._id}/${member.userId?._id || member.userId}`);
+        await axios.delete(`/api/admin/members/${activeRoom._id}/${member.userId?._id || member.userId}`);
         showSnackbar('Member removed from room', 'success');
         if (activeRoom) openViewMembers(activeRoom);
       } catch (err) {
@@ -175,37 +161,27 @@ export const RoomManagementPage = () => {
     });
   };
 
-  const openViewDetails = async (room, tab = 'overview') => {
-    setViewingRoom(room);
-    setDetailsTab(tab);
-    setRoomAnalytics(room.analytics || null);
-    try {
-      const res = await axios.get(`/api/week/rooms/${room._id}`);
-      if (res.data?.success) {
-        const data = res.data.data;
-        dispatch(setActiveRoom(data));
-        const updatedRoom = { ...room, ...(data.room || {}), cycles: data.cycles || data.room?.cycleIds || [] };
-        setViewingRoom(updatedRoom);
-        if (data.analytics) {
-          setRoomAnalytics(data.analytics);
-        }
-      }
-    } catch (err) {
-      dispatch(setActiveRoom({ room, members: [] }));
-    }
-    setIsDetailsDrawerOpen(true);
+  const roomsList = Array.isArray(rooms) ? rooms : (Array.isArray(rooms?.rooms) ? rooms.rooms : []);
+
+  const formatSafeDate = (d, fallback = 'N/A') => {
+    if (!d) return fallback;
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? fallback : dt.toLocaleDateString();
   };
 
-  const openViewMembers = async (room) => {
-    try {
-      const res = await axios.get(`/api/week/rooms/${room._id}`);
-      if (res.data?.success) {
-        dispatch(setActiveRoom(res.data.data));
-      }
-    } catch (err) {
-      dispatch(setActiveRoom({ room, members: [] }));
-    }
-    setIsMemberDrawerOpen(true);
+  const openViewRoomDetailsDrawer = (room, tab = 'overview') => {
+    const slug = slugifyTitle(room.title, room._id);
+    navigate(`/admin-dashboard/bi-weekly-room/rooms/${slug}?tab=${tab}`);
+  };
+
+  const openViewDetails = (room, tab = 'tasks') => {
+    const slug = slugifyTitle(room.title, room._id);
+    navigate(`/admin-dashboard/bi-weekly-room/rooms/${slug}?tab=${tab}`);
+  };
+
+  const openViewMembers = (room) => {
+    const slug = slugifyTitle(room.title, room._id);
+    navigate(`/admin-dashboard/bi-weekly-room/rooms/${slug}?tab=members`);
   };
 
   const handleAssignMembers = async (e) => {
@@ -213,7 +189,7 @@ export const RoomManagementPage = () => {
     if (!activeRoom) return;
     const userIdsArray = assignUserIds.split(',').map((id) => id.trim()).filter(Boolean);
     try {
-      const res = await axios.post('/api/admin/room-cycle/members/assign', {
+      const res = await axios.post('/api/admin/members/assign', {
         roomId: activeRoom._id,
         userIds: userIdsArray
       });
@@ -238,20 +214,65 @@ export const RoomManagementPage = () => {
             Room Management Desk
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Create, Edit, Delete, View Room Details, manage Capacity, Cycles, and Member Allocations.
+            Create, Edit, Delete, View Room Details, manage Tasks, Capacity, and Member Allocations.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              setDrawerMode('create');
-              setRoomFormData({ name: '', description: '', rules: '', guidelines: '', durationDays: 14, maxMembers: 50, currentCycle: 1, cycleIds: [], roomImage: '', status: 'Active', autoAssignment: true });
-              setIsRoomDrawerOpen(true);
-            }}
+            onClick={() => navigate('/admin-dashboard/bi-weekly-room/rooms/create')}
             className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow-indigo-500/20"
           >
             <Plus className="w-4 h-4" /> Create Room
           </button>
+        </div>
+      </div>
+
+      {/* Quick Desk KPI Cards Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-brandPrimary/10 text-brandPrimary flex items-center justify-center font-bold">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Rooms</span>
+            <span className="text-lg font-black text-slate-900 dark:text-white">{pagination?.total || roomsList.length}</span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
+            <Target className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Active Rooms</span>
+            <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+              {roomsList.filter(r => r.status === 'Active' || r.status === 'In Progress').length}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Active Members</span>
+            <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">
+              {roomsList.reduce((sum, r) => sum + (Number(r.membersCount) || 0), 0)}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">
+            <Trophy className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Total Points</span>
+            <span className="text-lg font-black text-amber-600 dark:text-amber-400">
+              {roomsList.reduce((sum, r) => sum + (Number(r.totalPoints) || 0), 0).toLocaleString()}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -284,18 +305,16 @@ export const RoomManagementPage = () => {
           <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-white/10">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'grid' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-400'
-              }`}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-400'
+                }`}
               title="Grid Cards View"
             >
               <Grid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'table' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-400'
-              }`}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'table' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-400'
+                }`}
               title="Table View"
             >
               <List className="w-4 h-4" />
@@ -316,7 +335,7 @@ export const RoomManagementPage = () => {
             </div>
           ))}
         </div>
-      ) : rooms.length === 0 ? (
+      ) : roomsList.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl text-center space-y-3">
           <Layers className="w-10 h-10 text-slate-300 dark:text-white/20" />
           <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Rooms Found</h3>
@@ -325,98 +344,154 @@ export const RoomManagementPage = () => {
       ) : viewMode === 'grid' ? (
         /* GRID CARDS VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rooms.map((room) => (
+          {roomsList.map((room) => (
             <div
               key={room._id}
-              className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between hover:border-brandPrimary/30 transition-all"
+              className="bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between hover:border-brandPrimary/30 transition-all hover:shadow-md"
             >
               <div className="space-y-3">
-                {room.roomImage ? (
-                  <img
+                <div onClick={() => openViewRoomDetailsDrawer(room, 'overview')} className="cursor-pointer group">
+                  <RoomCoverImage
                     src={room.roomImage}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-36 object-cover rounded-xl border border-slate-200 dark:border-white/10"
                     alt={room.name}
+                    code={room.code}
+                    className="w-full h-36"
                   />
-                ) : (
-                  <div className="w-full h-36 rounded-xl bg-gradient-to-tr from-brandPrimary/20 via-emerald-500/10 to-indigo-500/20 border border-slate-200 dark:border-white/10 flex items-center justify-center font-black text-2xl text-brandPrimary">
-                    {room.code || 'ROOM'}
-                  </div>
-                )}
 
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <span className="px-2 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold rounded text-[10px] inline-block mb-1">
-                      {room.code}
+                  <div className="flex justify-between items-start gap-2 mt-3">
+                    <div>
+                      <span className="px-2 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold rounded text-[10px] inline-block mb-1">
+                        {room.code}
+                      </span>
+                      <h3 className="font-bold font-poppins text-slate-900 dark:text-white text-base leading-snug group-hover:text-brandPrimary transition-colors">
+                        {room.name}
+                      </h3>
+                    </div>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 flex items-center gap-1.5 border ${room.status === 'Active' || room.status === 'In Progress'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : room.status === 'Registration Open'
+                            ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                            : room.status === 'Upcoming'
+                              ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                              : room.status === 'Completed'
+                                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                                : room.status === 'Archived'
+                                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                  : 'bg-slate-500/10 text-slate-500 border-slate-500/30'
+                        }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                      {room.status || 'Active'}
                     </span>
-                    <h3 className="font-bold font-poppins text-slate-900 dark:text-white text-base leading-snug">
-                      {room.name}
-                    </h3>
                   </div>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-                      room.status === 'Active'
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                        : room.status === 'Archived'
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                        : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
-                    }`}
-                  >
-                    {room.status}
-                  </span>
                 </div>
 
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
                   {room.description || 'No description provided.'}
                 </p>
 
+                {/* PRIZE POOL & FINANCIALS BADGE */}
+                <div className="grid grid-cols-2 gap-2 bg-gradient-to-r from-amber-500/5 via-brandPrimary/5 to-emerald-500/5 p-2.5 rounded-xl border border-amber-500/20 text-xs">
+                  <div>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 block font-bold uppercase flex items-center gap-1">
+                      <Trophy className="w-3 h-3 text-amber-500" /> Prize Pool
+                    </span>
+                    <span className="font-extrabold text-slate-800 dark:text-white text-sm">
+                      {room.entryFeeType === 'Cash'
+                        ? `₹${Number(room.prizePool || 50000).toLocaleString()}`
+                        : `${Number(room.prizePool || room.coinsReward || 10000).toLocaleString()} 🪙 Coins`}
+                      {room.coinsReward ? <span className="text-amber-500 text-xs ml-1 font-bold">+{room.coinsReward} 🪙</span> : null}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold uppercase flex items-center gap-1">
+                      <Coins className="w-3 h-3 text-amber-500" /> Entry Fee
+                    </span>
+                    <span className="font-extrabold text-xs text-slate-800 dark:text-white">
+                      {room.entryFeeType === 'Cash'
+                        ? `₹${room.entryFee || 99}`
+                        : `${room.entryFeeCoins || room.entryFee || 50} 🪙 Coins`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* TIMER & SEATS STRIP */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-bold uppercase flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-indigo-400" /> Timer & Duration
+                    </span>
+                    <span className="font-extrabold text-indigo-600 dark:text-indigo-400 text-xs">
+                      {room.timerLimit || 30} Mins • {room.durationDays || 14}d
+                    </span>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase">
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3 text-brandPrimary" /> Active Seats</span>
+                      <span className="text-slate-700 dark:text-slate-200 font-extrabold">{room.membersCount || 0} / {room.maxMembers || 50}</span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
+                      <div
+                        className="bg-brandPrimary h-full rounded-full transition-all"
+                        style={{ width: `${Math.min(100, Math.round(((room.membersCount || 0) / (room.maxMembers || 50)) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SCHEDULE TIMELINES */}
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-white/5 text-[11px] space-y-1.5">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="flex items-center gap-1 font-semibold text-[10px] uppercase">
+                      <Calendar className="w-3 h-3 text-amber-500" /> Reg Window:
+                    </span>
+                    <span className="font-medium text-slate-600 dark:text-slate-300">
+                      {formatSafeDate(room.registrationStart, 'Immediate')} – {formatSafeDate(room.registrationEnd, 'Open')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="flex items-center gap-1 font-semibold text-[10px] uppercase">
+                      <Target className="w-3 h-3 text-emerald-500" /> Execution:
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatSafeDate(room.startDate, 'Active')} – {formatSafeDate(room.endDate, 'Ongoing')}
+                    </span>
+                  </div>
+                </div>
+
                 {/* Leaderboard Banner & Top Scorer (Clickable) */}
                 <div
-                  onClick={() => openViewDetails(room, 'leaderboard')}
+                  onClick={() => openViewRoomDetailsDrawer(room, 'leaderboard')}
                   className="bg-gradient-to-r from-amber-500/10 via-brandPrimary/10 to-indigo-500/10 p-2.5 rounded-xl border border-amber-500/20 flex items-center justify-between text-xs cursor-pointer hover:border-amber-500/50 transition-all group"
                   title="Click to view Room Leaderboard"
                 >
                   <div className="flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-amber-500 shrink-0 group-hover:scale-110 transition-transform" />
                     <div>
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold block uppercase">Rank #{room.rank || '-'}</span>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold block uppercase">Rank #{room.rank || 1}</span>
                       <span className="font-extrabold text-slate-800 dark:text-white">
                         {(room.totalPoints || 0).toLocaleString()} pts
                       </span>
                     </div>
                   </div>
-                  {room.topMember && (
+                  {room.topMember ? (
                     <div className="text-right">
                       <span className="text-[9px] text-slate-400 font-bold block uppercase flex items-center gap-1 justify-end">
                         <Crown className="w-3 h-3 text-amber-400" /> Top Scorer
                       </span>
-                      <span className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[100px] block">
+                      <span className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[110px] block">
                         {room.topMember.name} ({room.topMember.points}p)
                       </span>
                     </div>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 italic">No submissions yet</span>
                   )}
-                </div>
-
-                {/* Capacity & Cycle Pill Metrics */}
-                <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 text-xs">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-medium uppercase">Members</span>
-                    <span className="font-extrabold text-slate-800 dark:text-white">
-                      {room.membersCount || 0} / {room.maxMembers}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-medium uppercase">Current Cycle</span>
-                    <span className="font-extrabold text-brandPrimary">
-                      Cycle {room.currentCycle || 1}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Analytics Metrics Box (Clickable) */}
                 <div
-                  onClick={() => openViewDetails(room, 'analytics')}
+                  onClick={() => openViewRoomDetailsDrawer(room, 'analytics')}
                   className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-white/5 space-y-1.5 text-xs cursor-pointer hover:border-indigo-500/40 transition-all group"
                   title="Click to view Room Analytics"
                 >
@@ -432,23 +507,50 @@ export const RoomManagementPage = () => {
                   </div>
                   <div className="flex justify-between items-center text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                     <span>Submissions: <strong className="text-slate-800 dark:text-white">{room.analytics?.totalSubmissions || 0}</strong></span>
-                    <span>Tasks: <strong className="text-brandPrimary">{room.analytics?.activeTasksCount || 0}</strong></span>
+                    <span>Tasks: <strong className="text-brandPrimary">{(room.taskIds?.length) || (room.analytics?.activeTasksCount) || 0}</strong></span>
                   </div>
                 </div>
 
                 {/* Connected Cycles Badges */}
                 {room.cycleIds && room.cycleIds.length > 0 && (
-                  <div className="flex flex-wrap gap-1 items-center pt-1">
-                    <span className="text-[10px] font-bold text-slate-400 mr-1">Cycles:</span>
-                    {room.cycleIds.map((c) => {
+                  <div className="flex flex-wrap gap-1 items-center pt-0.5">
+                    <span className="text-[10px] font-bold text-slate-400 mr-1 flex items-center gap-0.5">
+                      <Layers className="w-3 h-3 text-indigo-500" /> Cycle:
+                    </span>
+                    {room.cycleIds.map((c, cIdx) => {
                       const cNum = typeof c === 'object' ? c.cycleNumber : '';
                       const cTitle = typeof c === 'object' ? c.title : c;
                       return (
-                        <span key={typeof c === 'object' ? c._id : c} className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-md border border-indigo-500/20">
-                          #{cNum || 'Cycle'} {cTitle}
+                        <span key={typeof c === 'object' ? (c._id || cIdx) : cIdx} className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-md border border-indigo-500/20 truncate max-w-[200px]">
+                          {cNum ? `#${cNum} ` : ''}{cTitle}
                         </span>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Connected Tasks Badges */}
+                {room.taskIds && room.taskIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1 items-center pt-0.5">
+                    <span className="text-[10px] font-bold text-slate-400 mr-1 flex items-center gap-0.5">
+                      <CheckSquare className="w-3 h-3 text-brandPrimary" /> Tasks:
+                    </span>
+                    {room.taskIds.slice(0, 3).map((t, tIdx) => {
+                      const tId = typeof t === 'object' ? String(t._id || t.id) : String(t);
+                      const matchedTask = (typeof t === 'object' && t.title) ? t : availableTasks.find((at) => String(at._id || at.id) === tId);
+                      const tTitle = matchedTask?.title || (typeof t === 'object' ? t.title : `Task #${tIdx + 1}`);
+                      const tPoints = matchedTask?.points ? `${matchedTask.points}p` : '';
+                      return (
+                        <span key={tId || tIdx} className="px-2 py-0.5 bg-brandPrimary/10 text-brandPrimary text-[10px] font-bold rounded-md border border-brandPrimary/20 truncate max-w-[150px]">
+                          {tTitle} {tPoints && <span className="text-amber-500 ml-0.5">• {tPoints}</span>}
+                        </span>
+                      );
+                    })}
+                    {room.taskIds.length > 3 && (
+                      <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold rounded-md">
+                        +{room.taskIds.length - 3} more
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -457,54 +559,37 @@ export const RoomManagementPage = () => {
               <div className="pt-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => openViewDetails(room, 'overview')}
-                    title="View Room Overview"
-                    className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl transition-colors"
+                    onClick={() => openViewRoomDetailsDrawer(room, 'overview')}
+                    title="Quick View Details Drawer"
+                    className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-xl transition-colors cursor-pointer"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => openViewDetails(room, 'analytics')}
-                    title="Room Submission Analytics"
-                    className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-colors"
+                    title="Room Submission Analytics (Full Page)"
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl transition-colors cursor-pointer"
                   >
                     <BarChart3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => openViewDetails(room, 'leaderboard')}
-                    title="Room Leaderboard"
-                    className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-xl transition-colors"
+                    title="Room Leaderboard (Full Page)"
+                    className="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 rounded-xl transition-colors cursor-pointer"
                   >
                     <Trophy className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => openViewMembers(room)}
                     title="Manage Members"
-                    className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                    className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
                   >
                     <Users className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      setEditingRoomId(room._id);
-                      setDrawerMode('edit');
-                      setRoomFormData({
-                        name: room.name,
-                        description: room.description || '',
-                        rules: room.rules || '',
-                        guidelines: room.guidelines || '',
-                        durationDays: room.durationDays || 14,
-                        maxMembers: room.maxMembers || 50,
-                        currentCycle: room.currentCycle || 1,
-                        cycleIds: room.cycleIds ? room.cycleIds.map((c) => (typeof c === 'object' ? c._id : c)) : [],
-                        roomImage: room.roomImage || '',
-                        status: room.status,
-                        autoAssignment: room.autoAssignment
-                      });
-                      setIsRoomDrawerOpen(true);
-                    }}
+                    onClick={() => navigate(`/admin-dashboard/bi-weekly-room/rooms/edit/${slugifyTitle(room.title || room.name, room._id)}`)}
                     title="Edit Room"
-                    className="p-2 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                    className="p-2 text-brandPrimary hover:bg-brandPrimary/10 rounded-xl transition-colors cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -512,7 +597,7 @@ export const RoomManagementPage = () => {
                 <button
                   onClick={() => handleDeleteRoomClick(room)}
                   title="Delete Room"
-                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-xl transition-colors"
+                  className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-xl transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -529,110 +614,141 @@ export const RoomManagementPage = () => {
                 <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <th className="p-4">Room</th>
                   <th className="p-4">Code</th>
-                  <th className="p-4">Leaderboard Rank</th>
-                  <th className="p-4">Total Points</th>
-                  <th className="p-4">Top Scorer</th>
-                  <th className="p-4">Members</th>
-                  <th className="p-4">Cycle</th>
-                  <th className="p-4">Analytics (Submissions / Approval)</th>
-                  <th className="p-4">Status</th>
+                  <th className="p-4">Prize Pool & Fee</th>
+                  <th className="p-4">Timer & Seats</th>
+                  <th className="p-4">Schedule Timelines</th>
+                  <th className="p-4">Rank / Points</th>
+                  <th className="p-4">Connected Tasks</th>
+                  <th className="p-4">Submissions</th>
+                  <th className="p-4">Execution Status</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-sm">
-                {rooms.map((room) => (
+                {roomsList.map((room) => (
                   <tr key={room._id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors">
                     <td className="p-4 flex items-center gap-3">
-                      {room.roomImage ? (
-                        <img src={room.roomImage} alt={room.name} className="w-10 h-10 rounded-xl object-cover border" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-brandPrimary/10 text-brandPrimary flex items-center justify-center font-extrabold text-xs">
-                          {room.code ? room.code.slice(0, 3) : 'RM'}
-                        </div>
-                      )}
-                      <span className="font-bold text-slate-900 dark:text-white">{room.name}</span>
+                      <RoomCoverImage
+                        src={room.roomImage}
+                        alt={room.name}
+                        code={room.code ? room.code.slice(0, 3) : 'RM'}
+                        className="w-10 h-10 text-xs"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white block">{room.name}</span>
+                        <span className="text-[11px] text-slate-400 line-clamp-1 max-w-[180px]">{room.description || 'No description'}</span>
+                      </div>
                     </td>
                     <td className="p-4">
                       <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs font-bold rounded">
                         {room.code}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => openViewDetails(room, 'leaderboard')}
-                        className="px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-xs rounded-lg border border-amber-500/20 inline-flex items-center gap-1 hover:bg-amber-500/20 transition-all cursor-pointer"
-                        title="Click to view Room Leaderboard"
-                      >
-                        <Trophy className="w-3.5 h-3.5" /> Rank #{room.rank || '-'}
-                      </button>
-                    </td>
-                    <td className="p-4 font-extrabold text-emerald-600 dark:text-emerald-400">
-                      {(room.totalPoints || 0).toLocaleString()} pts
-                    </td>
-                    <td className="p-4 text-xs font-semibold">
-                      {room.topMember ? (
-                        <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
-                          <Crown className="w-3.5 h-3.5 text-amber-500" /> {room.topMember.name} ({room.topMember.points}p)
+                    <td className="p-4 text-xs">
+                      <div className="space-y-0.5">
+                        <span className="font-extrabold text-slate-900 dark:text-white block flex items-center gap-1">
+                          <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                          {room.entryFeeType === 'Cash'
+                            ? `₹${Number(room.prizePool || 50000).toLocaleString()}`
+                            : `${Number(room.prizePool || room.coinsReward || 10000).toLocaleString()} 🪙 Coins`}
                         </span>
-                      ) : '—'}
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {room.entryFeeType === 'Cash'
+                            ? `₹${room.entryFee || 99}`
+                            : `${room.entryFeeCoins || room.entryFee || 50} 🪙 Coins`}
+                        </span>
+                      </div>
                     </td>
-                    <td className="p-4 font-semibold">{room.membersCount || 0} / {room.maxMembers}</td>
-                    <td className="p-4 font-bold text-brandPrimary">Cycle {room.currentCycle || 1}</td>
+                    <td className="p-4 text-xs">
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-indigo-400" /> {room.timerLimit || 30} Mins ({room.durationDays || 14}d)
+                        </span>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                          <Users className="w-3 h-3 text-brandPrimary" />
+                          <span className="font-bold text-slate-700 dark:text-slate-200">{room.membersCount || 0} / {room.maxMembers || 50} Seats</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 text-xs">
+                      <div className="space-y-0.5 text-[11px]">
+                        <span className="text-slate-500 dark:text-slate-400 block">
+                          Reg: <strong className="text-slate-700 dark:text-slate-300 font-semibold">{formatSafeDate(room.registrationStart, 'Immediate')} – {formatSafeDate(room.registrationEnd, 'Open')}</strong>
+                        </span>
+                        <span className="text-emerald-600 dark:text-emerald-400 block font-semibold">
+                          Exec: {formatSafeDate(room.startDate, 'Active')} – {formatSafeDate(room.endDate, 'Ongoing')}
+                        </span>
+                      </div>
+                    </td>
                     <td className="p-4 text-xs">
                       <button
-                        onClick={() => openViewDetails(room, 'analytics')}
-                        className="text-left flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-all cursor-pointer"
+                        onClick={() => openViewRoomDetailsDrawer(room, 'leaderboard')}
+                        className="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-xs rounded-lg border border-amber-500/20 inline-flex items-center gap-1 hover:bg-amber-500/20 transition-all cursor-pointer"
+                        title="Click to view Room Leaderboard"
+                      >
+                        <Trophy className="w-3 h-3" /> Rank #{room.rank || 1}
+                      </button>
+                      <span className="block font-black text-emerald-600 dark:text-emerald-400 text-xs mt-1">
+                        {(room.totalPoints || 0).toLocaleString()} pts
+                      </span>
+                    </td>
+                    <td className="p-4 font-bold text-brandPrimary flex items-center gap-1 text-xs">
+                      <CheckSquare className="w-3.5 h-3.5 text-brandPrimary" />
+                      {(room.taskIds?.length) || (room.analytics?.activeTasksCount) || 0} Tasks
+                    </td>
+                    <td className="p-4 text-xs">
+                      <button
+                        onClick={() => openViewRoomDetailsDrawer(room, 'analytics')}
+                        className="text-left hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-all cursor-pointer"
                         title="Click to view Room Analytics"
                       >
-                        <span className="font-bold text-slate-700 dark:text-slate-300">{room.analytics?.totalSubmissions || 0} subs</span>
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold rounded-md">
+                        <span className="font-bold text-slate-700 dark:text-slate-300 block">{room.analytics?.totalSubmissions || 0} subs</span>
+                        <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold rounded text-[10px]">
                           {room.analytics?.completionRate || 0}% rate
                         </span>
                       </button>
                     </td>
                     <td className="p-4">
-                      <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold text-xs rounded-full">
-                        {room.status}
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 border ${room.status === 'Active' || room.status === 'In Progress'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                            : room.status === 'Registration Open'
+                              ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                              : room.status === 'Upcoming'
+                                ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                                : room.status === 'Completed'
+                                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                                  : room.status === 'Archived'
+                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                    : 'bg-slate-500/10 text-slate-500 border-slate-500/30'
+                          }`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                        {room.status || 'Active'}
                       </span>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openViewDetails(room, 'overview')} title="Room Overview" className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg">
+                        <button onClick={() => openViewRoomDetailsDrawer(room, 'overview')} title="Quick Room Overview" className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openViewDetails(room, 'analytics')} title="Room Submission Analytics" className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <button onClick={() => openViewDetails(room, 'analytics')} title="Room Submission Analytics (Full Page)" className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer">
                           <BarChart3 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openViewDetails(room, 'leaderboard')} title="Room Leaderboard" className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg">
+                        <button onClick={() => openViewDetails(room, 'leaderboard')} title="Room Leaderboard (Full Page)" className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer">
                           <Trophy className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openViewMembers(room)} title="Manage Members" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                        <button onClick={() => openViewMembers(room)} title="Manage Members" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">
                           <Users className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            setEditingRoomId(room._id);
-                            setDrawerMode('edit');
-                            setRoomFormData({
-                              name: room.name,
-                              description: room.description || '',
-                              rules: room.rules || '',
-                              guidelines: room.guidelines || '',
-                              durationDays: room.durationDays || 14,
-                              maxMembers: room.maxMembers || 50,
-                              currentCycle: room.currentCycle || 1,
-                              cycleIds: room.cycleIds ? room.cycleIds.map((c) => (typeof c === 'object' ? c._id : c)) : [],
-                              roomImage: room.roomImage || '',
-                              status: room.status,
-                              autoAssignment: room.autoAssignment
-                            });
-                            setIsRoomDrawerOpen(true);
-                          }}
-                          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                          onClick={() => navigate(`/admin-dashboard/bi-weekly-room/rooms/edit/${slugifyTitle(room.title || room.name, room._id)}`)}
+                          title="Edit Room"
+                          className="p-2 text-brandPrimary hover:bg-brandPrimary/10 rounded-lg cursor-pointer"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDeleteRoomClick(room)} title="Delete Room" className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <button onClick={() => handleDeleteRoomClick(room)} title="Delete Room" className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -641,6 +757,31 @@ export const RoomManagementPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between p-4 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/5 rounded-2xl shadow-sm text-xs">
+          <span className="text-slate-500 dark:text-slate-400 font-medium">
+            Page <strong className="text-slate-800 dark:text-white">{page}</strong> of <strong className="text-slate-800 dark:text-white">{pagination.totalPages}</strong> ({pagination.total} total rooms)
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 font-bold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((prev) => Math.min(pagination.totalPages, prev + 1))}
+              disabled={page >= pagination.totalPages}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 font-bold text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              Next
+            </button>
           </div>
         </div>
       )}
@@ -655,13 +796,12 @@ export const RoomManagementPage = () => {
           <div className="space-y-5">
             {/* Header Banner */}
             <div className="flex items-center gap-4 p-4 bg-[#E2F1D5]/60 dark:bg-slate-900/80 rounded-2xl border border-[#C4E2A8]/80 dark:border-slate-800">
-              {viewingRoom.roomImage ? (
-                <img src={viewingRoom.roomImage} alt={viewingRoom.name} className="w-16 h-16 rounded-2xl object-cover border shadow-sm" />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl bg-brandPrimary text-white flex items-center justify-center font-extrabold text-xl shadow-md">
-                  {viewingRoom.code ? viewingRoom.code.slice(0, 3) : 'RM'}
-                </div>
-              )}
+              <RoomCoverImage
+                src={viewingRoom.roomImage}
+                alt={viewingRoom.name}
+                code={viewingRoom.code ? viewingRoom.code.slice(0, 3) : 'RM'}
+                className="w-16 h-16 rounded-2xl text-xl shadow-md"
+              />
               <div>
                 <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">{viewingRoom.name}</h3>
                 <div className="flex items-center gap-2 mt-1">
@@ -679,33 +819,36 @@ export const RoomManagementPage = () => {
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
               <button
                 onClick={() => setDetailsTab('overview')}
-                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  detailsTab === 'overview' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
-                }`}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${detailsTab === 'overview' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                  }`}
               >
                 <Layers className="w-3.5 h-3.5" /> Overview
               </button>
               <button
+                onClick={() => setDetailsTab('tasks')}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${detailsTab === 'tasks' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                  }`}
+              >
+                <CheckSquare className="w-3.5 h-3.5" /> Tasks ({(viewingRoom.tasks || viewingRoom.taskIds || []).length})
+              </button>
+              <button
                 onClick={() => setDetailsTab('analytics')}
-                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  detailsTab === 'analytics' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
-                }`}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${detailsTab === 'analytics' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                  }`}
               >
                 <BarChart3 className="w-3.5 h-3.5" /> Analytics
               </button>
               <button
                 onClick={() => setDetailsTab('leaderboard')}
-                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  detailsTab === 'leaderboard' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
-                }`}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${detailsTab === 'leaderboard' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                  }`}
               >
                 <Trophy className="w-3.5 h-3.5" /> Leaderboard
               </button>
               <button
                 onClick={() => setDetailsTab('members')}
-                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                  detailsTab === 'members' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
-                }`}
+                className={`flex-1 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${detailsTab === 'members' ? 'bg-white dark:bg-slate-800 text-brandPrimary shadow-sm' : 'text-slate-500'
+                  }`}
               >
                 <Users className="w-3.5 h-3.5" /> Members ({roomMembers.length})
               </button>
@@ -716,26 +859,43 @@ export const RoomManagementPage = () => {
             {/* 1. OVERVIEW TAB */}
             {detailsTab === 'overview' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-3 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500 font-medium block">Current Cycle</span>
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">Cycle {viewingRoom.currentCycle || 1}</span>
+                    <span className="text-slate-500 font-medium block">Room Tasks</span>
+                    <span className="font-bold text-brandPrimary text-sm flex items-center gap-1">
+                      <CheckSquare className="w-3.5 h-3.5 text-brandPrimary" />
+                      {(viewingRoom.tasks || viewingRoom.taskIds || []).length} Tasks
+                    </span>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500 font-medium block">Member Capacity</span>
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">{viewingRoom.membersCount || 0} / {viewingRoom.maxMembers}</span>
+                    <span className="text-slate-500 font-medium block">Active Seats</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">{viewingRoom.membersCount || 0} / {viewingRoom.maxMembers || 50}</span>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500 font-medium block">Duration (Days)</span>
-                    <span className="font-bold text-indigo-500 text-sm">⏳ {viewingRoom.durationDays || 14} Days</span>
+                    <span className="text-slate-500 font-medium block">Duration</span>
+                    <span className="font-bold text-indigo-500 text-sm">⏳ {viewingRoom.durationDays || 14} Days ({viewingRoom.timerLimit || 30}m)</span>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500 font-medium block">Total Accumulated Points</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{(viewingRoom.totalPoints || 0).toLocaleString()} pts</span>
+                    <span className="text-slate-500 font-medium block">Prize Pool</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">
+                      {viewingRoom.entryFeeType === 'Coins'
+                        ? `${Number(viewingRoom.prizePool || 0).toLocaleString()} 🪙 Coins`
+                        : `₹${Number(viewingRoom.prizePool || 0).toLocaleString()}`}
+                    </span>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-500 font-medium block">Leaderboard Rank</span>
-                    <span className="font-bold text-amber-600 dark:text-amber-400 text-sm">#{viewingRoom.rank || '-'}</span>
+                    <span className="text-slate-500 font-medium block">Entry Fee</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">
+                      {viewingRoom.entryFeeType === 'Cash'
+                        ? `₹${viewingRoom.entryFee || 99}`
+                        : `${viewingRoom.entryFeeCoins || viewingRoom.entryFee || 50} 🪙 Coins`}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-500 font-medium block">Leaderboard Rank & Points</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                      Rank #{viewingRoom.rank || 1} • {(viewingRoom.totalPoints || 0).toLocaleString()} pts
+                    </span>
                   </div>
                 </div>
 
@@ -764,26 +924,123 @@ export const RoomManagementPage = () => {
                   </div>
                 )}
 
-                {((viewingRoom.cycles && viewingRoom.cycles.length > 0) || (viewingRoom.cycleIds && viewingRoom.cycleIds.length > 0)) && (
+                {((viewingRoom.tasks && viewingRoom.tasks.length > 0) || (viewingRoom.taskIds && viewingRoom.taskIds.length > 0)) && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                      Connected Cycles ({(viewingRoom.cycles || viewingRoom.cycleIds).length})
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {(viewingRoom.cycles || viewingRoom.cycleIds).map((c) => (
-                        <div key={typeof c === 'object' ? (c._id || c.id) : c} className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-indigo-500" />
-                          <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                            #{typeof c === 'object' ? (c.cycleNumber || 'Cycle') : 'Cycle'} {typeof c === 'object' ? c.title : c}
-                          </span>
-                          {typeof c === 'object' && c.status && (
-                            <span className="px-1.5 py-0.5 text-[10px] rounded bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-medium">
-                              {c.status}
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                        <CheckSquare className="w-3.5 h-3.5 text-brandPrimary" />
+                        Connected Tasks ({(viewingRoom.tasks || viewingRoom.taskIds).length})
+                      </h4>
+                      <button
+                        onClick={() => setDetailsTab('tasks')}
+                        className="text-[11px] text-brandPrimary font-bold hover:underline cursor-pointer"
+                      >
+                        View All
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {(viewingRoom.tasks || viewingRoom.taskIds).slice(0, 6).map((t, idx) => (
+                        <div key={typeof t === 'object' ? (t._id || t.id || idx) : t} className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-5 h-5 rounded bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold flex items-center justify-center text-[10px]">
+                              {idx + 1}
+                            </span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">
+                              {typeof t === 'object' ? t.title : t}
+                            </span>
+                          </div>
+                          {typeof t === 'object' && t.points !== undefined && (
+                            <span className="px-2 py-0.5 text-[10px] rounded-md bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold whitespace-nowrap">
+                              {t.points} pts
                             </span>
                           )}
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Connected Cycles in Drawer Overview */}
+                {((viewingRoom.cycles && viewingRoom.cycles.length > 0) || (viewingRoom.cycleIds && viewingRoom.cycleIds.length > 0)) && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                      Connected Cycles ({(viewingRoom.cycles || viewingRoom.cycleIds).length})
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(viewingRoom.cycles || viewingRoom.cycleIds).map((c, cIdx) => (
+                        <div key={typeof c === 'object' ? (c._id || c.id || cIdx) : cIdx} className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                            #{typeof c === 'object' ? (c.cycleNumber || 'Cycle') : 'Cycle'} {typeof c === 'object' ? c.title : c}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TASKS TAB */}
+            {detailsTab === 'tasks' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <CheckSquare className="w-4 h-4 text-brandPrimary" />
+                    Room Assigned Tasks ({(viewingRoom.tasks || viewingRoom.taskIds || []).length})
+                  </h4>
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    Total: {(viewingRoom.tasks || viewingRoom.taskIds || []).reduce((acc, t) => acc + (typeof t === 'object' && t.points ? Number(t.points) : 0), 0)} Points
+                  </span>
+                </div>
+
+                {!(viewingRoom.tasks || viewingRoom.taskIds) || (viewingRoom.tasks || viewingRoom.taskIds).length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
+                    <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-40 text-slate-400" />
+                    No tasks directly attached to this room. Edit the room to connect tasks.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                    {(viewingRoom.tasks || viewingRoom.taskIds).map((t, idx) => {
+                      const isObj = typeof t === 'object';
+                      const title = isObj ? t.title : `Task #${t}`;
+                      const taskType = isObj ? (t.taskType || t.submissionType || 'General') : 'Task';
+                      const points = isObj ? t.points : 0;
+                      const status = isObj ? (t.status || 'Published') : 'Active';
+                      const instructions = isObj ? t.instructions : '';
+
+                      return (
+                        <div
+                          key={isObj ? (t._id || t.id || idx) : t}
+                          className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-indigo-500/30 transition-all space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold flex items-center justify-center text-xs">
+                                {idx + 1}
+                              </span>
+                              <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                                {title}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-[11px] rounded-md border border-amber-500/20">
+                                {points} pts
+                              </span>
+                              <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold text-[10px] rounded-md">
+                                {taskType}
+                              </span>
+                            </div>
+                          </div>
+                          {instructions && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 pl-8">
+                              {instructions}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -849,11 +1106,10 @@ export const RoomManagementPage = () => {
                             </div>
                           </div>
                           <div className="text-right">
-                            <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
-                              sub.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                              sub.status === 'Rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                              'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            }`}>
+                            <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${sub.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                sub.status === 'Rejected' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                                  'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              }`}>
                               {sub.status}
                             </span>
                             <span className="text-[10px] text-slate-400 block mt-0.5">
@@ -907,9 +1163,8 @@ export const RoomManagementPage = () => {
                     {roomMembers.map((m, idx) => (
                       <div key={m._id} className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl flex items-center justify-between border border-slate-100 dark:border-slate-800 text-xs">
                         <div className="flex items-center gap-3">
-                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-sm ${
-                            idx === 0 ? 'bg-amber-400 text-slate-900' : idx === 1 ? 'bg-slate-300 text-slate-900' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                          }`}>
+                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs shadow-sm ${idx === 0 ? 'bg-amber-400 text-slate-900' : idx === 1 ? 'bg-slate-300 text-slate-900' : idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}>
                             {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`}
                           </span>
                           <div>
@@ -957,201 +1212,6 @@ export const RoomManagementPage = () => {
             </div>
           </div>
         )}
-      </RightDrawer>
-
-      {/* Room Drawer (Create / Edit) */}
-      <RightDrawer
-        isOpen={isRoomDrawerOpen}
-        onClose={() => setIsRoomDrawerOpen(false)}
-        title={drawerMode === 'create' ? 'Create New Room' : 'Edit Room'}
-      >
-        <form onSubmit={handleSaveRoom} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Room Name</label>
-            <input
-              type="text"
-              required
-              value={roomFormData.name}
-              onChange={(e) => setRoomFormData({ ...roomFormData, name: e.target.value })}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              placeholder="e.g. Alpha Strikers"
-            />
-          </div>
-
-          {/* Room Image Selection: Dual Upload & URL mode */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Room Image</label>
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setImageInputMode('upload')}
-                  className={`px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                    imageInputMode === 'upload' ? 'bg-white dark:bg-slate-900 text-brandPrimary shadow-sm' : 'text-slate-500'
-                  }`}
-                >
-                  <Upload className="w-3 h-3" /> Upload File
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImageInputMode('url')}
-                  className={`px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                    imageInputMode === 'url' ? 'bg-white dark:bg-slate-900 text-brandPrimary shadow-sm' : 'text-slate-500'
-                  }`}
-                >
-                  <LinkIcon className="w-3 h-3" /> Image URL
-                </button>
-              </div>
-            </div>
-
-            {imageInputMode === 'upload' ? (
-              <div className="space-y-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageFileUpload}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brandPrimary/10 file:text-brandPrimary hover:file:bg-brandPrimary/20"
-                />
-              </div>
-            ) : (
-              <input
-                type="text"
-                value={roomFormData.roomImage}
-                onChange={(e) => setRoomFormData({ ...roomFormData, roomImage: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-                placeholder="https://example.com/room-banner.png"
-              />
-            )}
-
-            {roomFormData.roomImage && (
-              <div className="mt-2 relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                <img src={roomFormData.roomImage} alt="Preview" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => setRoomFormData({ ...roomFormData, roomImage: '' })}
-                  className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full shadow-md"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Description</label>
-            <textarea
-              value={roomFormData.description}
-              onChange={(e) => setRoomFormData({ ...roomFormData, description: e.target.value })}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Members 👥</label>
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={roomFormData.maxMembers}
-                onChange={(e) => setRoomFormData({ ...roomFormData, maxMembers: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Duration (Days) ⏳</label>
-              <input
-                type="number"
-                min={1}
-                max={365}
-                value={roomFormData.durationDays || 14}
-                onChange={(e) => setRoomFormData({ ...roomFormData, durationDays: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-indigo-500 font-bold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
-              <select
-                value={roomFormData.status}
-                onChange={(e) => setRoomFormData({ ...roomFormData, status: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Archived">Archived</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Search & Select Multiple Cycles Component */}
-          <div className="pt-2">
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Connect Cycles (Search & Multi-Select)
-            </label>
-            <p className="text-[11px] text-slate-400 mb-2">Search and select one or more cycles to associate with this room.</p>
-            <MultiSelect
-              options={availableCycles.map((cyc) => ({
-                value: cyc._id,
-                label: `Cycle #${cyc.cycleNumber} - ${cyc.title}`
-              }))}
-              selected={roomFormData.cycleIds}
-              onChange={(val) => setRoomFormData({ ...roomFormData, cycleIds: val })}
-              placeholder="Search & Select Competition Cycles..."
-            />
-          </div>
-
-          {/* Contest Rules & Guidelines Section */}
-          <div className="space-y-3 pt-2">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Room Contest Rules 📜</label>
-              <textarea
-                rows={3}
-                value={roomFormData.rules}
-                onChange={(e) => setRoomFormData({ ...roomFormData, rules: e.target.value })}
-                placeholder="Enter specific room rules and scoring guidelines..."
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Participation Guidelines & Terms 📋</label>
-              <textarea
-                rows={3}
-                value={roomFormData.guidelines}
-                onChange={(e) => setRoomFormData({ ...roomFormData, guidelines: e.target.value })}
-                placeholder="Enter guidelines for members in this room..."
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="checkbox"
-              id="autoAssign"
-              checked={roomFormData.autoAssignment}
-              onChange={(e) => setRoomFormData({ ...roomFormData, autoAssignment: e.target.checked })}
-            />
-            <label htmlFor="autoAssign" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-              Allow Auto Assignment
-            </label>
-          </div>
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsRoomDrawerOpen(false)}
-              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-sm font-semibold"
-            >
-              {drawerMode === 'create' ? 'Create Room' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
       </RightDrawer>
 
       {/* Member Management Drawer */}

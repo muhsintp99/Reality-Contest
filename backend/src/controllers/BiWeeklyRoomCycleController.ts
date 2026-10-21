@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { biWeeklyRoomCycleService } from '../services/BiWeeklyRoomCycleService';
 import { logger } from '../core/logger';
+import Task from '../models/Task';
 
 export class BiWeeklyRoomCycleController {
   // ================= ROOMS =================
@@ -49,6 +50,15 @@ export class BiWeeklyRoomCycleController {
     try {
       const cycles = await biWeeklyRoomCycleService.getRoomCycles(req.params.id);
       return res.status(200).json({ success: true, cycles, data: cycles });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
+  async getRoomTasks(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tasks = await biWeeklyRoomCycleService.getRoomTasks(req.params.id);
+      return res.status(200).json({ success: true, tasks, data: tasks });
     } catch (err: any) {
       return next(err);
     }
@@ -193,7 +203,21 @@ export class BiWeeklyRoomCycleController {
   }
 
   async getTasks(req: Request, res: Response, next: NextFunction) {
-    return res.status(200).json({ success: true, data: { tasks: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } } });
+    try {
+      const { search, status } = req.query;
+      const filter: any = {};
+      if (status && status !== 'All') filter.status = status;
+      if (search) {
+        filter.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ];
+      }
+      const tasks = await Task.find(filter).sort({ order: 1, createdAt: -1 });
+      return res.status(200).json({ success: true, count: tasks.length, data: { tasks, pagination: { total: tasks.length, page: 1, limit: tasks.length, totalPages: 1 } }, tasks });
+    } catch (err: any) {
+      return next(err);
+    }
   }
 
   async updateTask(req: Request, res: Response, next: NextFunction) {

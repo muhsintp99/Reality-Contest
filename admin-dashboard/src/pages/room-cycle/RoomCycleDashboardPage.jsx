@@ -17,7 +17,7 @@ export const RoomCycleDashboardPage = () => {
   const fetchAnalytics = async () => {
     try {
       setRefreshing(true);
-      const res = await axios.get('/api/admin/room-cycle/analytics');
+      const res = await axios.get('/api/admin/analytics');
       if (res.data?.success) {
         dispatch(setAnalytics(res.data.data));
       } else {

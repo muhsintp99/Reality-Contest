@@ -8,6 +8,7 @@ export const createRoomSchema = z.object({
   durationDays: z.number().min(1).optional(),
   maxMembers: z.number().min(1).default(50),
   cycleIds: z.array(z.string()).optional(),
+  taskIds: z.array(z.string()).optional(),
   roomImage: z.string().optional(),
   autoAssignment: z.boolean().default(true)
 });
@@ -20,6 +21,7 @@ export const updateRoomSchema = z.object({
   durationDays: z.number().min(1).optional(),
   maxMembers: z.number().min(1).optional(),
   cycleIds: z.array(z.string()).optional(),
+  taskIds: z.array(z.string()).optional(),
   roomImage: z.string().optional(),
   status: z.enum(['Active', 'Inactive', 'Archived']).optional(),
   autoAssignment: z.boolean().optional()
