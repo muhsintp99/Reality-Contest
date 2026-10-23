@@ -139,21 +139,26 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Contest routes
   router.post('/contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.createContest);
-  router.get('/contests', authenticate, contestController.listContests);
+  router.get('/contests', optionalAuthenticate, contestController.listContests);
   router.get('/contests/:id/analytics', authenticate, contestController.getContestAnalytics);
   router.get('/admin/contests/:id/analytics', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), contestController.getContestAnalytics);
-  router.get('/contests/:id', authenticate, contestController.getContestDetail);
+  router.get('/contests/:id', optionalAuthenticate, contestController.getContestDetail);
+  router.get('/admin/contests/:id', optionalAuthenticate, contestController.getContestDetail);
   router.put('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.updateContest);
   router.delete('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.deleteContest);
   router.post('/contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.duplicateContest);
   router.post('/contests/:id/join', authenticate, requireNotGuest, contestController.joinContest);
   router.post('/contest/:id/join', authenticate, requireNotGuest, contestController.joinContest);
+  router.post('/contests/:id/submit', authenticate, requireNotGuest, contestController.submitContestAnswers);
+  router.post('/contests/:id/check-answers', authenticate, requireNotGuest, contestController.submitContestAnswers);
+  router.post('/contests/:id/answers', authenticate, requireNotGuest, contestController.submitContestAnswers);
+  router.post('/contest/:id/submit', authenticate, requireNotGuest, contestController.submitContestAnswers);
   router.get('/contests/:contestId/stages', authenticate, stageController.getStagesByContest);
   router.post('/contests/:contestId/stages', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), stageController.createStageForContest);
 
   // Grand Contest routes (/admin/grand-contests & /grand-contests)
   router.post('/grand-contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContest);
-  router.get('/grand-contests', authenticate, grandContestController.listGrandContests);
+  router.get('/grand-contests', optionalAuthenticate, grandContestController.listGrandContests);
   router.get('/grand-contests/:id', authenticate, grandContestController.getGrandContestDetail);
   router.put('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.updateGrandContest);
   router.delete('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.deleteGrandContest);
@@ -236,6 +241,9 @@ export function createApiRouter(authLimiter: any): Router {
 
   router.post('/wallet/claim-daily', authenticate, requireNotGuest, walletController.claimDailyBonus);
   router.post('/v1/mobile/wallet/claim-daily', authenticate, requireNotGuest, walletController.claimDailyBonus);
+
+  router.post('/wallet/convert-coins', authenticate, requireNotGuest, walletController.convertCoins);
+  router.post('/v1/mobile/wallet/convert-coins', authenticate, requireNotGuest, walletController.convertCoins);
 
   router.get('/wallet/transactions', authenticate, walletController.getTransactions);
   router.get('/v1/mobile/wallet/transactions', authenticate, walletController.getTransactions);
@@ -449,7 +457,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/admin/cms/social/:id', authenticate, authorize('Super Admin', 'Admin', 'Content Moderator'), cmsController.deleteSocial);
 
   // Daily Contests Routes
-  router.get('/daily-contests', authenticate, dailyContestsController.listDailyContests);
+  router.get('/daily-contests', optionalAuthenticate, dailyContestsController.listDailyContests);
   router.get('/daily-contests/:id/analytics', authenticate, dailyContestsController.getDailyContestAnalytics);
   router.get('/daily-contests/:id', authenticate, dailyContestsController.getDailyContestDetail);
   router.post('/daily-contests/:id/join', authenticate, dailyContestsController.joinDailyContest);

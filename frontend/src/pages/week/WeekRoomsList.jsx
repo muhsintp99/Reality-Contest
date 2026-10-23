@@ -184,7 +184,7 @@ export const WeekRoomsList = () => {
             const memberCount = room.membersCount || (Array.isArray(room.members) ? room.members.length : 0);
             const maxCapacity = room.maxMembers || 50;
             const capacityPercentage = Math.min(100, Math.round((memberCount / maxCapacity) * 100));
-            const cycleCount = room.cycleIds ? room.cycleIds.length : (room.cycleCount || 0);
+            const taskCount = room.taskIds ? room.taskIds.length : (room.tasksCount || 0);
 
             return (
               <div 
@@ -252,10 +252,10 @@ export const WeekRoomsList = () => {
                     <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
                       <div className="flex items-center gap-1.5 text-slate-400 text-[11px] font-semibold">
                         <Layers className="w-3.5 h-3.5" />
-                        <span>Total Cycles</span>
+                        <span>Challenges</span>
                       </div>
                       <p className="text-sm font-black text-slate-800 dark:text-white mt-0.5">
-                        {cycleCount} Cycles
+                        {taskCount} Tasks
                       </p>
                       <p className="text-[10px] font-bold text-slate-400 mt-1">
                         {room.durationDays ? `${room.durationDays} Days Duration` : '14 Days Standard'}

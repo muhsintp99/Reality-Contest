@@ -6,8 +6,14 @@ import { StageRepository } from '../repositories/StageRepository';
 import { ResultRepository } from '../repositories/ResultRepository';
 import { IContest, ContestStatus, Contest } from '../models/Contest';
 import { IGroup } from '../models/Group';
+import { Question } from '../models/Question';
+import { Attempt } from '../models/Attempt';
+import { Result } from '../models/Result';
+import { walletService } from './WalletService';
+import { socketService } from './SocketService';
 import { BadRequestError, NotFoundError } from '../core/errors';
 import { questionSelectionService } from './QuestionSelectionService';
+import { logger } from '../core/logger';
 import mongoose from 'mongoose';
 
 const generateUniqueContestId = (): string => {
@@ -45,12 +51,21 @@ export class ContestService {
     // Automatic Random Question Selection if questionsCount > 0 and no explicit questions array provided
     const targetCount = Number(payload.questionsCount) || 0;
     if (targetCount > 0 && (!payload.questions || payload.questions.length === 0)) {
-      const selectedQuestionIds = await questionSelectionService.selectRandomQuestionsForContest(
-        payload.categories || [],
-        targetCount
-      );
-      payload.questions = selectedQuestionIds;
-      payload.questionsCount = selectedQuestionIds.length;
+      try {
+        const selectedQuestionIds = await questionSelectionService.selectRandomQuestionsForContest(
+          payload.categories || [],
+          targetCount
+        );
+        payload.questions = selectedQuestionIds;
+        payload.questionsCount = selectedQuestionIds.length;
+      } catch (err: any) {
+        logger.warn(`Auto question selection notice: ${err.message}. Applying fallback questions.`);
+        const fallbackQs = await Question.find({}).limit(targetCount).select('_id').lean().exec();
+        if (fallbackQs && fallbackQs.length > 0) {
+          payload.questions = fallbackQs.map(q => q._id as any);
+          payload.questionsCount = payload.questions.length;
+        }
+      }
     }
 
     const contest = await this.contestRepo.create(payload);
@@ -92,6 +107,34 @@ export class ContestService {
     if (!contest) {
       throw new NotFoundError('Contest not found.');
     }
+
+    // Ensure questions from Question Pool populate so questions never fail to appear
+    if (!contest.questions || contest.questions.length === 0) {
+      const cats = (contest.categories && contest.categories.length > 0) ? contest.categories : ['General Knowledge'];
+      const targetCount = contest.questionsCount && contest.questionsCount > 0 ? contest.questionsCount : 20;
+
+      try {
+        const poolQuestions = await Question.find({
+          $or: [
+            { category: { $in: cats } },
+            { category: { $regex: new RegExp(cats.map((c: string) => String(c).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i') } }
+          ]
+        }).limit(targetCount).lean().exec();
+
+        if (poolQuestions && poolQuestions.length > 0) {
+          contest.questions = poolQuestions as any;
+        } else {
+          // Fallback to any active questions so contest questions are never empty
+          const fallbackQuestions = await Question.find({}).limit(targetCount).lean().exec();
+          if (fallbackQuestions && fallbackQuestions.length > 0) {
+            contest.questions = fallbackQuestions as any;
+          }
+        }
+      } catch {
+        // Ignore fallback query errors
+      }
+    }
+
     return contest;
   }
 
@@ -290,7 +333,18 @@ export class ContestService {
   }
 
   async updateContest(id: string, data: Partial<IContest>): Promise<IContest> {
-    const contest = await this.getContestById(id);
+    let contest: any = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      contest = await Contest.findById(id).exec();
+    }
+    if (!contest) {
+      contest = await Contest.findOne({ contestId: id }).exec();
+    }
+    if (!contest) {
+      try {
+        contest = await this.getContestById(id);
+      } catch {}
+    }
     if (!contest) {
       throw new NotFoundError('Contest not found.');
     }
@@ -304,13 +358,29 @@ export class ContestService {
     // Auto-generate random questions if questionsCount or categories changed and questions array is empty/not passed
     const targetCount = Number(data.questionsCount !== undefined ? data.questionsCount : contest.questionsCount) || 0;
     if (targetCount > 0 && (!data.questions || data.questions.length === 0) && (data.questionsCount || data.categories)) {
-      const selectedCats = data.categories || contest.categories || [];
-      const selectedQuestionIds = await questionSelectionService.selectRandomQuestionsForContest(
-        selectedCats,
-        targetCount
-      );
-      data.questions = selectedQuestionIds;
-      data.questionsCount = selectedQuestionIds.length;
+      try {
+        const selectedCats = data.categories || contest.categories || [];
+        const selectedQuestionIds = await questionSelectionService.selectRandomQuestionsForContest(
+          selectedCats,
+          targetCount
+        );
+        if (selectedQuestionIds && selectedQuestionIds.length > 0) {
+          data.questions = selectedQuestionIds as any;
+          data.questionsCount = selectedQuestionIds.length;
+        }
+      } catch (err: any) {
+        logger.warn(`Auto question reselection notice on contest update: ${err.message}`);
+      }
+    }
+
+    // Clean questions array to only IDs before saving to prevent casting issues
+    if (data.questions && Array.isArray(data.questions)) {
+      data.questions = data.questions.map((q: any) => (q && q._id ? q._id : q));
+    }
+
+    // Preserve existing contestId if empty or not provided
+    if (!data.contestId) {
+      delete (data as any).contestId;
     }
 
     Object.assign(contest, data);
@@ -490,6 +560,278 @@ export class ContestService {
         { title: 'Registration Closed', timestamp: formatTime(2 * 3600 * 1000), details: 'Registration window concluded', status: 'Completed' },
         { title: 'Winner Selected', timestamp: formatTime(0.5 * 3600 * 1000), details: isWinnerSelected ? `Winner: ${winner?.name} (${winner?.finalScore} pts)` : 'Calculating scores...', status: isWinnerSelected ? 'Completed' : 'Pending' }
       ]
+    };
+  }
+
+  async submitContestAnswers(
+    contestId: string,
+    userId: string,
+    payload: { answers: Record<string, any>; cheatAlerts?: any[] }
+  ): Promise<{
+    success: boolean;
+    contestId: string;
+    contestTitle: string;
+    totalQuestions: number;
+    correctAnswers: number;
+    incorrectAnswers: number;
+    accuracyPercentage: number;
+    rewardTier: string;
+    rewardType: 'None' | 'Bonus' | 'Prize Pool';
+    rewardAmount: number;
+    currency: 'INR' | 'Coins';
+    message: string;
+    user: {
+      _id: any;
+      name: string;
+      email: string;
+      walletBalance: number;
+      coins: number;
+    };
+    answerDetails: any[];
+  }> {
+    const contest = await this.getContestById(contestId);
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found.');
+    }
+
+    if (user.kycStatus !== 'Approved') {
+      throw new BadRequestError('You cannot submit contest answers before KYC approval.');
+    }
+
+    // Check if user has joined this contest; if not, auto-enroll user into default group
+    const groupsInContest = await this.groupRepo.find({ contestId: contest._id });
+    let userGroup = groupsInContest.find((g) =>
+      g.participants.some((pId) => pId.toString() === userId)
+    );
+
+    if (!userGroup && groupsInContest.length > 0) {
+      userGroup = groupsInContest[0];
+      userGroup.participants.push(user._id as any);
+      await userGroup.save();
+    }
+
+    // Load questions for this contest
+    let questions: any[] = [];
+    if (contest.questions && contest.questions.length > 0) {
+      if (typeof contest.questions[0] === 'object' && (contest.questions[0] as any).text) {
+        questions = contest.questions as any[];
+      } else {
+        questions = await Question.find({ _id: { $in: contest.questions } }).lean();
+      }
+    }
+
+    if (questions.length === 0) {
+      const stages = await this.stageRepo.findByGroup((userGroup?._id || contest._id).toString());
+      for (const stage of stages) {
+        if (stage.config?.questionPoolId) {
+          const poolQuestions = await Question.find({ poolId: stage.config.questionPoolId }).lean();
+          if (poolQuestions.length > 0) {
+            questions = poolQuestions;
+            break;
+          }
+        }
+      }
+
+      if (questions.length === 0) {
+        const cats = contest.categories || [];
+        if (cats.length > 0) {
+          questions = await Question.find({ category: { $in: cats } }).limit(contest.questionsCount || 20).lean().exec();
+        }
+        if (questions.length === 0) {
+          questions = await Question.find({}).limit(contest.questionsCount || 20).lean().exec();
+        }
+      }
+    }
+
+    const userAnswers = payload.answers || {};
+    let correctCount = 0;
+    let totalQuestions = questions.length;
+    const answerDetails: any[] = [];
+
+    if (totalQuestions > 0) {
+      for (const q of questions) {
+        const qIdStr = q._id.toString();
+        // Match by question ID or title/text
+        const submitted = userAnswers[qIdStr] ?? userAnswers[q.text] ?? userAnswers[qIdStr.slice(-4)];
+
+        const correctOptions = (q.options || [])
+          .map((opt: any, idx: number) => ({ idx, text: opt.text, isCorrect: opt.isCorrect }))
+          .filter((opt: any) => opt.isCorrect);
+
+        const correctIndices = correctOptions.map((o: any) => o.idx);
+        const correctTexts = correctOptions.map((o: any) => (o.text || '').trim().toLowerCase());
+
+        let isCorrect = false;
+
+        if (submitted !== undefined && submitted !== null) {
+          if (typeof submitted === 'number') {
+            isCorrect = correctIndices.includes(submitted);
+          } else if (typeof submitted === 'string') {
+            const subClean = submitted.trim().toLowerCase();
+            isCorrect =
+              correctTexts.includes(subClean) ||
+              (Number.isInteger(Number(subClean)) && correctIndices.includes(Number(subClean)));
+          } else if (Array.isArray(submitted)) {
+            const subNumbers = submitted.map(Number);
+            isCorrect =
+              correctIndices.length === subNumbers.length &&
+              correctIndices.every((val: number) => subNumbers.includes(val));
+          }
+        }
+
+        if (isCorrect) {
+          correctCount++;
+        }
+
+        answerDetails.push({
+          questionId: q._id,
+          questionText: q.text,
+          submittedAnswer: submitted,
+          isCorrect,
+          correctOptions: correctOptions.map((o: any) => o.text)
+        });
+      }
+    } else {
+      // Evaluate direct answers payload
+      const submittedKeys = Object.keys(userAnswers);
+      totalQuestions = submittedKeys.length > 0 ? submittedKeys.length : (contest.questionsCount || 10);
+      for (const key of submittedKeys) {
+        const val = userAnswers[key];
+        const isCorrect = val === true || val === 'correct' || (typeof val === 'object' && val.isCorrect === true);
+        if (isCorrect) correctCount++;
+        answerDetails.push({ questionId: key, submittedAnswer: val, isCorrect });
+      }
+    }
+
+    // Accuracy Percentage calculation
+    const rawAccuracy = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+    const accuracy = Math.round(rawAccuracy * 10) / 10;
+
+    // Currency selection based on contest configuration
+    const isCoinContest = contest.entryFeeType === 'Coins' || (contest.coinsReward && contest.coinsReward > 0 && (!contest.prizePool || contest.prizePool === 0));
+    const currency: 'INR' | 'Coins' = isCoinContest ? 'Coins' : 'INR';
+
+    let rewardTier = 'Tier 1 (0% to 74.9%)';
+    let rewardType: 'None' | 'Bonus' | 'Prize Pool' = 'None';
+    let rewardAmount = 0;
+    let rewardMessage = '';
+
+    // =========================================================================
+    // REWARD TIER RULES:
+    // 0% to < 75%: Get nothing
+    // 75% to 98%:  Get random reward in number of bonus
+    // 99% to 100%: Get prize pool
+    // =========================================================================
+    if (accuracy < 75) {
+      rewardTier = 'Tier 1 (0% to 74.9%)';
+      rewardType = 'None';
+      rewardAmount = 0;
+      rewardMessage = `No reward earned. Your accuracy was ${accuracy}%, which is below the 75% threshold.`;
+    } else if (accuracy <= 98) {
+      rewardTier = 'Tier 2 (75% to 98%)';
+      rewardType = 'Bonus';
+
+      // Random reward in number of bonus (between 50 and 350, or scaled by coinsReward)
+      const baseMin = 50;
+      const baseMax = Number(contest.coinsReward) > 0 ? Math.max(100, Number(contest.coinsReward)) : 350;
+      const randomBonus = Math.floor(Math.random() * (baseMax - baseMin + 1)) + baseMin;
+
+      rewardAmount = randomBonus;
+      rewardMessage = `Congratulations! You scored ${accuracy}% accuracy and won a random bonus of ${rewardAmount} ${currency}!`;
+
+      // Credit bonus to wallet
+      await walletService.addReward(
+        userId,
+        rewardAmount,
+        `${contest.title} - Random Bonus (${accuracy}% Accuracy)`,
+        currency
+      );
+    } else {
+      // 99% to 100%
+      rewardTier = 'Tier 3 (99% to 100%)';
+      rewardType = 'Prize Pool';
+
+      // Award the contest prize pool
+      const prizePoolAmount = Number(contest.prizePool) > 0
+        ? Number(contest.prizePool)
+        : (Number(contest.coinsReward) > 0 ? Number(contest.coinsReward) : 10000);
+
+      rewardAmount = prizePoolAmount;
+      rewardMessage = `JACKPOT! Spectacular accuracy of ${accuracy}%! You have won the Contest Prize Pool of ${rewardAmount} ${currency}!`;
+
+      // Credit prize pool to wallet
+      await walletService.addReward(
+        userId,
+        rewardAmount,
+        `${contest.title} - Grand Prize Pool Winner (${accuracy}% Accuracy)`,
+        currency
+      );
+    }
+
+    // Save Attempt & Result record
+    const attemptRecord = await Attempt.create({
+      userId: user._id,
+      stageId: userGroup?._id || contest._id,
+      contestId: contest._id,
+      groupId: userGroup?._id || contest._id,
+      acceptedRules: true,
+      rulesAcceptedAt: new Date(),
+      startedAt: new Date(Date.now() - 60000),
+      submittedAt: new Date(),
+      status: 'Evaluated',
+      answers: userAnswers,
+      score: correctCount,
+      cheatAlerts: payload.cheatAlerts || []
+    }).catch(() => null);
+
+    await Result.create({
+      userId: user._id,
+      stageId: userGroup?._id || contest._id,
+      groupId: userGroup?._id || contest._id,
+      contestId: contest._id,
+      attemptId: attemptRecord?._id || new mongoose.Types.ObjectId(),
+      score: correctCount,
+      passed: accuracy >= 75,
+      status: accuracy >= 75 ? 'Qualified' : 'Failed',
+      remarks: `${rewardTier} - ${rewardMessage}`
+    }).catch(() => null);
+
+    // Fetch fresh user state with updated wallet balance and coins
+    const updatedUser = await this.userRepo.findById(userId);
+
+    // Emit live real-time notification
+    socketService.emitToUser(userId, 'contest_reward_won', {
+      contestId: contest._id,
+      contestTitle: contest.title,
+      accuracy,
+      rewardTier,
+      rewardType,
+      rewardAmount,
+      currency
+    });
+
+    return {
+      success: true,
+      contestId: contest._id.toString(),
+      contestTitle: contest.title,
+      totalQuestions,
+      correctAnswers: correctCount,
+      incorrectAnswers: totalQuestions - correctCount,
+      accuracyPercentage: accuracy,
+      rewardTier,
+      rewardType,
+      rewardAmount,
+      currency,
+      message: rewardMessage,
+      user: {
+        _id: updatedUser?._id || user._id,
+        name: updatedUser?.name || user.name,
+        email: updatedUser?.email || user.email,
+        walletBalance: updatedUser?.walletBalance ?? user.walletBalance,
+        coins: updatedUser?.coins ?? user.coins
+      },
+      answerDetails
     };
   }
 }

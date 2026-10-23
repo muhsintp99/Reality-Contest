@@ -111,14 +111,14 @@ export const WeekContestScreen = () => {
 
       const res = await weekRoomApi.submitContestTask(payload);
       if (res.success || res.data) {
-        navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}/contest/${contestId}/result`);
+        navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${contestId}/result`);
       } else {
-        navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}/contest/${contestId}/result`);
+        navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${contestId}/result`);
       }
     } catch (err) {
       console.error('Error submitting task proof:', err);
       // Fallback navigate to result screen if submission was noted
-      navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}/contest/${contestId}/result`);
+      navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${contestId}/result`);
     } finally {
       setSubmitting(false);
     }
@@ -142,7 +142,7 @@ export const WeekContestScreen = () => {
         <h3 className="text-xl font-bold text-slate-800 dark:text-white">Unable to Start Test</h3>
         <p className="text-xs text-slate-500 dark:text-white/60">{error}</p>
         <button
-          onClick={() => navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}`)}
+          onClick={() => navigate(`/week/rooms/${roomId}/tasks/${taskId}`)}
           className="px-5 py-2.5 bg-brandPrimary text-white text-xs font-bold rounded-xl shadow-lg"
         >
           Return to Task Details
@@ -156,7 +156,7 @@ export const WeekContestScreen = () => {
       {/* Contest Top Navigation & Timer Bar */}
       <div className="sticky top-4 z-30 glassmorphism p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xl flex items-center justify-between gap-4">
         <button
-          onClick={() => navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}`)}
+          onClick={() => navigate(`/week/rooms/${roomId}/tasks/${taskId}`)}
           className="flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-brandPrimary"
         >
           <ArrowLeft className="w-4 h-4" />

@@ -1,8 +1,9 @@
 import { QuestionPoolRepository } from '../repositories/QuestionPoolRepository';
 import { QuestionRepository } from '../repositories/QuestionRepository';
-import { IQuestionPool } from '../models/QuestionPool';
-import { IQuestion } from '../models/Question';
+import { IQuestionPool, QuestionPool } from '../models/QuestionPool';
+import { IQuestion, Question } from '../models/Question';
 import { BadRequestError, NotFoundError } from '../core/errors';
+import { redisService } from './RedisService';
 import mongoose from 'mongoose';
 
 function parseNegativeMarks(val: any): number {
@@ -16,15 +17,52 @@ export class QuestionService {
   private poolRepo = new QuestionPoolRepository();
   private questionRepo = new QuestionRepository();
 
+  private async invalidateCache(): Promise<void> {
+    try {
+      await redisService.del('cache:question_pools:list');
+      await redisService.del('cache:questions:all');
+      await redisService.del('cache:questions:questions');
+      await redisService.del('cache:questions:all-questions');
+    } catch {
+      // Ignore cache clearing errors
+    }
+  }
+
   async createPool(data: Partial<IQuestionPool>): Promise<IQuestionPool> {
     if (!data.name || !data.category) {
       throw new BadRequestError('Name and category are required.');
     }
-    return this.poolRepo.create(data);
+    const pool = await this.poolRepo.create(data);
+    await this.invalidateCache();
+    return pool;
   }
 
-  async listPools(): Promise<IQuestionPool[]> {
-    return this.poolRepo.find({});
+  async listPools(): Promise<any[]> {
+    const cacheKey = 'cache:question_pools:list';
+    const cached = await redisService.get<any[]>(cacheKey);
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      return cached;
+    }
+
+    const pools = await QuestionPool.find({}).sort({ createdAt: -1 }).lean().exec();
+
+    // Fast parallel aggregation of questions per pool
+    const counts = await Question.aggregate([
+      { $group: { _id: '$poolId', count: { $sum: 1 } } }
+    ]).exec().catch(() => []);
+
+    const countMap: Record<string, number> = {};
+    for (const c of counts) {
+      if (c._id) countMap[c._id.toString()] = c.count;
+    }
+
+    const poolsWithCounts = pools.map((p: any) => ({
+      ...p,
+      questionCount: countMap[p._id.toString()] || 0
+    }));
+
+    await redisService.set(cacheKey, poolsWithCounts, 45);
+    return poolsWithCounts;
   }
 
   async getPoolById(id: string): Promise<IQuestionPool> {
@@ -36,18 +74,24 @@ export class QuestionService {
   }
 
   async updatePool(id: string, data: Partial<IQuestionPool>): Promise<IQuestionPool | null> {
-    return this.poolRepo.update(id, data);
+    const pool = await this.poolRepo.update(id, data);
+    await this.invalidateCache();
+    return pool;
   }
 
   async deletePool(id: string): Promise<boolean> {
     const deleted = await this.poolRepo.delete(id);
+    await this.invalidateCache();
     return Boolean(deleted);
   }
 
   async addQuestion(poolId: string, qData: Partial<IQuestion>): Promise<IQuestion> {
     const pool = await this.getPoolById(poolId);
     qData.poolId = pool._id as any;
-    return this.questionRepo.create(qData);
+    if (!qData.category) qData.category = pool.category;
+    const q = await this.questionRepo.create(qData);
+    await this.invalidateCache();
+    return q;
   }
 
   async createSingleQuestion(qData: any): Promise<IQuestion> {
@@ -74,7 +118,7 @@ export class QuestionService {
       ];
     }
 
-    return this.questionRepo.create({
+    const q = await this.questionRepo.create({
       poolId: pool._id,
       category: category,
       type: qData.type || 'Single Choice',
@@ -89,13 +133,27 @@ export class QuestionService {
       videoUrl: qData.videoUrl || '',
       questionTimer: parseInt(qData.questionTimer, 10) || 0
     });
+    await this.invalidateCache();
+    return q;
   }
 
   async listQuestions(poolId?: string): Promise<IQuestion[]> {
-    if (!poolId || poolId === 'all' || poolId === 'questions' || !mongoose.Types.ObjectId.isValid(poolId)) {
-      return this.questionRepo.find({});
+    const cleanId = (!poolId || poolId === 'all' || poolId === 'questions' || poolId === 'all-questions') ? 'all' : poolId;
+    const cacheKey = `cache:questions:${cleanId}`;
+    const cached = await redisService.get<IQuestion[]>(cacheKey);
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      return cached;
     }
-    return this.questionRepo.findByPool(poolId);
+
+    let questions: IQuestion[];
+    if (cleanId === 'all') {
+      questions = await this.questionRepo.findByPool();
+    } else {
+      questions = await this.questionRepo.findByPool(cleanId);
+    }
+
+    await redisService.set(cacheKey, questions, 45);
+    return questions;
   }
 
   async getQuestionById(id: string): Promise<IQuestion> {
@@ -160,7 +218,9 @@ export class QuestionService {
       updatePayload.questionTimer = isNaN(timer) ? 0 : timer;
     }
 
-    return this.questionRepo.update(id, updatePayload);
+    const updated = await this.questionRepo.update(id, updatePayload);
+    await this.invalidateCache();
+    return updated;
   }
 
   async deleteQuestion(id: string): Promise<boolean> {
@@ -168,12 +228,14 @@ export class QuestionService {
       return false;
     }
     const deleted = await this.questionRepo.delete(id);
+    await this.invalidateCache();
     return Boolean(deleted);
   }
 
   async clearAllQuestions(): Promise<void> {
     await this.questionRepo.deleteMany({});
     await this.poolRepo.deleteMany({});
+    await this.invalidateCache();
   }
 
   async importQuestions(poolId: string, rows: any[]): Promise<{ count: number }> {
@@ -220,6 +282,7 @@ export class QuestionService {
       count++;
     }
 
+    await this.invalidateCache();
     return { count };
   }
 
@@ -279,6 +342,7 @@ export class QuestionService {
       }
     }
 
+    await this.invalidateCache();
     return { count };
   }
 }

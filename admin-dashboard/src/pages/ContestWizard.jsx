@@ -70,14 +70,59 @@ export const ContestWizard = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const initialCustomId = useMemo(() => `GNC-${Math.floor(100000 + Math.random() * 900000)}`, []);
+  const passedContest = location.state?.contest;
 
-  const formik = useFormik({
-    initialValues: {
-      customContestId: initialCustomId,
+  const getInitialValues = () => {
+    const c = passedContest;
+    if (c) {
+      const regStartSplit = splitDateTime(c.registrationStart);
+      const regEndSplit = splitDateTime(c.registrationEnd);
+      const tStartSplit = splitDateTime(c.startDate);
+      const tEndSplit = splitDateTime(c.endDate);
+      const feeVal = c.entryFee !== undefined ? c.entryFee : (c.fee !== undefined ? c.fee : 0);
+      const prizeVal = c.prizePool !== undefined ? c.prizePool : (c.prize !== undefined ? c.prize : 0);
+      const isFreeVal = Boolean(c.isFree || c.entryFeeType === 'Free' || Number(feeVal) === 0);
+      const feeTypeVal = c.entryFeeType || (isFreeVal ? 'Free' : ((c.entryFeeCoins && Number(c.entryFeeCoins) > 0) ? 'Coins' : 'Cash'));
+
+      return {
+        customContestId: c.contestId || c.customContestId || (c._id ? `CNT-2026-${String(c._id).slice(-4).toUpperCase()}` : ''),
+        title: c.title || '',
+        description: c.description || '',
+        rules: c.rules || '',
+        guidelines: c.guidelines || '',
+        durationDays: String(c.durationDays !== undefined ? c.durationDays : '7'),
+        prize: String(prizeVal),
+        fee: String(feeVal),
+        entryFeeType: feeTypeVal,
+        isFree: isFreeVal,
+        entryFeeCoins: String(c.entryFeeCoins || '0'),
+        coinsReward: String(c.coinsReward !== undefined ? c.coinsReward : '0'),
+        maxPart: String(c.maxParticipants !== undefined ? c.maxParticipants : (c.maxPart !== undefined ? c.maxPart : '500')),
+        timerLimit: String(c.timerLimit !== undefined ? c.timerLimit : '30'),
+        difficulty: c.difficulty || 'Medium',
+        questionsCount: String(c.questionsCount !== undefined ? c.questionsCount : '20'),
+        imageUrl: c.imageUrl || c.bannerUrl || '',
+        videoUrl: c.videoUrl || '',
+        fileAttachmentUrl: c.fileAttachmentUrl || '',
+        selectedCategories: Array.isArray(c.categories) ? c.categories : [],
+        status: c.status || 'Registration Open',
+        regStartDate: regStartSplit.date || getCurrentDateString(),
+        regStartTime: regStartSplit.time || getCurrentTimeString(),
+        regEndDate: regEndSplit.date || '',
+        regEndTime: regEndSplit.time || '',
+        tStartDate: tStartSplit.date || '',
+        tStartTime: tStartSplit.time || '',
+        tEndDate: tEndSplit.date || '',
+        tEndTime: tEndSplit.time || ''
+      };
+    }
+
+    return {
+      customContestId: contestId ? '' : initialCustomId,
       title: isDailyType ? 'Daily Speed Quiz Rush 2026' : '',
       description: isDailyType ? 'Automated 24-hour daily quiz battle with live reset countdown.' : '',
-      rules: '1. Complete all quiz stages within timer countdown.\n2. Negative marking -2 for wrong attempts.\n3. Top scorers qualify for grand prize pool.',
-      guidelines: '1. Ensure stable internet connection.\n2. Do not refresh or close app during contest.\n3. Anti-cheat monitoring is active.',
+      rules: contestId ? '' : '1. Complete all quiz stages within timer countdown.\n2. Negative marking -2 for wrong attempts.\n3. Top scorers qualify for grand prize pool.',
+      guidelines: contestId ? '' : '1. Ensure stable internet connection.\n2. Do not refresh or close app during contest.\n3. Anti-cheat monitoring is active.',
       durationDays: '7',
       prize: isDailyType ? '10000' : '100000',
       fee: isDailyType ? '0' : '499',
@@ -102,7 +147,12 @@ export const ContestWizard = () => {
       tStartTime: '',
       tEndDate: '',
       tEndTime: ''
-    },
+    };
+  };
+
+  const formik = useFormik({
+    initialValues: getInitialValues(),
+    enableReinitialize: true,
     validationSchema: Yup.object({
       title: Yup.string()
         .max(100, 'Title must be 100 characters or less')
@@ -133,7 +183,7 @@ export const ContestWizard = () => {
       const uploadedFileAttachmentUrl = await uploadPendingFile(values.fileAttachmentUrl, 'contest');
 
       const data = {
-        contestId: values.customContestId || `GNC-${Date.now()}`,
+        contestId: values.customContestId || passedContest?.contestId || `GNC-${Date.now()}`,
         title: values.title,
         description: values.description,
         rules: values.rules,
@@ -223,6 +273,55 @@ export const ContestWizard = () => {
     await formik.submitForm();
   };
 
+  const populateFormWithContest = (c) => {
+    if (!c) return;
+    const regStartSplit = splitDateTime(c.registrationStart);
+    const regEndSplit = splitDateTime(c.registrationEnd);
+    const tStartSplit = splitDateTime(c.startDate);
+    const tEndSplit = splitDateTime(c.endDate);
+
+    const feeVal = c.entryFee !== undefined ? c.entryFee : (c.fee !== undefined ? c.fee : 0);
+    const prizeVal = c.prizePool !== undefined ? c.prizePool : (c.prize !== undefined ? c.prize : 0);
+    const isFreeVal = Boolean(c.isFree || c.entryFeeType === 'Free' || Number(feeVal) === 0);
+    const feeTypeVal = c.entryFeeType || (isFreeVal ? 'Free' : ((c.entryFeeCoins && Number(c.entryFeeCoins) > 0) ? 'Coins' : 'Cash'));
+
+    formik.setValues({
+      customContestId: c.contestId || c.customContestId || (c._id ? `CNT-2026-${String(c._id).slice(-4).toUpperCase()}` : ''),
+      title: c.title || '',
+      description: c.description || '',
+      rules: c.rules || '',
+      guidelines: c.guidelines || '',
+      durationDays: String(c.durationDays !== undefined ? c.durationDays : '7'),
+      prize: String(prizeVal),
+      fee: String(feeVal),
+      entryFeeType: feeTypeVal,
+      isFree: isFreeVal,
+      entryFeeCoins: String(c.entryFeeCoins || 0),
+      coinsReward: String(c.coinsReward !== undefined ? c.coinsReward : 0),
+      maxPart: String(c.maxParticipants !== undefined ? c.maxParticipants : (c.maxPart !== undefined ? c.maxPart : 500)),
+      timerLimit: String(c.timerLimit !== undefined ? c.timerLimit : 30),
+      difficulty: c.difficulty || 'Medium',
+      questionsCount: String(c.questionsCount !== undefined ? c.questionsCount : 20),
+      imageUrl: c.imageUrl || c.bannerUrl || '',
+      videoUrl: c.videoUrl || '',
+      fileAttachmentUrl: c.fileAttachmentUrl || '',
+      selectedCategories: Array.isArray(c.categories) ? c.categories : [],
+      status: c.status || 'Registration Open',
+      regStartDate: regStartSplit.date || getCurrentDateString(),
+      regStartTime: regStartSplit.time || getCurrentTimeString(),
+      regEndDate: regEndSplit.date || '',
+      regEndTime: regEndSplit.time || '',
+      tStartDate: tStartSplit.date || '',
+      tStartTime: tStartSplit.time || '',
+      tEndDate: tEndSplit.date || '',
+      tEndTime: tEndSplit.time || ''
+    });
+
+    if (c.title) {
+      setCustomTitle(`Edit ${c.title}`);
+    }
+  };
+
   const fetchCategories = async () => {
     if (isMockMode) {
       setCategories([
@@ -242,107 +341,44 @@ export const ContestWizard = () => {
 
   const fetchContestDetails = async () => {
     if (!contestId) return;
-    setLoading(true);
+    if (!passedContest) {
+      setLoading(true);
+    }
     try {
-      if (isMockMode) {
-        const c = { 
-          _id: contestId, 
-          contestId: 'CNT-2026-1001',
-          title: 'India Creator Showdown 2026', 
-          description: 'Vlogging, photography, and cinematography creative expression.', 
-          rules: 'Submit short film before deadline.',
-          entryFee: 499, 
-          prizePool: 1000000, 
-          status: 'Registration Open', 
-          timerLimit: 45,
-          difficulty: 'Medium',
-          questionsCount: 25,
-          imageUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500',
-          startDate: '2026-07-01T12:00:00', 
-          endDate: '2026-07-15T18:00:00', 
-          registrationStart: '2026-06-01T09:00:00', 
-          registrationEnd: '2026-06-30T23:59:00', 
-          maxParticipants: 1000, 
-          categories: ['cat-2'] 
-        };
-        const regStartSplit = splitDateTime(c.registrationStart);
-        const regEndSplit = splitDateTime(c.registrationEnd);
-        const tStartSplit = splitDateTime(c.startDate);
-        const tEndSplit = splitDateTime(c.endDate);
-
-        formik.setValues({
-          title: c.title,
-          description: c.description || '',
-          rules: c.rules || '',
-          prize: String(c.prizePool),
-          fee: String(c.entryFee),
-          maxPart: String(c.maxParticipants),
-          timerLimit: String(c.timerLimit || 30),
-          difficulty: c.difficulty || 'Medium',
-          questionsCount: String(c.questionsCount || 20),
-          imageUrl: c.imageUrl || '',
-          videoUrl: c.videoUrl || '',
-          fileAttachmentUrl: c.fileAttachmentUrl || '',
-          selectedCategories: c.categories || [],
-          status: c.status || 'Registration Open',
-          regStartDate: regStartSplit.date,
-          regStartTime: regStartSplit.time,
-          regEndDate: regEndSplit.date,
-          regEndTime: regEndSplit.time,
-          tStartDate: tStartSplit.date,
-          tStartTime: tStartSplit.time,
-          tEndDate: tEndSplit.date,
-          tEndTime: tEndSplit.time
-        });
+      const res = await axios.get(`/api/contests/${contestId}`, { withCredentials: true });
+      const c = res.data?.contest || res.data?.data || res.data;
+      if (c && (c._id || c.title || c.contestId)) {
+        populateFormWithContest(c);
         return;
       }
-      
-      const res = await axios.get(`/api/contests/${contestId}`, { withCredentials: true });
-      const c = res.data.contest;
-      if (c) {
-        const regStartSplit = splitDateTime(c.registrationStart);
-        const regEndSplit = splitDateTime(c.registrationEnd);
-        const tStartSplit = splitDateTime(c.startDate);
-        const tEndSplit = splitDateTime(c.endDate);
-
-        formik.setValues({
-          title: c.title,
-          description: c.description || '',
-          rules: c.rules || '',
-          prize: String(c.prizePool),
-          fee: String(c.entryFee),
-          maxPart: String(c.maxParticipants),
-          timerLimit: String(c.timerLimit || 30),
-          difficulty: c.difficulty || 'Medium',
-          questionsCount: String(c.questionsCount || 20),
-          imageUrl: c.imageUrl || '',
-          videoUrl: c.videoUrl || '',
-          fileAttachmentUrl: c.fileAttachmentUrl || '',
-          selectedCategories: c.categories || [],
-          status: c.status || 'Registration Open',
-          regStartDate: regStartSplit.date,
-          regStartTime: regStartSplit.time,
-          regEndDate: regEndSplit.date,
-          regEndTime: regEndSplit.time,
-          tStartDate: tStartSplit.date,
-          tStartTime: tStartSplit.time,
-          tEndDate: tEndSplit.date,
-          tEndTime: tEndSplit.time
-        });
-
-        if (c.title) {
-          setCustomTitle(`Edit ${c.title}`);
-        }
-      }
     } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+      console.warn('Direct contest detail fetch failed, trying list fallback:', err);
     }
+
+    // List fallback query:
+    try {
+      const listRes = await axios.get('/api/contests', { withCredentials: true });
+      const contestsList = listRes.data?.contests || listRes.data?.data || listRes.data || [];
+      const found = contestsList.find((item) => String(item._id) === String(contestId) || String(item.contestId) === String(contestId));
+      if (found) {
+        populateFormWithContest(found);
+        return;
+      }
+    } catch (listErr) {
+      console.error('List fallback fetch also failed:', listErr);
+    }
+
+    if (!passedContest) {
+      showAlert('Could not load contest settings. Please check your connection.', 'error');
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchCategories();
+    if (passedContest) {
+      populateFormWithContest(passedContest);
+    }
     fetchContestDetails();
   }, [contestId, isMockMode]);
 
@@ -863,7 +899,7 @@ export const ContestWizard = () => {
             {/* Header Details */}
             <div className="space-y-1">
               <span className="px-2 py-0.5 bg-brandPrimary/10 text-brandPrimary font-mono font-bold rounded text-[10px] inline-block">
-                Auto ID: {contestId || 'CNT-2026-AUTO'}
+                Contest ID: {formik.values.customContestId || contestId || 'CNT-2026-AUTO'}
               </span>
               <h4 className="text-base font-bold text-slate-900 dark:text-white">{formik.values.title || 'Untitled Contest'}</h4>
               <span className="inline-block px-2.5 py-0.5 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold rounded-full uppercase">
@@ -895,7 +931,9 @@ export const ContestWizard = () => {
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 block">Entry Fee</span>
-                <strong className="text-brandPrimary font-bold">₹{formik.values.fee}</strong>
+                <strong className="text-brandPrimary font-bold">
+                  {formik.values.isFree ? 'FREE' : formik.values.entryFeeType === 'Coins' ? `🪙 ${formik.values.fee} Coins` : `₹${formik.values.fee}`}
+                </strong>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 block">Timer Limit</span>
@@ -909,7 +947,11 @@ export const ContestWizard = () => {
                 <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Selected Categories</span>
                 <div className="flex flex-wrap gap-1">
                   {formik.values.selectedCategories.map((catId) => {
-                    const catObj = categories.find(c => c._id === catId);
+                    const catObj = categories.find(c => 
+                      String(c._id) === String(catId) || 
+                      String(c.title).toLowerCase() === String(catId).toLowerCase() || 
+                      String(c.name || '').toLowerCase() === String(catId).toLowerCase()
+                    );
                     return (
                       <span key={catId} className="px-2 py-0.5 bg-brandPrimary/10 text-brandPrimary rounded text-[10px] font-bold">
                         {catObj?.title || catObj?.name || catId}

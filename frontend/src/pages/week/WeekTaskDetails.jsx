@@ -86,10 +86,10 @@ export const WeekTaskDetails = () => {
     setJoinActionLoading(true);
     try {
       await weekRoomApi.startContest(roomId, contestId);
-      navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}/contest/${contestId}`);
+      navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${contestId}`);
     } catch (err) {
       console.warn('Start contest response (proceeding to screen):', err);
-      navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}/contest/${contestId}`);
+      navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${contestId}`);
     } finally {
       setJoinActionLoading(false);
     }
@@ -114,10 +114,10 @@ export const WeekTaskDetails = () => {
         <h3 className="text-xl font-bold text-slate-800 dark:text-white">Task Details Unavailable</h3>
         <p className="text-xs text-slate-500 dark:text-white/60">{error || 'Could not load task information'}</p>
         <button
-          onClick={() => navigate(`/week/rooms/${roomId}/cycles/${cycleId}`)}
+          onClick={() => navigate(`/week/rooms/${roomId}`)}
           className="px-5 py-2.5 bg-brandPrimary text-white text-xs font-bold rounded-xl shadow-lg"
         >
-          Return to Cycle
+          Return to Room
         </button>
       </div>
     );
@@ -127,11 +127,11 @@ export const WeekTaskDetails = () => {
     <div className="space-y-8 max-w-4xl mx-auto pb-12 animate-fade-in">
       {/* Back Button */}
       <button
-        onClick={() => navigate(`/week/rooms/${roomId}/cycles/${cycleId}`)}
+        onClick={() => navigate(`/week/rooms/${roomId}`)}
         className="inline-flex items-center gap-2 px-3.5 py-2 bg-white/80 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-200/60 dark:border-white/10 transition-all shadow-sm"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back to Cycle Tasks</span>
+        <span>Back to Room Tasks</span>
       </button>
 
       {/* Task Header Card */}
@@ -211,7 +211,7 @@ export const WeekTaskDetails = () => {
 
           {joinState === 'COMPLETED' && (
             <button
-              onClick={() => navigate(`/week/rooms/${roomId}/cycles/${cycleId}/tasks/${taskId}/contest/${contestId}/result`)}
+              onClick={() => navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${contestId}/result`)}
               className="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 text-white font-bold text-xs rounded-2xl shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />

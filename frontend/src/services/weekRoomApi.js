@@ -11,21 +11,21 @@ export const weekRoomApi = {
     return response.data;
   },
 
-  // 2. Fetch Single Room Details (includes header, members, cycles, analytics)
+  // 2. Fetch Single Room Details (includes header, members, tasks, analytics)
   getWeekRoomDetails: async (roomId) => {
     const response = await api.get(`/week/rooms/${roomId}`);
     return response.data;
   },
 
-  // 3. Fetch Room Cycles for a specific room
-  getRoomCycles: async (roomId) => {
-    const response = await api.get(`/week/rooms/${roomId}/cycles`);
-    return response.data;
-  },
-
-  // 4. Fetch Cycle Details by ID (Deprecated: cycles endpoints removed)
-  getCycleDetails: async (cycleId) => {
-    return { success: true, data: null };
+  // 3. Fetch Tasks directly for a room
+  getRoomTasks: async (roomId) => {
+    try {
+      const response = await api.get(`/week/rooms/${roomId}/tasks`);
+      return response.data;
+    } catch (err) {
+      const roomRes = await api.get(`/week/rooms/${roomId}`);
+      return { success: true, data: roomRes.data?.data?.tasks || roomRes.data?.tasks || [] };
+    }
   },
 
   // 5. Fetch Task Details by ID

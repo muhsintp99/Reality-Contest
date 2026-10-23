@@ -87,6 +87,24 @@ export class WalletController {
   }
 
   /**
+   * Convert contestant coins into wallet cash balance
+   */
+  async convertCoins(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user.id || (req as any).user._id;
+      const { coins } = req.body;
+      const result = await walletService.convertCoinsToCash(userId, parseInt(coins, 10));
+      res.status(200).json({
+        success: true,
+        message: `Successfully converted ${result.coinsConverted} Coins to ₹${result.cashAdded} Wallet Cash! 🪙->₹`,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * Get contestant wallet transactions history
    */
   async getTransactions(req: Request, res: Response, next: NextFunction): Promise<void> {

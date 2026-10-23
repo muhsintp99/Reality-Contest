@@ -75,6 +75,18 @@ export class ContestController {
       next(err);
     }
   }
+
+  async submitContestAnswers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user.id;
+      const contestId = req.params.id;
+      const { answers, cheatAlerts } = req.body;
+      const result = await contestService.submitContestAnswers(contestId, userId, { answers, cheatAlerts });
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 export const contestController = new ContestController();
 export default contestController;

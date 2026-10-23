@@ -37,9 +37,27 @@ export const QuestionPoolPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState('10');
 
-  // Categories & Questions (Strictly Live MongoDB Data)
-  const [categories, setCategories] = useState([]);
-  const [questions, setQuestions] = useState([]);
+  // Categories & Questions (Instant Stale-While-Revalidate Session Cache)
+  const [categories, setCategories] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('haka_admin_categories');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+
+  const [questions, setQuestions] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('haka_admin_questions');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('haka_admin_questions');
+      return !cached || JSON.parse(cached).length === 0;
+    } catch { return true; }
+  });
 
   // Drawers & Modals
   const [showAddDrawer, setShowAddDrawer] = useState(false);
@@ -107,9 +125,9 @@ export const QuestionPoolPage = () => {
 
   const fetchCategories = async () => {
     try {
-      let res = await axios.get('/api/categories', { withCredentials: true }).catch(() => null);
+      let res = await axios.get('/api/categories', { withCredentials: true, timeout: 3500 }).catch(() => null);
       if (!res || !res.data) {
-        res = await axios.get('/api/admin/categories', { withCredentials: true }).catch(() => null);
+        res = await axios.get('/api/admin/categories', { withCredentials: true, timeout: 3500 }).catch(() => null);
       }
       if (res && res.data) {
         const catList = Array.isArray(res.data) ? res.data : (res.data.categories || res.data.data || []);
@@ -118,25 +136,59 @@ export const QuestionPoolPage = () => {
           if (names.length > 0) {
             const uniqueCategories = Array.from(new Set(names));
             setCategories(uniqueCategories);
+            try { sessionStorage.setItem('haka_admin_categories', JSON.stringify(uniqueCategories)); } catch {}
             setQuestionForm(prev => ({ ...prev, category: uniqueCategories[0] }));
             return;
           }
         }
       }
-      setCategories([]);
     } catch (err) {
       console.warn('Error fetching categories:', err);
-      setCategories([]);
     }
   };
 
   const fetchQuestions = async () => {
     try {
-      const poolsRes = await axios.get('/api/question-pools', { withCredentials: true }).catch(() => null);
+      // 1. Fast direct fetch for all questions across all pools in a single optimized call
+      const fastAllRes = await axios.get('/api/question-pools/all-questions', { withCredentials: true, timeout: 3000 }).catch(() => null);
+      if (fastAllRes && fastAllRes.data && fastAllRes.data.questions && fastAllRes.data.questions.length > 0) {
+        const formatted = fastAllRes.data.questions.map((q, idx) => ({
+          id: q.id || `Q-${q._id?.slice(-4) || idx + 1000}`,
+          _id: q._id,
+          poolId: q.poolId,
+          category: q.category || 'General Knowledge',
+          question: q.question || q.text || '',
+          optionA: q.optionA || q.options?.[0]?.text || '',
+          optionB: q.optionB || q.options?.[1]?.text || '',
+          optionC: q.optionC || q.options?.[2]?.text || '',
+          optionD: q.optionD || q.options?.[3]?.text || '',
+          correctOption: q.correctOption || (q.options?.findIndex(o => o.isCorrect) >= 0
+            ? `Option ${String.fromCharCode(65 + q.options.findIndex(o => o.isCorrect))}`
+            : 'Option A'),
+          difficulty: q.difficulty || 'Medium',
+          explanation: q.explanation || '',
+          negativeMarks: formatNegMarks(q.negativeMarks),
+          approvalStatus: q.approvalStatus || 'Approved',
+          imageUrl: q.imageUrl || q.mediaUrl || '',
+          videoUrl: q.videoUrl || '',
+          status: q.status || 'Active'
+        }));
+        setQuestions(formatted);
+        try { sessionStorage.setItem('haka_admin_questions', JSON.stringify(formatted)); } catch {}
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Parallel pool questions fetch
+      const poolsRes = await axios.get('/api/question-pools', { withCredentials: true, timeout: 3000 }).catch(() => null);
       if (poolsRes && poolsRes.data && poolsRes.data.pools && poolsRes.data.pools.length > 0) {
+        const poolPromises = poolsRes.data.pools.map(p =>
+          axios.get(`/api/question-pools/${p._id}/questions`, { withCredentials: true, timeout: 2500 }).catch(() => null)
+        );
+        const poolResults = await Promise.all(poolPromises);
         let allQuestions = [];
-        for (const p of poolsRes.data.pools) {
-          const qRes = await axios.get(`/api/question-pools/${p._id}/questions`, { withCredentials: true }).catch(() => null);
+        poolResults.forEach((qRes, i) => {
+          const p = poolsRes.data.pools[i];
           if (qRes && qRes.data && qRes.data.questions) {
             const formatted = qRes.data.questions.map((q, idx) => ({
               id: q.id || `Q-${q._id?.slice(-4) || idx + 1000}`,
@@ -161,17 +213,19 @@ export const QuestionPoolPage = () => {
             }));
             allQuestions = [...allQuestions, ...formatted];
           }
-        }
+        });
         if (allQuestions.length > 0) {
           setQuestions(allQuestions);
+          try { sessionStorage.setItem('haka_admin_questions', JSON.stringify(allQuestions)); } catch {}
+          setIsLoading(false);
           return;
         }
       }
 
       // Fallback
-      let res = await axios.get('/api/questions', { withCredentials: true }).catch(() => null);
+      let res = await axios.get('/api/questions', { withCredentials: true, timeout: 3000 }).catch(() => null);
       if (!res || !res.data) {
-        res = await axios.get('/api/question-pools/all-questions', { withCredentials: true }).catch(() => null);
+        res = await axios.get('/api/question-pools/all-questions', { withCredentials: true, timeout: 3000 }).catch(() => null);
       }
       if (res && res.data) {
         const qList = Array.isArray(res.data) ? res.data : (res.data.questions || res.data.data || []);
@@ -197,9 +251,12 @@ export const QuestionPoolPage = () => {
           status: q.status || 'Active'
         }));
         setQuestions(formatted);
+        try { sessionStorage.setItem('haka_admin_questions', JSON.stringify(formatted)); } catch {}
       }
     } catch (err) {
       console.warn('Error fetching questions:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -241,6 +298,7 @@ export const QuestionPoolPage = () => {
         await axios.post('/api/question-pools/questions', questionForm, { withCredentials: true });
         showSnackbar('Question added to pool successfully!', 'success');
       }
+      try { sessionStorage.removeItem('haka_admin_questions'); } catch {}
       setShowAddDrawer(false);
       resetQuestionForm();
       fetchQuestions();
@@ -256,6 +314,7 @@ export const QuestionPoolPage = () => {
       async () => {
         try {
           await axios.delete(`/api/question-pools/questions/${qId}`, { withCredentials: true });
+          try { sessionStorage.removeItem('haka_admin_questions'); } catch {}
           showSnackbar('Question deleted from pool', 'info');
           fetchQuestions();
         } catch (err) {
@@ -272,6 +331,8 @@ export const QuestionPoolPage = () => {
       async () => {
         try {
           await axios.delete('/api/question-pools/clear-all', { withCredentials: true });
+          try { sessionStorage.removeItem('haka_admin_questions'); } catch {}
+          setQuestions([]);
           showSnackbar('All questions and pools cleared from database', 'info');
           fetchQuestions();
         } catch (err) {

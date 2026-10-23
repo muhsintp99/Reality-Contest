@@ -1091,8 +1091,8 @@ export const swaggerDocument = {
       get: {
         tags: ['4. Contest Participation'],
         summary: 'List Available Contests',
-        description: 'Filter and list contests by status, category, or search term.',
-        security: [{ bearerAuth: [] }],
+        description: 'Filter and list contests by status, category, or search term. Accessible without authentication.',
+        security: [],
         parameters: [
           {
             name: 'status',
@@ -1218,6 +1218,61 @@ export const swaggerDocument = {
         }
       }
     },
+    '/api/contests/{id}/submit': {
+      post: {
+        tags: ['4. Contest Participation'],
+        summary: 'Submit / Check Contest Answers & Claim Reward',
+        description: 'Checks submitted answers against question keys and computes accuracy percentage. Reward Rules: 0% to <75% gets nothing; 75% to 98% gets a random bonus credited to wallet; 99% to 100% wins the contest prize pool.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['answers'],
+                properties: {
+                  answers: {
+                    type: 'object',
+                    description: 'Map of questionId to selected option index or string value',
+                    example: { "664fa1...": 1, "664fa2...": 2 }
+                  },
+                  cheatAlerts: {
+                    type: 'array',
+                    items: { type: 'object' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          200: {
+            description: 'Answers evaluated and reward tier distributed.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    contestId: { type: 'string', example: '664fa1...' },
+                    accuracyPercentage: { type: 'number', example: 88.5 },
+                    rewardTier: { type: 'string', example: 'Tier 2 (75% to 98%)' },
+                    rewardType: { type: 'string', example: 'Bonus' },
+                    rewardAmount: { type: 'number', example: 250 },
+                    currency: { type: 'string', example: 'INR' },
+                    message: { type: 'string', example: 'Congratulations! You scored 88.5% accuracy and won a random bonus of 250 INR!' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     '/api/stages/{id}/start': {
       post: {
         tags: ['4. Contest Participation'],
@@ -1269,8 +1324,8 @@ export const swaggerDocument = {
       get: {
         tags: ['5. Daily Contests (24h Arena)'],
         summary: 'List Active Daily Contests',
-        description: 'Retrieves all 24-hour reset daily contests with optional filtering by status, category, or search term.',
-        security: [{ bearerAuth: [] }],
+        description: 'Retrieves all 24-hour reset daily contests with optional filtering by status, category, or search term. Accessible without authentication.',
+        security: [],
         parameters: [
           {
             name: 'category',
@@ -2990,8 +3045,8 @@ export const swaggerDocument = {
       get: {
         tags: ['11. Bi-Weekly Room Cycle Module'],
         summary: 'Get All Competition Rooms',
-        description: 'Fetch paginated list of competition rooms with search, status filter, and capacity details.',
-        security: [{ bearerAuth: [] }],
+        description: 'Fetch paginated list of competition rooms with search, status filter, and capacity details. Accessible without authentication.',
+        security: [],
         parameters: [
           { name: 'search', in: 'query', required: false, schema: { type: 'string', example: 'Alpha' } },
           { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['All', 'Active', 'Inactive', 'Archived'] } },
@@ -3920,8 +3975,8 @@ export const swaggerDocument = {
       get: {
         tags: ['12. Grand Contest Management'],
         summary: 'List All Grand Contests',
-        description: 'Retrieves paginated list of Grand Contests with connected tasks populated.',
-        security: [{ bearerAuth: [] }],
+        description: 'Retrieves paginated list of Grand Contests with connected tasks populated. Accessible without authentication.',
+        security: [],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', example: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', example: 10 } },

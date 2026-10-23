@@ -493,7 +493,7 @@ export const ContestManagement = () => {
                     <button onClick={() => handleViewClick(c)} title="View Contest Details" className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg">
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button onClick={() => navigate(`/admin-dashboard/contests/edit/${slugifyTitle(c.title, c._id)}`)} title="Edit Contest" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg">
+                    <button onClick={() => navigate(`/admin-dashboard/contests/edit/${c._id}`, { state: { contest: c } })} title="Edit Contest" className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg">
                       <Settings className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDuplicateClick(c)} title="Duplicate Contest" className="p-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 rounded-lg">

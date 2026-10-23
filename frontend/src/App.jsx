@@ -19,6 +19,10 @@ import { WebsiteHome } from './pages/WebsiteHome';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsOfService } from './pages/TermsOfService';
 import { SupportContact } from './pages/SupportContact';
+import { CoinPage } from './pages/CoinPage';
+import { WebsiteWalletPage } from './pages/WebsiteWalletPage';
+import { GrandContestsPortal } from './pages/grand/GrandContestsPortal';
+import { GrandContestDetails } from './pages/grand/GrandContestDetails';
 import { WeekRoomsList } from './pages/week/WeekRoomsList';
 import { WeekRoomDetails } from './pages/week/WeekRoomDetails';
 import { WeekCycleDetails } from './pages/week/WeekCycleDetails';
@@ -90,8 +94,12 @@ const AppContent = () => {
       setActiveView('week-rooms');
       return;
     }
+    if (location.pathname.startsWith('/grand-contests')) {
+      setActiveView('grand-contests');
+      return;
+    }
     const path = location.pathname.split('/').pop() || 'website';
-    const validViews = ['website', 'dashboard', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings', 'profile', 'judge', 'sponsor', 'week-rooms'];
+    const validViews = ['website', 'dashboard', 'grand-contests', 'contests', 'daily-contests', 'rewards', 'coin', 'coins', 'wallet', 'notifications', 'settings', 'profile', 'judge', 'sponsor', 'week-rooms'];
     if (validViews.includes(path)) {
       setActiveView(path);
     }
@@ -135,6 +143,14 @@ const AppContent = () => {
   }
   if (['/support', '/support-contact', '/contact'].includes(location.pathname)) {
     return <SupportContact />;
+  }
+
+  // 2.5 Standalone Public/Member Coin & Wallet Pages (Check login status, show warning modal if unauthenticated)
+  if (['/coin', '/coins'].includes(location.pathname)) {
+    return <CoinPage />;
+  }
+  if (location.pathname === '/wallet') {
+    return <WebsiteWalletPage />;
   }
 
   // 3. Standalone Auth Pages (Login, Register, Forgot Password)
@@ -263,9 +279,31 @@ const AppContent = () => {
             } />
 
             {/* Shared Member Routes */}
+            <Route path="/coin" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <CoinPage />
+              </ProtectedMemberRoute>
+            } />
+            <Route path="/coins" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <CoinPage />
+              </ProtectedMemberRoute>
+            } />
             <Route path="/wallet" element={
               <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                 <WalletDashboard />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/grand-contests" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <GrandContestsPortal />
+              </ProtectedMemberRoute>
+            } />
+
+            <Route path="/grand-contests/:id" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <GrandContestDetails />
               </ProtectedMemberRoute>
             } />
 
@@ -282,24 +320,37 @@ const AppContent = () => {
               </ProtectedMemberRoute>
             } />
 
-            <Route path="/week/rooms/:roomId/cycles/:cycleId" element={
-              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
-                <WeekCycleDetails />
-              </ProtectedMemberRoute>
-            } />
-
-            <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId" element={
+            {/* Direct Room Task Routes */}
+            <Route path="/week/rooms/:roomId/tasks/:taskId" element={
               <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                 <WeekTaskDetails />
               </ProtectedMemberRoute>
             } />
 
-            <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId/contest/:contestId" element={
+            <Route path="/week/rooms/:roomId/tasks/:taskId/contest/:contestId" element={
               <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                 <WeekContestScreen />
               </ProtectedMemberRoute>
             } />
 
+            <Route path="/week/rooms/:roomId/tasks/:taskId/contest/:contestId/result" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekResultScreen />
+              </ProtectedMemberRoute>
+            } />
+
+            {/* Legacy Cycle Route Aliases */}
+            <Route path="/week/rooms/:roomId/cycles/:cycleId" element={<Navigate to="/week/rooms/:roomId" replace />} />
+            <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekTaskDetails />
+              </ProtectedMemberRoute>
+            } />
+            <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId/contest/:contestId" element={
+              <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
+                <WeekContestScreen />
+              </ProtectedMemberRoute>
+            } />
             <Route path="/week/rooms/:roomId/cycles/:cycleId/tasks/:taskId/contest/:contestId/result" element={
               <ProtectedMemberRoute allowedRoles={['Contestant', 'Judge', 'Sponsor', 'Guest']}>
                 <WeekResultScreen />

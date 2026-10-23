@@ -103,16 +103,16 @@ class RedisService {
   async set(key: string, value: any, ttlSeconds?: number): Promise<void> {
     const stringified = typeof value === 'string' ? value : JSON.stringify(value);
 
-    if (this.isConnected && this.client) {
+    if (this.isConnected && this.client && this.client.status === 'ready') {
       try {
-        if (ttlSeconds) {
-          await this.client.set(key, stringified, 'EX', ttlSeconds);
-        } else {
-          await this.client.set(key, stringified);
-        }
+        const setPromise = ttlSeconds
+          ? this.client.set(key, stringified, 'EX', ttlSeconds)
+          : this.client.set(key, stringified);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 150));
+        await Promise.race([setPromise, timeoutPromise]);
         return;
       } catch (err: any) {
-        logger.error(`Redis set operation error: ${err.message}`);
+        // Fall back to memory DB silently
       }
     }
 
@@ -123,9 +123,11 @@ class RedisService {
 
   // 2. GET
   async get<T>(key: string): Promise<T | null> {
-    if (this.isConnected && this.client) {
+    if (this.isConnected && this.client && this.client.status === 'ready') {
       try {
-        const val = await this.client.get(key);
+        const getPromise = this.client.get(key);
+        const timeoutPromise = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 150));
+        const val = await Promise.race([getPromise, timeoutPromise]);
         if (!val) return null;
         try {
           return JSON.parse(val) as T;
@@ -133,7 +135,7 @@ class RedisService {
           return val as unknown as T;
         }
       } catch (err: any) {
-        logger.error(`Redis get operation error: ${err.message}`);
+        // Fall back to memory DB silently
       }
     }
 
@@ -155,12 +157,14 @@ class RedisService {
 
   // 3. DEL
   async del(key: string): Promise<void> {
-    if (this.isConnected && this.client) {
+    if (this.isConnected && this.client && this.client.status === 'ready') {
       try {
-        await this.client.del(key);
+        const delPromise = this.client.del(key);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 150));
+        await Promise.race([delPromise, timeoutPromise]);
         return;
       } catch (err: any) {
-        logger.error(`Redis del operation error: ${err.message}`);
+        // Fall back to memory DB silently
       }
     }
 

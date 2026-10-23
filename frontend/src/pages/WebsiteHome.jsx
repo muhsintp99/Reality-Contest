@@ -7,19 +7,20 @@ import {
   ArrowRight, CheckCircle2, Clock, Eye, ShoppingBag, Award, Users, 
   ChevronRight, ChevronLeft, LogIn, UserPlus, Flame, AlertCircle, X, RotateCw, Check,
   Home, Search, Heart, Sliders, Volume2, User, Download, MoreHorizontal,
-  ExternalLink, Copy, HelpCircle, ChevronUp, Sparkle, ArrowUp, Briefcase
+  ExternalLink, Copy, HelpCircle, ChevronUp, Sparkle, ArrowUp, Briefcase, Wallet
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resolveAvatarSrc } from '../utils/avatar';
+import { LoginWarningModal } from '../components/common/LoginWarningModal';
 
 // Reusable 4.5 Cards Slider Component for Contest Categories
-const ContestSliderRow = ({ sectionTitle, sectionSubtitle, contestsList, sectionIcon, joinedContestIds, setSelectedContestModal }) => {
+const ContestSliderRow = ({ sectionTitle, sectionSubtitle, contestsList = [], sectionIcon, joinedContestIds = [], setSelectedContestModal, badgeText }) => {
   const trackRef = useRef(null);
 
   const scrollTrack = (direction) => {
     if (trackRef.current) {
-      const scrollAmount = trackRef.current.clientWidth * 0.22; // 4.5 cards visible per row
+      const scrollAmount = trackRef.current.clientWidth * 0.45;
       trackRef.current.scrollBy({
         left: direction === 'next' ? scrollAmount : -scrollAmount,
         behavior: 'smooth'
@@ -35,6 +36,11 @@ const ContestSliderRow = ({ sectionTitle, sectionSubtitle, contestsList, section
           <h3 className="text-xl sm:text-2xl font-black text-white font-poppins flex items-center gap-2">
             {sectionIcon}
             <span>{sectionTitle}</span>
+            {badgeText && (
+              <span className="text-[10px] font-black bg-[#CEF500]/15 text-[#CEF500] border border-[#CEF500]/30 px-2.5 py-0.5 rounded-full ml-1 font-mono">
+                {badgeText}
+              </span>
+            )}
           </h3>
           <p className="text-xs text-[#A69EC6] font-medium mt-0.5">{sectionSubtitle}</p>
         </div>
@@ -87,6 +93,10 @@ const ContestSliderRow = ({ sectionTitle, sectionSubtitle, contestsList, section
                 <img 
                   src={c.image} 
                   alt={c.title} 
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80';
+                  }}
                   className="w-full h-full object-cover opacity-85 group-hover:scale-110 transition-transform duration-700 brightness-95" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1C1335] via-transparent to-black/40" />
@@ -184,8 +194,13 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   const [claimedBonusToday, setClaimedBonusToday] = useState(false);
   const [activeTab, setActiveTab] = useState('contests');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [contestViewMode, setContestViewMode] = useState('sections'); // 'sections' or 'grid'
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Login Warning Modal State
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginModalTarget, setLoginModalTarget] = useState('wallet');
 
   // Ad player modal state
   const [activeAd, setActiveAd] = useState(null);
@@ -280,7 +295,7 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   // Scroll to top visibility check
   const [showQuickTop, setShowQuickTop] = useState(false);
 
-  const [categoryPills, setCategoryPills] = useState(['All', 'Trending', 'Top', 'New', 'Free Entry', 'Creator Showdown', 'Daily Quiz', 'Completed Contests']);
+  const [categoryPills, setCategoryPills] = useState(['All', 'Tournament Contests', 'Weekly Contests', 'Daily Contests', 'Mega Contests', 'Free Entry', 'Completed Contests']);
 
   // Backend State for all API categories (No static dummy data)
   const [apiGeneralContests, setApiGeneralContests] = useState([]);
@@ -301,12 +316,22 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   useEffect(() => {
     const fetchWebsiteData = async () => {
       try {
+        console.group('%c🌐 [WEBSITE HOME] Querying Platform APIs...', 'background: #581c87; color: #e9d5ff; font-weight: bold; padding: 4px 8px; border-radius: 4px;');
+        console.log('• Contests API: /api/contests');
+        console.log('• Completed Contests API: /api/public/contests/completed');
+        console.log('• Daily Contests API: /api/daily-contests');
+        console.log('• Grand Contests API: /api/grand-contests');
+        console.log('• Bi-Weekly Rooms API: /api/week/rooms');
+        console.log('• Sponsored Ads API: /api/ads');
+        console.log('• Coupons & Offers API: /api/public/coupons');
+        console.groupEnd();
+
         const [activeRes, completedRes, dailyRes, grandRes, biWeeklyRes, adsRes, couponsRes] = await Promise.allSettled([
-          axios.get('/api/public/contests', { timeout: 4000 }),
+          axios.get('/api/contests', { timeout: 4000 }).catch(() => axios.get('/api/public/contests', { timeout: 4000 })),
           axios.get('/api/public/contests/completed', { timeout: 4000 }),
-          axios.get('/api/public/daily-contests', { timeout: 4000 }),
-          axios.get('/api/public/grand-contests', { timeout: 4000 }),
-          axios.get('/api/public/bi-weekly-contests', { timeout: 4000 }),
+          axios.get('/api/daily-contests', { timeout: 4000 }).catch(() => axios.get('/api/public/daily-contests', { timeout: 4000 })),
+          axios.get('/api/grand-contests', { timeout: 4000 }).catch(() => axios.get('/api/public/grand-contests', { timeout: 4000 })),
+          axios.get('/api/week/rooms', { timeout: 4000 }).catch(() => axios.get('/api/public/bi-weekly-contests', { timeout: 4000 })),
           axios.get('/api/ads', { timeout: 4000 }),
           axios.get('/api/public/coupons', { timeout: 4000 })
         ]);
@@ -318,29 +343,83 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
             for (const key of keys) {
               if (Array.isArray(raw[key])) return raw[key];
             }
-            if (raw.data && Array.isArray(raw.data)) return raw.data;
+            if (raw.data) {
+              if (Array.isArray(raw.data)) return raw.data;
+              for (const key of keys) {
+                if (Array.isArray(raw.data[key])) return raw.data[key];
+              }
+            }
           }
           return [];
         };
 
-        const formatContest = (c, defaultCat = 'General') => ({
-          id: c._id || c.id || c.contestId || c.cycleId || c.roomId,
-          _id: c._id || c.id || c.contestId || c.cycleId || c.roomId,
-          title: c.title || c.name || c.roomName || 'Platform Contest',
-          sponsor: c.sponsor || c.organization || c.brand || 'Haka Official',
-          sponsorLogo: c.sponsorLogo || '🏆',
-          prizeCash: typeof c.prizePool === 'number' ? `₹${c.prizePool.toLocaleString()}` : (c.prizePool || c.prizeCash || '₹50,000'),
-          prizeCoins: c.entryFeeCoins ? `${c.entryFeeCoins} Coins` : (c.prizeCoins || '10,000 Coins'),
-          entryFee: c.entryFee === 0 || c.entryFeeType === 'Free' ? 'Free' : (typeof c.entryFee === 'number' ? `₹${c.entryFee}` : (c.entryFee || 'Free')),
-          participants: `${c.participantsCount || c.participants || c.maxParticipants || 100} Players`,
-          timeLeft: c.status === 'Completed' ? 'Completed' : (c.endDate ? `${Math.max(0, Math.ceil((new Date(c.endDate) - new Date()) / (1000 * 60 * 60 * 24)))} Days Left` : 'Active'),
-          category: c.status === 'Completed' ? 'Completed Contests' : (c.category || defaultCat),
-          tags: [c.status || 'Active', c.entryFee === 0 ? 'Free Entry' : 'Prize Pool'],
-          image: c.bannerImage || c.image || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-          description: c.description || c.rules || 'Join this exciting platform contest to showcase your skills and win rewards!'
-        });
+        const formatContest = (c, defaultCat = 'General') => {
+          const rawImg = c.bannerUrl || c.imageUrl || c.roomImage || c.bannerImage || c.image;
+          const fallbackImg = defaultCat === 'Mega Contests'
+            ? 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=800&q=80'
+            : defaultCat === 'Weekly Cup'
+            ? 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80'
+            : defaultCat === 'Daily Quiz'
+            ? 'https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=800&q=80'
+            : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80';
 
-        const activeList = extractList(activeRes).map(c => formatContest(c, 'General'));
+          const sponsorName = Array.isArray(c.sponsors) && c.sponsors.length > 0 
+            ? c.sponsors[0] 
+            : (c.sponsor || c.organization || c.brand || 'HAKA Platform');
+
+          const primaryCategory = c.status === 'Completed'
+            ? 'Completed Contests'
+            : (c.category || (Array.isArray(c.categories) && c.categories.length > 0 ? c.categories[0] : defaultCat));
+
+          const allTags = [
+            c.status || 'Active',
+            (c.isFree || c.entryFee === 0) ? 'Free Entry' : 'Prize Pool',
+            ...(Array.isArray(c.categories) ? c.categories : [primaryCategory]),
+            ...(Array.isArray(c.tags) ? c.tags : [])
+          ].filter(Boolean);
+
+          const feeText = (c.isFree || c.entryFee === 0)
+            ? 'Free'
+            : c.entryFeeType === 'Coins'
+            ? `${c.entryFeeCoins || c.entryFee} Coins`
+            : typeof c.entryFee === 'number'
+            ? `₹${c.entryFee.toLocaleString()}`
+            : (c.entryFee || 'Free');
+
+          const cashText = typeof c.prizePool === 'number'
+            ? `₹${c.prizePool.toLocaleString()}`
+            : (c.prizePool || c.prizeCash || '₹50,000');
+
+          const coinsText = c.coinsReward 
+            ? `${c.coinsReward.toLocaleString()} Coins` 
+            : (c.entryFeeCoins ? `${c.entryFeeCoins} Coins` : (c.prizeCoins || '10,000 Coins'));
+
+          const playersCount = (Array.isArray(c.participants) ? c.participants.length : 0) ||
+            c.membersCount ||
+            c.participantsCount ||
+            (typeof c.participants === 'number' ? c.participants : null) ||
+            c.maxParticipants ||
+            100;
+
+          return {
+            id: c._id || c.id || c.contestId || c.cycleId || c.roomId,
+            _id: c._id || c.id || c.contestId || c.cycleId || c.roomId,
+            title: c.title || c.name || c.roomName || 'Platform Contest',
+            sponsor: sponsorName,
+            sponsorLogo: c.sponsorLogo || '🏆',
+            prizeCash: cashText,
+            prizeCoins: coinsText,
+            entryFee: feeText,
+            participants: `${playersCount} Players`,
+            timeLeft: c.status === 'Completed' ? 'Completed' : (c.endDate ? `${Math.max(0, Math.ceil((new Date(c.endDate) - new Date()) / (1000 * 60 * 60 * 24)))} Days Left` : 'Active'),
+            category: primaryCategory,
+            tags: Array.from(new Set(allTags)),
+            image: rawImg || fallbackImg,
+            description: c.description || c.rules || 'Join this exciting platform contest to showcase your skills and win rewards!'
+          };
+        };
+
+        const activeList = extractList(activeRes).map(c => formatContest(c, 'Tournament'));
         const completedList = extractList(completedRes).map(c => formatContest(c, 'Completed Contests'));
         const dailyList = extractList(dailyRes).map(c => formatContest(c, 'Daily Quiz'));
         const grandList = extractList(grandRes).map(c => formatContest(c, 'Mega Contests'));
@@ -399,7 +478,7 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
         if (Array.isArray(catsData) && catsData.length > 0) {
           const titles = catsData.map(c => typeof c === 'string' ? c : (c.title || c.name || c.categoryName)).filter(Boolean);
           if (titles.length > 0) {
-            setCategoryPills(['All', ...Array.from(new Set(titles))]);
+            setCategoryPills(['All', 'Tournament Contests', 'Weekly Contests', 'Daily Contests', 'Mega Contests', 'Free Entry', 'Completed Contests', ...Array.from(new Set(titles))]);
           }
         }
       } catch (err) {
@@ -614,13 +693,21 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   const megaContestsData = apiGrandContests;
   const defaultCompletedContestsData = apiCompletedContests;
 
+  // Complete collection of all active contests across all tournament formats
+  const allActiveContests = useMemo(() => [
+    ...apiGeneralContests,
+    ...apiGrandContests,
+    ...apiDailyContests,
+    ...apiBiWeeklyContests
+  ], [apiGeneralContests, apiGrandContests, apiDailyContests, apiBiWeeklyContests]);
+
   const contestsData = useMemo(() => [
     ...apiGeneralContests,
+    ...apiGrandContests,
     ...apiDailyContests,
     ...apiBiWeeklyContests,
-    ...apiGrandContests,
     ...apiCompletedContests
-  ], [apiGeneralContests, apiDailyContests, apiBiWeeklyContests, apiGrandContests, apiCompletedContests]);
+  ], [apiGeneralContests, apiGrandContests, apiDailyContests, apiBiWeeklyContests, apiCompletedContests]);
 
   const featuredSlidesData = useMemo(() => {
     const combined = [...apiGrandContests, ...apiGeneralContests, ...apiDailyContests, ...apiBiWeeklyContests];
@@ -649,15 +736,48 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
   const adsData = apiAds;
   const offersData = apiOffers;
 
-  // Search & Filter Logic
-  const filteredContests = contestsData.filter(c => {
-    const matchesCategory = selectedCategory === 'All' || c.category === selectedCategory || c.tags.includes(selectedCategory);
-    const matchesSearch = searchQuery === '' || 
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      c.sponsor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Search & Filter Logic with full category mapping
+  const filteredContests = useMemo(() => {
+    return contestsData.filter(c => {
+      const catLower = String(c.category || '').toLowerCase();
+      const tagsLower = Array.isArray(c.tags) ? c.tags.map(t => String(t || '').toLowerCase()) : [];
+      const titleLower = String(c.title || '').toLowerCase();
+      const descLower = String(c.description || '').toLowerCase();
+      const sponsorLower = String(c.sponsor || '').toLowerCase();
+
+      let matchesCategory = true;
+      if (selectedCategory !== 'All') {
+        const selLower = selectedCategory.toLowerCase();
+        if (selLower === 'free entry') {
+          matchesCategory = c.entryFee === 'Free' || tagsLower.includes('free entry');
+        } else if (selLower === 'completed contests') {
+          matchesCategory = c.category === 'Completed Contests' || c.timeLeft === 'Completed';
+        } else if (selLower.includes('daily')) {
+          matchesCategory = catLower.includes('daily') || catLower.includes('quiz') || tagsLower.some(t => t.includes('daily') || t.includes('quiz'));
+        } else if (selLower.includes('weekly')) {
+          matchesCategory = catLower.includes('weekly') || catLower.includes('room') || tagsLower.some(t => t.includes('weekly') || t.includes('room'));
+        } else if (selLower.includes('mega') || selLower.includes('grand')) {
+          matchesCategory = catLower.includes('mega') || catLower.includes('grand') || tagsLower.some(t => t.includes('mega') || t.includes('grand'));
+        } else if (selLower.includes('tournament')) {
+          matchesCategory = apiGeneralContests.some(g => (g.id === c.id || g._id === c.id));
+        } else if (selLower === 'trending' || selLower === 'top' || selLower === 'new') {
+          matchesCategory = true;
+        } else {
+          matchesCategory = catLower === selLower || 
+            tagsLower.includes(selLower) ||
+            titleLower.includes(selLower);
+        }
+      }
+
+      const matchesSearch = searchQuery === '' || 
+        titleLower.includes(searchQuery.toLowerCase()) || 
+        sponsorLower.includes(searchQuery.toLowerCase()) ||
+        descLower.includes(searchQuery.toLowerCase()) ||
+        tagsLower.some(t => t.includes(searchQuery.toLowerCase()));
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [contestsData, apiGeneralContests, selectedCategory, searchQuery]);
 
   return (
     <div className="min-h-screen bg-[#0D0714] text-white font-sans antialiased relative overflow-x-hidden">
@@ -765,6 +885,36 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
           <Zap className="w-5 h-5 fill-current" />
         </button>
 
+        <button
+          onClick={() => {
+            if (isAuthenticated) {
+              navigate('/coin');
+            } else {
+              setLoginModalTarget('coin');
+              setShowLoginModal(true);
+            }
+          }}
+          className="p-3 rounded-full text-[#A69EC6] hover:text-[#CEF500] hover:bg-white/5 transition-all cursor-pointer"
+          title="Coin Store & Rewards"
+        >
+          <Coins className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={() => {
+            if (isAuthenticated) {
+              navigate('/wallet');
+            } else {
+              setLoginModalTarget('wallet');
+              setShowLoginModal(true);
+            }
+          }}
+          className="p-3 rounded-full text-[#A69EC6] hover:text-[#CEF500] hover:bg-white/5 transition-all cursor-pointer"
+          title="Syndicate Wallet"
+        >
+          <Wallet className="w-5 h-5" />
+        </button>
+
         <div className="w-6 h-[1px] bg-[#CEF500]/20" />
 
         {/* Quick Top Button (↑) */}
@@ -780,20 +930,40 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
 
       {/* ==================== 2. MOBILE & TABLET BOTTOM FIXED NAVIGATION BAR (< 1024px) ==================== */}
       <div className="lg:hidden fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto">
-        <div className="bg-[#1C1335]/95 backdrop-blur-2xl border border-[#CEF500]/60 rounded-full py-3 px-6 shadow-2xl flex items-center justify-around">
-          <button onClick={() => { setActiveTab('contests'); scrollToTop(); }} className={`p-2 rounded-full ${activeTab === 'contests' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`}>
+        <div className="bg-[#1C1335]/95 backdrop-blur-2xl border border-[#CEF500]/60 rounded-full py-3 px-4 sm:px-6 shadow-2xl flex items-center justify-around">
+          <button onClick={() => { setActiveTab('contests'); scrollToTop(); }} className={`p-2 rounded-full ${activeTab === 'contests' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`} title="Home">
             <Home className="w-5 h-5" />
           </button>
-          <button onClick={() => setActiveTab('contests')} className={`p-2 rounded-full ${activeTab === 'contests' ? 'text-[#CEF500]' : 'text-[#A69EC6]'}`}>
+          <button onClick={() => setActiveTab('contests')} className={`p-2 rounded-full ${activeTab === 'contests' ? 'text-[#CEF500]' : 'text-[#A69EC6]'}`} title="Contests">
             <Trophy className="w-5 h-5" />
           </button>
-          <button onClick={() => setActiveTab('ads')} className={`p-2 rounded-full ${activeTab === 'ads' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`}>
+          <button onClick={() => {
+            if (isAuthenticated) {
+              navigate('/coin');
+            } else {
+              setLoginModalTarget('coin');
+              setShowLoginModal(true);
+            }
+          }} className="p-2 rounded-full text-[#A69EC6] hover:text-[#CEF500]" title="Coins">
+            <Coins className="w-5 h-5" />
+          </button>
+          <button onClick={() => {
+            if (isAuthenticated) {
+              navigate('/wallet');
+            } else {
+              setLoginModalTarget('wallet');
+              setShowLoginModal(true);
+            }
+          }} className="p-2 rounded-full text-[#A69EC6] hover:text-[#CEF500]" title="Wallet">
+            <Wallet className="w-5 h-5" />
+          </button>
+          <button onClick={() => setActiveTab('ads')} className={`p-2 rounded-full ${activeTab === 'ads' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`} title="Watch Ads">
             <Play className="w-5 h-5 fill-current" />
           </button>
-          <button onClick={() => setActiveTab('offers')} className={`p-2 rounded-full ${activeTab === 'offers' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`}>
+          <button onClick={() => setActiveTab('offers')} className={`p-2 rounded-full ${activeTab === 'offers' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`} title="Offers">
             <Tag className="w-5 h-5" />
           </button>
-          <button onClick={() => setActiveTab('rewards')} className={`p-2 rounded-full ${activeTab === 'rewards' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`}>
+          <button onClick={() => setActiveTab('rewards')} className={`p-2 rounded-full ${activeTab === 'rewards' ? 'bg-[#CEF500] text-[#0D0714]' : 'text-[#A69EC6]'}`} title="Rewards">
             <Gift className="w-5 h-5" />
           </button>
         </div>
@@ -848,11 +1018,41 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
               )}
             </div>
 
-            {/* Coin Balance Pill (Uniform h-10) */}
-            <div className="h-10 bg-[#1C1335]/90 border border-[#CEF500]/60 rounded-full px-4 flex items-center gap-2 shadow-lg shadow-[#CEF500]/20 shrink-0">
+            {/* Coin Balance Pill (Clickable -> checks login or goes to /coin) */}
+            <button
+              onClick={() => {
+                if (isAuthenticated) {
+                  navigate('/coin');
+                } else {
+                  setLoginModalTarget('coin');
+                  setShowLoginModal(true);
+                }
+              }}
+              className="h-10 bg-[#1C1335]/90 hover:bg-[#2E1E54] border border-[#CEF500]/60 rounded-full px-4 flex items-center gap-2 shadow-lg shadow-[#CEF500]/20 shrink-0 hover:scale-105 transition-all cursor-pointer"
+              title="Open Coin Store & Rewards"
+            >
               <span className="text-sm animate-bounce">🪙</span>
-              <span className="text-xs sm:text-sm font-black text-[#CEF500] font-poppins whitespace-nowrap">{coinBalance.toLocaleString()} COINS</span>
-            </div>
+              <span className="text-xs sm:text-sm font-black text-[#CEF500] font-poppins whitespace-nowrap">
+                {isAuthenticated ? `${coinBalance.toLocaleString()} COINS` : 'COINS'}
+              </span>
+            </button>
+
+            {/* Wallet Button Pill (Clickable -> checks login or goes to /wallet) */}
+            <button
+              onClick={() => {
+                if (isAuthenticated) {
+                  navigate('/wallet');
+                } else {
+                  setLoginModalTarget('wallet');
+                  setShowLoginModal(true);
+                }
+              }}
+              className="h-10 bg-[#1C1335]/90 hover:bg-[#2E1E54] border border-[#2E1E54] hover:border-[#CEF500] rounded-full px-3.5 flex items-center gap-1.5 text-xs font-black text-white shadow-lg hover:scale-105 transition-all cursor-pointer shrink-0"
+              title="Open Syndicate Wallet"
+            >
+              <Wallet className="w-4 h-4 text-[#CEF500]" />
+              <span className="hidden sm:inline">Wallet</span>
+            </button>
 
             {/* User Icon Avatar Button (Uniform h-10) */}
             <button
@@ -1025,6 +1225,10 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
                       <img 
                         src={slide.image} 
                         alt={slide.title} 
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=800&q=80';
+                        }}
                         className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700" 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-3">
@@ -1044,54 +1248,119 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
 
         {/* ==================== TAB CONTENT SECTIONS ==================== */}
 
-        {/* TAB 1: CONTESTS SLIDERS & ARENA (DAILY, WEEKLY, JOB, MEGA) */}
+        {/* TAB 1: CONTESTS SLIDERS & ARENA (ALL, TOURNAMENTS, DAILY, WEEKLY, MEGA, COMPLETED) */}
         {activeTab === 'contests' && (
           <section className="space-y-12">
+
+            {/* Arena Header: Contest summary & view switcher */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#1C1335]/70 border border-[#2E1E54] p-4 rounded-3xl backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#0D0714] border border-[#CEF500]/50 flex items-center justify-center text-[#CEF500]">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white font-poppins flex items-center gap-2">
+                    <span>Contests Arena</span>
+                    <span className="text-xs bg-[#CEF500] text-[#0D0714] font-black px-2.5 py-0.5 rounded-full font-mono shadow-sm">
+                      {allActiveContests.length} Live
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#A69EC6]">
+                    {selectedCategory === 'All' 
+                      ? 'Live catalogue of all tournament championships, daily speed quizzes, weekly cups, and mega contests.' 
+                      : `Filtered by: ${selectedCategory} (${filteredContests.length} contests)`}
+                  </p>
+                </div>
+              </div>
+
+              {/* View Switcher: Categorized Sliders vs All Contests Grid */}
+              <div className="flex items-center gap-1.5 bg-[#0D0714] p-1.5 rounded-2xl border border-[#2E1E54] shrink-0">
+                <button
+                  onClick={() => setContestViewMode('sections')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    contestViewMode === 'sections'
+                      ? 'bg-[#CEF500] text-[#0D0714] shadow-md shadow-[#CEF500]/30 font-black'
+                      : 'text-[#A69EC6] hover:text-white'
+                  }`}
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Categorized Sliders</span>
+                </button>
+                <button
+                  onClick={() => setContestViewMode('grid')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    contestViewMode === 'grid'
+                      ? 'bg-[#CEF500] text-[#0D0714] shadow-md shadow-[#CEF500]/30 font-black'
+                      : 'text-[#A69EC6] hover:text-white'
+                  }`}
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>All Contests Grid ({allActiveContests.length})</span>
+                </button>
+              </div>
+            </div>
             
-            {/* If Category is 'All' and no search query, show the 4 Category Card Sliders */}
-            {selectedCategory === 'All' && searchQuery === '' ? (
+            {/* If Category is 'All' and no search query and view mode is 'sections', show all Category Card Sliders */}
+            {selectedCategory === 'All' && searchQuery === '' && contestViewMode === 'sections' ? (
               <div className="space-y-12">
-                {/* 1. Daily Contests Card Slider */}
+                {/* 1. All Contests Master Slider */}
                 <ContestSliderRow
-                  sectionTitle="Daily Contests"
+                  sectionTitle="All Contests & Tournaments"
+                  sectionSubtitle="Complete catalogue of all active competitions across daily, weekly, mega, and championship arenas."
+                  contestsList={allActiveContests}
+                  sectionIcon={<Sparkles className="w-5 h-5 text-[#CEF500]" />}
+                  joinedContestIds={joinedContestIds}
+                  setSelectedContestModal={setSelectedContestModal}
+                  badgeText={`${allActiveContests.length} Live`}
+                />
+
+                {/* 2. Daily Contests Card Slider */}
+                <ContestSliderRow
+                  sectionTitle="Daily Contests & Blitz Quizzes"
                   sectionSubtitle="Fast 24-hour trivia & speedrun blitzes reset every midnight."
                   contestsList={dailyContestsData}
                   sectionIcon={<Zap className="w-5 h-5 text-[#CEF500]" />}
                   joinedContestIds={joinedContestIds}
                   setSelectedContestModal={setSelectedContestModal}
+                  badgeText={`${dailyContestsData.length} Daily`}
                 />
 
-                {/* 2. Weekly Contests Card Slider */}
+                {/* 3. Weekly Contests Card Slider */}
                 <ContestSliderRow
-                  sectionTitle="Weekly Contests"
-                  sectionSubtitle="7-day creator & talent cups with massive prize pools."
+                  sectionTitle="Weekly Contests & Room Challenges"
+                  sectionSubtitle="7-day creator cohort rooms, talent cups, and collaborative point sprints."
                   contestsList={weeklyContestsData}
-                  sectionIcon={<Trophy className="w-5 h-5 text-[#B983FF]" />}
+                  sectionIcon={<Users className="w-5 h-5 text-[#B983FF]" />}
                   joinedContestIds={joinedContestIds}
                   setSelectedContestModal={setSelectedContestModal}
-                />
-
-                {/* 3. Job Contests Card Slider */}
-                <ContestSliderRow
-                  sectionTitle="Job Contests & Hiring Sprints"
-                  sectionSubtitle="Compete in tech & design sprints to land direct job passes and internships."
-                  contestsList={jobContestsData}
-                  sectionIcon={<Briefcase className="w-5 h-5 text-[#3B82F6]" />}
-                  joinedContestIds={joinedContestIds}
-                  setSelectedContestModal={setSelectedContestModal}
+                  badgeText={`${weeklyContestsData.length} Weekly`}
                 />
 
                 {/* 4. Mega Contests Card Slider */}
                 <ContestSliderRow
                   sectionTitle="Mega Contests & Bumper Cups"
-                  sectionSubtitle="Grand bumper prize pools up to ₹30,00,000 cash!"
+                  sectionSubtitle="Grand bumper prize pools up to ₹50,000+ cash with verified awards."
                   contestsList={megaContestsData}
                   sectionIcon={<Flame className="w-5 h-5 text-[#EF4444]" />}
                   joinedContestIds={joinedContestIds}
                   setSelectedContestModal={setSelectedContestModal}
+                  badgeText={`${megaContestsData.length} Mega`}
                 />
 
-                {/* 5. Completed Contests Card Slider (Displayed by default) */}
+                {/* 5. Job Contests Card Slider (if any exist) */}
+                {jobContestsData.length > 0 && (
+                  <ContestSliderRow
+                    sectionTitle="Job Contests & Hiring Sprints"
+                    sectionSubtitle="Compete in tech & design sprints to land direct job passes and internships."
+                    contestsList={jobContestsData}
+                    sectionIcon={<Briefcase className="w-5 h-5 text-[#3B82F6]" />}
+                    joinedContestIds={joinedContestIds}
+                    setSelectedContestModal={setSelectedContestModal}
+                    badgeText={`${jobContestsData.length} Sprints`}
+                  />
+                )}
+
+                {/* 7. Completed Contests Card Slider */}
                 <ContestSliderRow
                   sectionTitle="Completed Contests & Hall of Fame"
                   sectionSubtitle="Past completed contests, prize pool distributions, and verified winners."
@@ -1099,29 +1368,36 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
                   sectionIcon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />}
                   joinedContestIds={joinedContestIds}
                   setSelectedContestModal={setSelectedContestModal}
+                  badgeText={`${defaultCompletedContestsData.length} Completed`}
                 />
               </div>
             ) : (
-              /* Filtered Contests Grid View when user searches or selects a pill */
+              /* Grid View: Shown when contestViewMode === 'grid' OR selectedCategory !== 'All' OR searchQuery !== '' */
               <div className="space-y-8">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-2xl sm:text-3xl font-black text-white font-poppins">Filtered Contests</h3>
-                    <p className="text-xs text-[#A69EC6] font-medium mt-1">Showing active competitions for "{selectedCategory}".</p>
+                    <h3 className="text-2xl sm:text-3xl font-black text-white font-poppins">
+                      {selectedCategory === 'All' && searchQuery === '' ? 'All Contests Arena' : 'Filtered Contests'}
+                    </h3>
+                    <p className="text-xs text-[#A69EC6] font-medium mt-1">
+                      {selectedCategory === 'All' && searchQuery === '' 
+                        ? 'Browsing all active competitions across tournament formats in full grid view.' 
+                        : `Showing active competitions matching "${selectedCategory}".`}
+                    </p>
                   </div>
-                  <span className="text-xs text-[#CEF500] font-bold cursor-pointer hover:underline">
-                    {filteredContests.length} Contests Found
+                  <span className="text-xs text-[#CEF500] font-bold cursor-pointer hover:underline font-mono">
+                    {(selectedCategory === 'All' && searchQuery === '' ? allActiveContests : filteredContests).length} Contests Available
                   </span>
                 </div>
 
-                {filteredContests.length === 0 ? (
+                {(selectedCategory === 'All' && searchQuery === '' ? allActiveContests : filteredContests).length === 0 ? (
                   <div className="w-full py-12 px-6 bg-[#1C1335]/60 border border-[#2E1E54] rounded-[28px] text-center space-y-2">
                     <p className="text-sm font-bold text-white">No active competitions matching "{selectedCategory}"</p>
                     <p className="text-xs text-[#A69EC6]">Try selecting another category pill or clearing your search filter.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
-                    {filteredContests.map((c) => {
+                    {(selectedCategory === 'All' && searchQuery === '' ? allActiveContests : filteredContests).map((c) => {
                       const isJoined = joinedContestIds.includes(c.id);
                       return (
                         <div 
@@ -1659,6 +1935,17 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ==================== LOGIN WARNING MODAL ==================== */}
+      <LoginWarningModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        targetPage={loginModalTarget}
+        onSuccessLogin={() => {
+          setShowLoginModal(false);
+          navigate(loginModalTarget === 'coin' ? '/coin' : '/wallet');
+        }}
+      />
 
       {/* ==================== DESKTOP FOOTER (SINGLE ROW) ==================== */}
       <footer className="bg-transparent py-8 text-xs text-[#A69EC6] relative z-10">

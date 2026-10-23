@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, BarChart3, Wallet, 
-  MessageSquare, Settings, LogOut, ChevronLeft, X, Trophy, Clock, Award, Globe
+  MessageSquare, Settings, LogOut, ChevronLeft, X, Trophy, Clock, Award, Globe, Coins
 } from 'lucide-react';
 import { HakaLogo } from '../HakaLogo';
 
 const MENU_ITEMS = [
   { id: 'website', label: 'Public Website 🌐', icon: Globe, route: '/website' },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/dashboard' },
+  { id: 'grand-contests', label: 'Grand Contests 👑', icon: Trophy, route: '/grand-contests' },
   { id: 'week-rooms', label: 'Week Rooms 🏆', icon: Award, route: '/week/rooms' },
   { id: 'contests', label: 'Contest Tournaments', icon: Trophy, route: '/contests' },
   { id: 'daily-contests', label: 'Daily Contests ⚡', icon: Clock, route: '/daily-contests' },
   { id: 'rewards', label: 'Badges & Rewards', icon: Award, route: '/rewards' },
+  { id: 'coin', label: 'Coin Store 🪙', icon: Coins, route: '/coin' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, route: '/wallet' },
   { id: 'notifications', label: 'Notifications', icon: MessageSquare, route: '/notifications', badge: 3 },
   { id: 'settings', label: 'Settings', icon: Settings, route: '/settings' }
@@ -43,10 +45,10 @@ export const Sidebar = ({ activeView, onLogout, isOpenMobile, setIsOpenMobile, r
 
   // Role-based visibility logic
   const allowedIds = role === 'Judge'
-    ? ['website', 'dashboard', 'week-rooms', 'wallet', 'notifications', 'settings']
+    ? ['website', 'dashboard', 'grand-contests', 'week-rooms', 'coin', 'wallet', 'notifications', 'settings']
     : role === 'Sponsor'
-      ? ['website', 'dashboard', 'week-rooms', 'wallet', 'notifications', 'settings']
-      : ['website', 'dashboard', 'week-rooms', 'contests', 'daily-contests', 'rewards', 'wallet', 'notifications', 'settings'];
+      ? ['website', 'dashboard', 'grand-contests', 'week-rooms', 'coin', 'wallet', 'notifications', 'settings']
+      : ['website', 'dashboard', 'grand-contests', 'week-rooms', 'contests', 'daily-contests', 'rewards', 'coin', 'wallet', 'notifications', 'settings'];
 
   const filteredMenu = MENU_ITEMS.filter(item => allowedIds.includes(item.id)).map(item => {
     // Custom label overwrites for special roles

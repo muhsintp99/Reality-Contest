@@ -101,11 +101,14 @@ export const MultiSelect = ({
 
         {activeValue.map((val, idx) => {
           const valKey = typeof val === 'object' ? String(val.value || val._id || val.id || '') : String(val);
-          const opt = options.find(o => String(o.value) === valKey) ||
-                      (typeof val === 'object' ? { value: valKey, label: val.label || val.title || val.name } : null);
+          const opt = options.find(o => 
+            String(o.value) === valKey || 
+            String(o._id || '') === valKey || 
+            String(o.label || '').toLowerCase() === valKey.toLowerCase()
+          ) || (typeof val === 'object' ? { value: valKey, label: val.label || val.title || val.name } : null);
           const displayLabel = opt?.label ||
                                (typeof val === 'object' ? (val.label || val.title || val.name) : null) ||
-                               (valKey.length === 24 ? `Task #${valKey.slice(-4)}` : valKey);
+                               valKey;
           return (
             <span
               key={valKey || idx}

@@ -146,13 +146,16 @@ export class WalletService {
   /**
    * Deducts contest entry fee from wallet or platform coins.
    */
-  async payEntryFee(userId: string, amount: number, contestTitle: string, currency: 'INR' | 'Coins' = 'INR'): Promise<{ newBalance: number; transaction: any }> {
+  async payEntryFee(userId: string, amount: number, contestTitle: string, currency: string = 'INR'): Promise<{ newBalance: number; transaction: any }> {
     const user = await User.findById(userId);
     if (!user) {
       throw new NotFoundError('User not found.');
     }
 
-    if (currency === 'Coins') {
+    const isCoin = typeof currency === 'string' && currency.trim().toLowerCase().startsWith('coin');
+    const selectedCurrency: 'INR' | 'Coins' = isCoin ? 'Coins' : 'INR';
+
+    if (selectedCurrency === 'Coins') {
       if ((user.coins || 0) < amount) {
         throw new BadRequestError(`Insufficient coins. You have ${user.coins || 0} coins, but contest requires ${amount} coins.`);
       }
@@ -169,15 +172,15 @@ export class WalletService {
     const transaction = await Transaction.create({
       userId: user._id,
       amount,
-      currency,
+      currency: selectedCurrency,
       type: 'Entry Fee',
       status: 'Completed',
-      description: `Entry Fee for: ${contestTitle}`,
+      description: `Entry Fee for: ${contestTitle} (${selectedCurrency === 'Coins' ? `${amount} Coins` : `₹${amount}`})`,
       reference: `ENT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
     });
 
     return {
-      newBalance: currency === 'Coins' ? user.coins : user.walletBalance,
+      newBalance: selectedCurrency === 'Coins' ? user.coins : user.walletBalance,
       transaction
     };
   }
@@ -185,13 +188,16 @@ export class WalletService {
   /**
    * Adds prize payout or reward to contestant wallet.
    */
-  async addReward(userId: string, amount: number, title: string, currency: 'INR' | 'Coins' = 'INR'): Promise<{ newBalance: number; transaction: any }> {
+  async addReward(userId: string, amount: number, title: string, currency: string = 'INR'): Promise<{ newBalance: number; transaction: any }> {
     const user = await User.findById(userId);
     if (!user) {
       throw new NotFoundError('User not found.');
     }
 
-    if (currency === 'Coins') {
+    const isCoin = typeof currency === 'string' && currency.trim().toLowerCase().startsWith('coin');
+    const selectedCurrency: 'INR' | 'Coins' = isCoin ? 'Coins' : 'INR';
+
+    if (selectedCurrency === 'Coins') {
       user.coins = (user.coins || 0) + amount;
     } else {
       user.walletBalance = (user.walletBalance || 0) + amount;
@@ -202,7 +208,7 @@ export class WalletService {
     const transaction = await Transaction.create({
       userId: user._id,
       amount,
-      currency,
+      currency: selectedCurrency,
       type: 'Prize Payout',
       status: 'Completed',
       description: `Reward Won: ${title}`,
@@ -210,7 +216,7 @@ export class WalletService {
     });
 
     return {
-      newBalance: currency === 'Coins' ? user.coins : user.walletBalance,
+      newBalance: selectedCurrency === 'Coins' ? user.coins : user.walletBalance,
       transaction
     };
   }
@@ -239,6 +245,53 @@ export class WalletService {
     return {
       coinsAdded: bonusCoins,
       newCoins: user.coins
+    };
+  }
+
+  /**
+   * Converts contestant coins into wallet cash balance.
+   * Standard conversion: 10 Coins = 1 INR (e.g. 500 Coins = 50 INR).
+   */
+  async convertCoinsToCash(userId: string, coinsAmount: number): Promise<{ coinsConverted: number; cashAdded: number; newCoins: number; newWalletBalance: number }> {
+    if (isNaN(coinsAmount) || coinsAmount <= 0) {
+      throw new BadRequestError('Coins amount must be greater than 0.');
+    }
+
+    if (coinsAmount < 50) {
+      throw new BadRequestError('Minimum conversion threshold is 50 Coins (₹5 INR).');
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found.');
+    }
+
+    if ((user.coins || 0) < coinsAmount) {
+      throw new BadRequestError(`Insufficient coins. You have ${user.coins || 0} coins, but requested to convert ${coinsAmount} coins.`);
+    }
+
+    const conversionRate = 10; // 10 Coins = 1 INR
+    const cashAmount = parseFloat((coinsAmount / conversionRate).toFixed(2));
+
+    user.coins = (user.coins || 0) - coinsAmount;
+    user.walletBalance = (user.walletBalance || 0) + cashAmount;
+    await user.save();
+
+    await Transaction.create({
+      userId: user._id,
+      amount: cashAmount,
+      currency: 'INR',
+      type: 'Credit',
+      status: 'Completed',
+      description: `Converted ${coinsAmount} Coins to ₹${cashAmount} Wallet Cash 🪙->₹`,
+      reference: `CNV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+    });
+
+    return {
+      coinsConverted: coinsAmount,
+      cashAdded: cashAmount,
+      newCoins: user.coins,
+      newWalletBalance: user.walletBalance
     };
   }
 
