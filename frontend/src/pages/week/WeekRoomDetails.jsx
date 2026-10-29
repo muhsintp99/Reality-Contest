@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { 
   Trophy, Users, Calendar, ArrowLeft, Layers, CheckCircle2, 
   Clock, ShieldAlert, Award, BarChart2, RefreshCw, FileText, 
@@ -10,6 +11,8 @@ import weekRoomApi from '../../services/weekRoomApi';
 export const WeekRoomDetails = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth || {});
+  const currentUserId = user?._id || user?.id || '';
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,6 +24,7 @@ export const WeekRoomDetails = () => {
   const [rewards, setRewards] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [mySubmissions, setMySubmissions] = useState([]);
   const [recalculating, setRecalculating] = useState(false);
   const [reviewModalSubmission, setReviewModalSubmission] = useState(null);
   const [reviewScore, setReviewScore] = useState('');
@@ -84,8 +88,19 @@ export const WeekRoomDetails = () => {
     }
   };
 
+  const fetchMySubmissions = async () => {
+    try {
+      const res = await weekRoomApi.getMySubmissions(roomId);
+      const list = res.data?.submissions || res.data || [];
+      setMySubmissions(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.warn('My submissions fetch fallback:', err);
+    }
+  };
+
   useEffect(() => {
     fetchRoomDetails();
+    fetchMySubmissions();
   }, [roomId]);
 
   useEffect(() => {
@@ -315,59 +330,88 @@ export const WeekRoomDetails = () => {
               <p className="text-xs font-semibold text-slate-500">No tasks assigned to this room yet.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {tasks.map((task, index) => {
-                const taskId = task._id || task.id || index;
-                const taskNum = task.order !== undefined ? task.order + 1 : index + 1;
-                const status = task.status || 'Active';
+            (() => {
+              const submittedTaskIds = new Set(
+                (mySubmissions || []).map(s => (s.taskId?._id || s.taskId || '').toString()).filter(Boolean)
+              );
+              if (currentUserId && data?.analytics?.recentSubmissions) {
+                data.analytics.recentSubmissions.forEach(s => {
+                  const subUid = (s.userId?._id || s.userId || '').toString();
+                  if (subUid === currentUserId.toString()) {
+                    const tid = (s.taskId?._id || s.taskId || '').toString();
+                    if (tid) submittedTaskIds.add(tid);
+                  }
+                });
+              }
 
-                return (
-                  <div
-                    key={taskId}
-                    className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold text-[11px] rounded-full uppercase">
-                          Task #{taskNum} • {task.taskType || 'Challenge'}
-                        </span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                          status === 'Completed' 
-                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-                            : status === 'Active' || status === 'Published'
-                              ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                              : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                        }`}>
-                          {status === 'Active' || status === 'Published' ? '● Active' : status}
-                        </span>
-                      </div>
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {tasks.map((task, index) => {
+                    const taskId = task._id || task.id || index;
+                    const taskIdStr = (task._id || task.id || '').toString();
+                    const taskNum = task.order !== undefined ? task.order + 1 : index + 1;
+                    const isSubmitted = taskIdStr ? submittedTaskIds.has(taskIdStr) : false;
+                    const status = isSubmitted ? 'Completed' : (task.status || 'Active');
 
-                      <h4 className="text-base font-bold text-slate-900 dark:text-white font-poppins">
-                        {task.title || `Task Challenge ${taskNum}`}
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 font-medium">
-                        {task.description || task.instructions || 'Complete this task challenge to earn points and climb the room leaderboard.'}
-                      </p>
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-100 dark:border-white/5 space-y-3">
-                      <div className="flex justify-between items-center text-xs font-semibold text-slate-400">
-                        <span>Reward Points</span>
-                        <span className="text-emerald-500 dark:text-emerald-400 font-black">+{task.points || 50} Pts 🪙</span>
-                      </div>
-
-                      <button
-                        onClick={() => navigate(`/week/rooms/${roomId}/tasks/${taskId}`)}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-brandPrimary text-white text-xs font-bold rounded-2xl shadow-md hover:bg-brandPrimary/90 transition-all cursor-pointer"
+                    return (
+                      <div
+                        key={taskId}
+                        className={`bg-white dark:bg-slate-900/80 border ${isSubmitted ? 'border-emerald-500/30 ring-1 ring-emerald-500/20' : 'border-slate-200/80 dark:border-white/10'} rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4`}
                       >
-                        <span>Open Task & Submit</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold text-[11px] rounded-full uppercase">
+                              Task #{taskNum} • {task.taskType || 'Challenge'}
+                            </span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                              isSubmitted || status === 'Completed' 
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                                : status === 'Active' || status === 'Published'
+                                  ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                  : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                            }`}>
+                              {isSubmitted ? '✓ Completed' : (status === 'Active' || status === 'Published' ? '● Active' : status)}
+                            </span>
+                          </div>
+
+                          <h4 className="text-base font-bold text-slate-900 dark:text-white font-poppins">
+                            {task.title || `Task Challenge ${taskNum}`}
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 font-medium">
+                            {task.description || task.instructions || 'Complete this task challenge to earn points and climb the room leaderboard.'}
+                          </p>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-100 dark:border-white/5 space-y-3">
+                          <div className="flex justify-between items-center text-xs font-semibold text-slate-400">
+                            <span>Reward Points</span>
+                            <span className="text-emerald-500 dark:text-emerald-400 font-black">+{task.points || 50} Pts 🪙</span>
+                          </div>
+
+                          {isSubmitted ? (
+                            <button
+                              onClick={() => navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${taskId}/result`)}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold rounded-2xl hover:bg-emerald-500/25 transition-all cursor-pointer shadow-sm"
+                            >
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              <span>Completed • View Result</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => navigate(`/week/rooms/${roomId}/tasks/${taskId}`)}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 bg-brandPrimary text-white text-xs font-bold rounded-2xl shadow-md hover:bg-brandPrimary/90 transition-all cursor-pointer"
+                            >
+                              <span>Open Task & Submit</span>
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
         </div>
       )}

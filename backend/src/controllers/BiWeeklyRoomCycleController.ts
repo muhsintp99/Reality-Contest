@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import { biWeeklyRoomCycleService } from '../services/BiWeeklyRoomCycleService';
 import { logger } from '../core/logger';
 import Task from '../models/Task';
+import RoomSubmission from '../models/RoomSubmission';
 
 export class BiWeeklyRoomCycleController {
   // ================= ROOMS =================
@@ -297,11 +299,28 @@ export class BiWeeklyRoomCycleController {
         });
       }
 
+      const { cycleId, taskId, submissionType, proofNotes, answers } = req.body;
+
+      // Prevent duplicate submission / re-entry for this task by this user
+      if (taskId && mongoose.Types.ObjectId.isValid(taskId)) {
+        const existingSubmission = await RoomSubmission.findOne({
+          roomId: status.roomId || roomId,
+          taskId,
+          userId: userId.toString()
+        });
+        if (existingSubmission) {
+          return res.status(400).json({
+            success: false,
+            alreadySubmitted: true,
+            message: 'You have already submitted this task. Re-entry or duplicate submission is not allowed. (ഈ ടാസ്ക് ഇതിനകം സബ്മിറ്റ് ചെയ്തിട്ടുണ്ട്).'
+          });
+        }
+      }
+
       let uploadedMediaUrl = req.body.mediaUrl || '';
       if (req.file) {
         uploadedMediaUrl = `/uploads/${req.file.filename}`;
       }
-      const { cycleId, taskId, submissionType, proofNotes, answers } = req.body;
       const submission = await biWeeklyRoomCycleService.createSubmission({
         cycleId: cycleId || undefined,
         contestId: contestId || undefined,

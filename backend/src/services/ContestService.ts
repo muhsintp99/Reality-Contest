@@ -209,10 +209,7 @@ export class ContestService {
       throw new NotFoundError('User not found.');
     }
 
-    if (user.kycStatus !== 'Approved') {
-      throw new BadRequestError('You cannot join contests before KYC approval.');
-    }
-
+    // KYC check bypassed for contest joining (Coin / Price check enforced below)
     const allowedStatuses: ContestStatus[] = ['Registration Open', 'Active', 'Live', 'In Progress'];
     if (!allowedStatuses.includes(contest.status)) {
       throw new BadRequestError('Registration for this contest is currently not open.');
@@ -648,10 +645,7 @@ export class ContestService {
       throw new NotFoundError('User not found.');
     }
 
-    if (user.kycStatus !== 'Approved') {
-      throw new BadRequestError('You cannot submit contest answers before KYC approval.');
-    }
-
+    // KYC check bypassed for contest answer submission
     // Check if user has joined this contest; if not, auto-enroll user into default group
     const groupsInContest = await this.groupRepo.find({ contestId: contest._id });
     let userGroup = groupsInContest.find((g) =>

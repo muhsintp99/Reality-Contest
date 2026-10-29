@@ -104,6 +104,22 @@ export const weekRoomApi = {
     return response.data;
   },
 
+  // 13b. Fetch Current User's Submissions for this Room
+  getMySubmissions: async (roomId) => {
+    try {
+      const targetRoom = roomId || 'default';
+      const response = await api.get(`/week/rooms/${targetRoom}/submissions/my`);
+      return response.data;
+    } catch (err) {
+      try {
+        const fallback = await api.get('/week/rooms/submissions/my');
+        return fallback.data;
+      } catch (err2) {
+        return { success: false, data: [] };
+      }
+    }
+  },
+
   // 14. Fetch Admin Submissions (for review)
   getSubmissions: async (params = {}) => {
     const response = await api.get('/admin/room-cycle/submissions', { params });

@@ -4622,6 +4622,50 @@ export const swaggerDocument = {
         }
       }
     },
+    '/api/grand-contests/{id}/submit': {
+      post: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Submit Task Proof for Grand Contest (Canonical)',
+        description: 'Submits contestant proof (file upload, link, notes) for a task in this Grand Contest.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  taskId: { type: 'string', example: '66bc91f24d9e123456789task' },
+                  submissionType: { type: 'string', enum: ['Link', 'File', 'Text', 'Image', 'Video'], example: 'File' },
+                  mediaUrl: { type: 'string', example: 'https://youtube.com/watch?v=demo' },
+                  proofNotes: { type: 'string', example: 'Completed task submission proof.' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: {
+            description: 'Proof submitted successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Task proof submitted successfully' },
+                    data: { $ref: '#/components/schemas/RoomSubmissionResponse' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     '/api/grand-contests/{id}/tasks/{taskId}/submit': {
       post: {
         tags: ['12. Grand Contest Management'],

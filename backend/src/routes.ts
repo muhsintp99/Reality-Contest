@@ -203,7 +203,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/grand-contests/:id/tasks', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContestTask);
   router.delete('/grand-contests/:id/tasks/:taskId', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.removeGrandContestTask);
   router.get('/grand-contests/:id/submissions', authenticate, grandContestController.getGrandContestSubmissions);
-  router.post('/grand-contests/:id/submissions', authenticate, requireNotGuest, grandContestController.submitGrandContestTask);
+  router.post('/grand-contests/:id/submit', authenticate, requireNotGuest, upload.single('mediaFile'), grandContestController.submitGrandContestTask);
   router.put('/grand-contests/submissions/:id/review', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.reviewGrandContestSubmission);
 
   router.get('/admin/grand-contests/:id/tasks', authenticate, grandContestController.getGrandContestTasks);

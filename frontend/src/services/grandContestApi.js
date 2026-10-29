@@ -16,6 +16,14 @@ export const grandContestApi = {
     }
   },
 
+  // 1b. Fetch Completed Grand Contests strictly using /grand-contests
+  getCompletedGrandContests: async (params = {}) => {
+    const response = await api.get('/grand-contests', {
+      params: { ...params, status: 'Completed' }
+    });
+    return response.data;
+  },
+
   // 2. Fetch Single Grand Contest Details (header, tasks, rules, prize pool)
   getGrandContestDetails: async (id) => {
     const response = await api.get(`/grand-contests/${id}`);
@@ -44,6 +52,12 @@ export const grandContestApi = {
     return response.data;
   },
 
+  // 4b. Start Grand Contest Attempt
+  startGrandContest: async (id, payload = {}) => {
+    const response = await api.post(`/grand-contests/${id}/start`, payload);
+    return response.data;
+  },
+
   // 5. Fetch Connected Tasks for Grand Contest
   getGrandContestTasks: async (id) => {
     try {
@@ -56,17 +70,13 @@ export const grandContestApi = {
   },
 
   // 6. Submit Grand Contest Task Proof
-  submitTaskProof: async (contestId, taskId, payload) => {
+  submitTaskProof: async (contestId, taskId, payload = {}) => {
     const isFormData = payload instanceof FormData;
     const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' };
+    const body = isFormData ? payload : { ...payload, taskId: taskId || payload.taskId };
 
-    try {
-      const response = await api.post(`/grand-contests/${contestId}/tasks/${taskId}/submit`, payload, { headers });
-      return response.data;
-    } catch (err) {
-      const response2 = await api.post(`/grand-contests/${contestId}/submissions`, payload, { headers });
-      return response2.data;
-    }
+    const response = await api.post(`/grand-contests/${contestId}/submit`, body, { headers });
+    return response.data;
   },
 
   // 7. Fetch Contestant's Submissions for this Grand Contest

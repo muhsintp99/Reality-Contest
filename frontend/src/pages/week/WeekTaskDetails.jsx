@@ -50,6 +50,21 @@ export const WeekTaskDetails = () => {
         console.warn('Check join status fallback:', jErr);
         setJoinState('NOT_JOINED');
       }
+
+      // 2b. Check if this specific task was already submitted by the user
+      try {
+        const subRes = await weekRoomApi.getMySubmissions(roomId);
+        const subList = subRes.data?.submissions || subRes.data || [];
+        const isThisTaskSubmitted = Array.isArray(subList) && subList.some(
+          s => (s.taskId?._id || s.taskId || '').toString() === taskId.toString()
+        );
+        if (isThisTaskSubmitted) {
+          setJoinState('COMPLETED');
+          setStatusMessage('You have already submitted this task. Re-entry or duplicate submission is locked.');
+        }
+      } catch (subErr) {
+        console.warn('Submissions check fallback:', subErr);
+      }
     } catch (err) {
       console.error('Error fetching task details:', err);
       setError(err.response?.data?.message || err.message || 'Failed to load task details');

@@ -175,6 +175,9 @@ export class GrandContestController {
     try {
       const userId = (req as any).user?.id || (req as any).user?._id;
       const taskId = req.params.taskId || req.body.taskId;
+      if (req.file) {
+        req.body.mediaUrl = `/uploads/${req.file.filename}`;
+      }
       const submission = await grandContestService.submitGrandContestTask(req.params.id, taskId, userId, req.body);
       res.status(201).json({ success: true, message: 'Task proof submitted successfully', data: submission });
     } catch (err) {

@@ -193,10 +193,6 @@ export const DailyContestPortal = () => {
                     setShowGuestModal(true);
                     return;
                   }
-                  if (user?.kycStatus !== 'Approved') {
-                    alert('You cannot participate in daily contests before KYC approval.');
-                    return;
-                  }
                   try {
                     const contestId = b._id || b.id;
                     const res = await axios.post(`/api/contest/${contestId}/join`, {}, { withCredentials: true });

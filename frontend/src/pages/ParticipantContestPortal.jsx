@@ -100,10 +100,6 @@ export const ParticipantContestPortal = () => {
       setShowGuestModal(true);
       return;
     }
-    if (user?.kycStatus !== 'Approved') {
-      alert('You cannot register for contests before your KYC is approved.');
-      return;
-    }
 
     try {
       // Single API call for joining / getting group & stages
@@ -146,10 +142,6 @@ export const ParticipantContestPortal = () => {
     if (user?.role === 'Guest') {
       setGuestModalAction('enter this audition stage');
       setShowGuestModal(true);
-      return;
-    }
-    if (user?.kycStatus !== 'Approved') {
-      alert('You cannot enter audition stages before your KYC is approved.');
       return;
     }
     setRulesStage(stage);

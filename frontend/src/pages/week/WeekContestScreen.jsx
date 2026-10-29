@@ -29,6 +29,21 @@ export const WeekContestScreen = () => {
     setLoading(true);
     setError(null);
     try {
+      // Check if user has already submitted this task; if so, redirect immediately to prevent re-entry
+      try {
+        const subRes = await weekRoomApi.getMySubmissions(roomId);
+        const subList = subRes.data?.submissions || subRes.data || [];
+        const isThisTaskSubmitted = Array.isArray(subList) && subList.some(
+          s => (s.taskId?._id || s.taskId || '').toString() === taskId.toString()
+        );
+        if (isThisTaskSubmitted) {
+          navigate(`/week/rooms/${roomId}/tasks/${taskId}/contest/${contestId}/result`, { replace: true });
+          return;
+        }
+      } catch (subErr) {
+        console.warn('Submissions check on contest screen:', subErr);
+      }
+
       const res = await weekRoomApi.getTaskDetails(taskId);
       const tData = res.data || res.task || res.contest || res;
       setTask(tData);

@@ -231,10 +231,7 @@ export class DailyContestsController {
           throw new NotFoundError('User not found.');
         }
 
-        if (user.kycStatus !== 'Approved') {
-          throw new BadRequestError('You cannot participate in daily contests before KYC approval.');
-        }
-
+        // KYC check bypassed for daily contest participation (Coin / Price check enforced below)
         const participants = contest.participants || [];
         alreadyJoined = participants.some((pId: any) => (pId?._id ? pId._id.toString() : pId.toString()) === userId.toString());
 
@@ -342,10 +339,7 @@ export class DailyContestsController {
         throw new NotFoundError('User not found.');
       }
 
-      if (user.kycStatus !== 'Approved') {
-        throw new BadRequestError('You cannot participate in daily contests before KYC approval.');
-      }
-
+      // KYC check bypassed for daily contest start attempt (Coin / Price check enforced below)
       const participants = contest.participants || [];
       let alreadyJoined = participants.some((pId: any) => (pId?._id ? pId._id.toString() : pId.toString()) === userId.toString());
 
