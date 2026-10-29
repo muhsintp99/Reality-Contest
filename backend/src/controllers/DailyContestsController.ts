@@ -1,6 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { DailyContest } from '../models/DailyContests';
+import User from '../models/User';
+import Question from '../models/Question';
+import Attempt from '../models/Attempt';
+import Result from '../models/Result';
+import Transaction from '../models/Transaction';
+import { walletService } from '../services/WalletService';
+import { socketService } from '../services/SocketService';
+import { BadRequestError, NotFoundError } from '../core/errors';
 import { saveBase64File } from './UploadController';
 import { questionSelectionService } from '../services/QuestionSelectionService';
 
@@ -48,8 +56,35 @@ export class DailyContestsController {
   async getDailyContestDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const contest = await DailyContest.findOne(getQueryForId(id)).populate('questions').exec();
-      res.status(200).json({ success: true, data: contest || null });
+      const contest: any = await DailyContest.findOne(getQueryForId(id)).populate('questions').exec();
+      if (!contest) {
+        throw new NotFoundError('Daily contest not found');
+      }
+
+      // Ensure questions are populated so contestants always receive questions
+      if (!contest.questions || contest.questions.length === 0 || !contest.questions[0]?.options) {
+        const cats = contest.categories && contest.categories.length > 0 ? contest.categories : [contest.category || 'General Knowledge'];
+        const targetCount = contest.questionsCount || 20;
+        try {
+          const poolQuestions = await Question.find({
+            $or: [
+              { category: { $in: cats } },
+              { category: { $regex: new RegExp(cats.join('|'), 'i') } }
+            ]
+          }).limit(targetCount).lean().exec();
+
+          if (poolQuestions && poolQuestions.length > 0) {
+            contest.questions = poolQuestions as any;
+          } else {
+            const fallbackQuestions = await Question.find({}).limit(targetCount).lean().exec();
+            if (fallbackQuestions && fallbackQuestions.length > 0) {
+              contest.questions = fallbackQuestions as any;
+            }
+          }
+        } catch {}
+      }
+
+      res.status(200).json({ success: true, data: contest });
     } catch (err) {
       next(err);
     }
@@ -181,12 +216,453 @@ export class DailyContestsController {
   async joinDailyContest(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+      const userId = (req as any).user?.id || (req as any).user?._id;
       const contest = await DailyContest.findOne(getQueryForId(id)).exec();
-      if (contest) {
+      if (!contest) {
+        throw new NotFoundError('Daily contest not found.');
+      }
+
+      let user: any = null;
+      let alreadyJoined = false;
+
+      if (userId) {
+        user = await User.findById(userId).exec();
+        if (!user) {
+          throw new NotFoundError('User not found.');
+        }
+
+        if (user.kycStatus !== 'Approved') {
+          throw new BadRequestError('You cannot participate in daily contests before KYC approval.');
+        }
+
+        const participants = contest.participants || [];
+        alreadyJoined = participants.some((pId: any) => (pId?._id ? pId._id.toString() : pId.toString()) === userId.toString());
+
+        if (!alreadyJoined) {
+          const isFree = contest.isFree === true || contest.entryFee === 0 || contest.entryFeeType === 'Free';
+          if (!isFree) {
+            const isCoinFee = contest.entryFeeType === 'Coins' || (contest.entryFeeCoins && contest.entryFeeCoins > 0);
+            if (isCoinFee) {
+              const coinFee = contest.entryFeeCoins || contest.entryFee;
+              const currentCoins = user.coins || 0;
+              if (currentCoins < coinFee && user.walletBalance < coinFee) {
+                throw new BadRequestError(`Insufficient balance. This daily battle requires ${coinFee} Coins 🪙.`);
+              }
+              if (currentCoins >= coinFee) {
+                user.coins = currentCoins - coinFee;
+              } else {
+                user.walletBalance -= coinFee;
+              }
+              await user.save();
+
+              await Transaction.create({
+                userId: user._id,
+                amount: -coinFee,
+                currency: 'Coins',
+                type: 'Entry Fee',
+                status: 'Completed',
+                description: `Coin entry fee for daily contest ${contest.dailyContestId}: ${contest.title} (${coinFee} Coins 🪙)`,
+                reference: `DAILY-COIN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+              }).catch(() => null);
+            } else {
+              if (user.walletBalance < contest.entryFee) {
+                throw new BadRequestError('Insufficient wallet balance to pay daily contest entry fee.');
+              }
+              user.walletBalance -= contest.entryFee;
+              await user.save();
+
+              await Transaction.create({
+                userId: user._id,
+                amount: -contest.entryFee,
+                currency: 'INR',
+                type: 'Entry Fee',
+                status: 'Completed',
+                description: `Entry fee for daily contest ${contest.dailyContestId}: ${contest.title}`,
+                reference: `DAILY-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+              }).catch(() => null);
+            }
+          }
+
+          if (!contest.participants) {
+            contest.participants = [];
+          }
+          contest.participants.push(user._id as any);
+          contest.participantsCount = contest.participants.length;
+          await contest.save();
+        }
+      } else {
         contest.participantsCount = (contest.participantsCount || 0) + 1;
         await contest.save();
       }
-      res.status(200).json({ success: true, message: 'Joined daily contest successfully' });
+
+      const message = alreadyJoined
+        ? 'You have already joined this daily contest.'
+        : 'Joined daily contest successfully';
+
+      const responseData = {
+        alreadyJoined: Boolean(alreadyJoined),
+        message,
+        contest,
+        user: user ? {
+          _id: user._id,
+          name: user.name,
+          walletBalance: user.walletBalance,
+          coins: user.coins
+        } : null
+      };
+
+      res.status(200).json({
+        success: true,
+        message,
+        alreadyJoined: Boolean(alreadyJoined),
+        contest,
+        user: responseData.user,
+        data: responseData
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async startDailyContest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = (req as any).user?.id || (req as any).user?._id;
+      if (!userId) {
+        throw new BadRequestError('Authentication required to start daily contest.');
+      }
+
+      const contest = await DailyContest.findOne(getQueryForId(id)).exec();
+      if (!contest) {
+        throw new NotFoundError('Daily contest not found.');
+      }
+
+      const user = await User.findById(userId).exec();
+      if (!user) {
+        throw new NotFoundError('User not found.');
+      }
+
+      if (user.kycStatus !== 'Approved') {
+        throw new BadRequestError('You cannot participate in daily contests before KYC approval.');
+      }
+
+      const participants = contest.participants || [];
+      let alreadyJoined = participants.some((pId: any) => (pId?._id ? pId._id.toString() : pId.toString()) === userId.toString());
+
+      if (!alreadyJoined) {
+        if (req.body?.autoJoin === true || req.query?.autoJoin === 'true') {
+          const isFree = contest.isFree === true || contest.entryFee === 0 || contest.entryFeeType === 'Free';
+          if (!isFree) {
+            const isCoinFee = contest.entryFeeType === 'Coins' || (contest.entryFeeCoins && contest.entryFeeCoins > 0);
+            if (isCoinFee) {
+              const coinFee = contest.entryFeeCoins || contest.entryFee;
+              const currentCoins = user.coins || 0;
+              if (currentCoins < coinFee && user.walletBalance < coinFee) {
+                throw new BadRequestError(`Insufficient balance. This daily battle requires ${coinFee} Coins 🪙.`);
+              }
+              if (currentCoins >= coinFee) {
+                user.coins = currentCoins - coinFee;
+              } else {
+                user.walletBalance -= coinFee;
+              }
+              await user.save();
+              await Transaction.create({
+                userId: user._id,
+                amount: -coinFee,
+                currency: 'Coins',
+                type: 'Entry Fee',
+                status: 'Completed',
+                description: `Coin entry fee for daily contest ${contest.title}`
+              }).catch(() => null);
+            } else {
+              const cashFee = Number(contest.entryFee) || 0;
+              if (cashFee > 0) {
+                if (user.walletBalance < cashFee) {
+                  throw new BadRequestError(`Insufficient balance. This daily battle requires ₹${cashFee}.`);
+                }
+                user.walletBalance -= cashFee;
+                await user.save();
+                await Transaction.create({
+                  userId: user._id,
+                  amount: -cashFee,
+                  currency: 'INR',
+                  type: 'Entry Fee',
+                  status: 'Completed',
+                  description: `Entry fee for daily contest ${contest.title}`
+                }).catch(() => null);
+              }
+            }
+          }
+
+          if (!contest.participants) {
+            contest.participants = [];
+          }
+          contest.participants.push(user._id as any);
+          contest.participantsCount = contest.participants.length;
+          await contest.save();
+          alreadyJoined = true;
+        } else {
+          res.status(400).json({
+            success: false,
+            alreadyJoined: false,
+            requiresJoin: true,
+            message: 'You must join this daily contest before starting. Contest join cheyathe start cheyan pattilla.'
+          });
+          return;
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        alreadyJoined: true,
+        message: 'Daily contest attempt started successfully',
+        data: {
+          contestId: contest._id,
+          dailyContestId: contest.dailyContestId,
+          title: contest.title,
+          timerLimit: contest.timerLimit,
+          questionsCount: contest.questionsCount,
+          startedAt: new Date()
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async submitDailyContestAnswers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = (req as any).user?.id || (req as any).user?._id;
+      const user = await User.findById(userId).exec();
+      if (!user) {
+        throw new NotFoundError('User not found.');
+      }
+
+      const contest = await DailyContest.findOne(getQueryForId(id)).populate('questions').exec();
+      if (!contest) {
+        throw new NotFoundError('Daily contest not found.');
+      }
+
+      const participants = contest.participants || [];
+      const alreadyJoined = participants.some((pId: any) => (pId?._id ? pId._id.toString() : pId.toString()) === userId.toString());
+      if (!alreadyJoined) {
+        throw new BadRequestError('You must join this daily contest before submitting answers. Contest join cheyathe submit cheyan pattilla.');
+      }
+
+      let questions: any[] = Array.isArray(contest.questions) ? contest.questions : [];
+      if (questions.length === 0 || !questions[0]?.options) {
+        if (contest.questions && contest.questions.length > 0) {
+          questions = await Question.find({ _id: { $in: contest.questions } }).lean().exec();
+        }
+        if (questions.length === 0) {
+          const cats = contest.categories && contest.categories.length > 0 ? contest.categories : [contest.category];
+          questions = await Question.find({
+            $or: [
+              { category: { $in: cats } },
+              { category: { $regex: new RegExp(cats.join('|'), 'i') } }
+            ]
+          }).limit(contest.questionsCount || 20).lean().exec();
+        }
+        if (questions.length === 0) {
+          questions = await Question.find({}).limit(contest.questionsCount || 20).lean().exec();
+        }
+      }
+
+      const userAnswers = req.body.answers || {};
+      let correctCount = 0;
+      let totalQuestions = questions.length;
+      const answerDetails: any[] = [];
+
+      if (totalQuestions > 0) {
+        for (const q of questions) {
+          const qIdStr = q._id.toString();
+          const submitted = userAnswers[qIdStr] ?? userAnswers[q.text] ?? userAnswers[qIdStr.slice(-4)];
+
+          const correctOptions = (q.options || [])
+            .map((opt: any, idx: number) => ({ idx, text: opt.text, isCorrect: opt.isCorrect }))
+            .filter((opt: any) => opt.isCorrect);
+
+          const correctIndices = correctOptions.map((o: any) => o.idx);
+          const correctTexts = correctOptions.map((o: any) => (o.text || '').trim().toLowerCase());
+
+          let isCorrect = false;
+          if (submitted !== undefined && submitted !== null) {
+            if (typeof submitted === 'number') {
+              isCorrect = correctIndices.includes(submitted);
+            } else if (typeof submitted === 'string') {
+              const subClean = submitted.trim().toLowerCase();
+              isCorrect = correctTexts.includes(subClean) ||
+                (Number.isInteger(Number(subClean)) && correctIndices.includes(Number(subClean)));
+            } else if (Array.isArray(submitted)) {
+              const subNumbers = submitted.map(Number);
+              isCorrect = correctIndices.length === subNumbers.length &&
+                correctIndices.every((val: number) => subNumbers.includes(val));
+            }
+          }
+
+          if (isCorrect) correctCount++;
+
+          answerDetails.push({
+            questionId: q._id,
+            questionText: q.text,
+            submittedAnswer: submitted,
+            isCorrect,
+            correctOptions: correctOptions.map((o: any) => o.text)
+          });
+        }
+      } else {
+        const submittedKeys = Object.keys(userAnswers);
+        totalQuestions = submittedKeys.length > 0 ? submittedKeys.length : (contest.questionsCount || 10);
+        for (const key of submittedKeys) {
+          const val = userAnswers[key];
+          const isCorrect = val === true || val === 'correct' || (typeof val === 'object' && val.isCorrect === true);
+          if (isCorrect) correctCount++;
+          answerDetails.push({ questionId: key, submittedAnswer: val, isCorrect });
+        }
+      }
+
+      const rawAccuracy = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+      const accuracy = Math.round(rawAccuracy * 10) / 10;
+      const currency: 'Coins' | 'INR' = contest.entryFeeType === 'Cash' ? 'INR' : 'Coins';
+
+      // Grand prize calculation: prioritize coinsReward for coin contests (e.g. 500 Coins) or prizePool (whichever is higher)
+      const grandPrizeAmount = Math.max(
+        Number(contest.coinsReward) || 0,
+        Number(contest.prizePool) || 0,
+        currency === 'Coins' ? 500 : 1000
+      );
+
+      let rewardTier = 'Tier 1 (0% to 74.9%)';
+      let rewardType: 'None' | 'Bonus' | 'Prize Pool' = 'None';
+      let rewardAmount = 0;
+      let rewardMessage = '';
+
+      if (accuracy < 75) {
+        rewardTier = 'Tier 1 (0% to 74.9%)';
+        rewardType = 'None';
+        rewardAmount = 0;
+        rewardMessage = `No reward earned. Your accuracy was ${accuracy}%, which is below the 75% threshold.`;
+      } else if (accuracy <= 98) {
+        rewardTier = 'Tier 2 (75% to 98%)';
+        rewardType = 'Bonus';
+        const entryFeeCoins = Number(contest.entryFeeCoins) || Number(contest.entryFee) || 50;
+        const minBonus = Math.max(50, Math.floor(entryFeeCoins * 0.75));
+        const maxBonus = Math.max(minBonus + 50, Math.floor(grandPrizeAmount * 0.6));
+        const randomBonus = Math.floor(Math.random() * (maxBonus - minBonus + 1)) + minBonus;
+        rewardAmount = randomBonus;
+        rewardMessage = `Congratulations! You scored ${accuracy}% accuracy and won a bonus of ${rewardAmount} ${currency}!`;
+
+        await walletService.addReward(
+          userId,
+          rewardAmount,
+          `${contest.title} - Daily Battle Bonus (${accuracy}% Accuracy)`,
+          currency
+        );
+      } else {
+        rewardTier = 'Tier 3 (99% to 100%)';
+        rewardType = 'Prize Pool';
+        rewardAmount = grandPrizeAmount;
+        rewardMessage = `JACKPOT! Spectacular accuracy of ${accuracy}%! You have won the Daily Contest Grand Prize of ${rewardAmount} ${currency}!`;
+
+        await walletService.addReward(
+          userId,
+          rewardAmount,
+          `${contest.title} - Daily Grand Prize Pool Winner (${accuracy}% Accuracy)`,
+          currency
+        );
+      }
+
+      // Ensure user is marked in contest participants
+      if (!contest.participants) {
+        contest.participants = [];
+      }
+      const isParticipant = contest.participants.some(
+        (pId: any) => (pId?._id ? pId._id.toString() : pId.toString()) === userId.toString()
+      );
+      if (!isParticipant) {
+        contest.participants.push(user._id as any);
+        contest.participantsCount = contest.participants.length;
+        await contest.save();
+      }
+
+      // Save Attempt & Result
+      const attemptRecord = await Attempt.create({
+        userId: user._id,
+        stageId: contest._id,
+        contestId: contest._id,
+        groupId: contest._id,
+        acceptedRules: true,
+        rulesAcceptedAt: new Date(),
+        startedAt: new Date(Date.now() - 60000),
+        submittedAt: new Date(),
+        status: 'Evaluated',
+        answers: userAnswers,
+        score: correctCount,
+        cheatAlerts: req.body.cheatAlerts || []
+      }).catch(() => null);
+
+      await Result.create({
+        userId: user._id,
+        stageId: contest._id,
+        groupId: contest._id,
+        contestId: contest._id,
+        attemptId: attemptRecord?._id || new mongoose.Types.ObjectId(),
+        score: correctCount,
+        passed: accuracy >= 75,
+        status: accuracy >= 75 ? 'Qualified' : 'Failed',
+        remarks: `${rewardTier} - ${rewardMessage}`
+      }).catch(() => null);
+
+      const updatedUser = await User.findById(userId).exec();
+
+      socketService.emitToUser(userId, 'contest_reward_won', {
+        contestId: contest._id,
+        contestTitle: contest.title,
+        accuracy,
+        rewardTier,
+        rewardType,
+        rewardAmount,
+        currency
+      });
+
+      const responsePayload = {
+        contestId: contest._id.toString(),
+        dailyContestId: contest.dailyContestId,
+        contestTitle: contest.title,
+        totalQuestions,
+        correctAnswers: correctCount,
+        incorrectAnswers: totalQuestions - correctCount,
+        score: correctCount,
+        accuracy,
+        accuracyPercentage: accuracy,
+        passed: accuracy >= 75,
+        rewardTier,
+        rewardType,
+        rewardAmount,
+        currency,
+        coinsReward: currency === 'Coins' ? rewardAmount : (Number(contest.coinsReward) || 0),
+        prizePool: grandPrizeAmount,
+        message: rewardMessage,
+        rewardMessage,
+        alreadyJoined: true,
+        user: {
+          _id: updatedUser?._id || user._id,
+          name: updatedUser?.name || user.name,
+          email: updatedUser?.email || user.email,
+          walletBalance: updatedUser?.walletBalance ?? user.walletBalance,
+          coins: updatedUser?.coins ?? user.coins
+        },
+        walletBalance: updatedUser?.walletBalance ?? user.walletBalance,
+        coins: updatedUser?.coins ?? user.coins,
+        answerDetails
+      };
+
+      res.status(200).json({
+        success: true,
+        data: responsePayload,
+        ...responsePayload
+      });
     } catch (err) {
       next(err);
     }

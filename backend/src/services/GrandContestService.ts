@@ -41,6 +41,13 @@ export class GrandContestService {
       endDate: data.endDate ? new Date(data.endDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     };
 
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      payload.status = contestScheduleAutomationService.getTargetContestStatus(payload);
+    } catch {
+      payload.status = payload.status || 'Registration Open';
+    }
+
     const contest = await GrandContest.create(payload);
     return contest;
   }
@@ -71,6 +78,12 @@ export class GrandContestService {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
+
+    // Keep schedule statuses fresh
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      await Promise.all(contests.map((c: any) => contestScheduleAutomationService.checkAndUpdateSingleGrandContest(c)));
+    } catch {}
 
     const total = await GrandContest.countDocuments(filter);
 
@@ -108,6 +121,12 @@ export class GrandContestService {
       throw new NotFoundError('Grand Contest not found');
     }
 
+    // Ensure schedule status is current
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      await contestScheduleAutomationService.checkAndUpdateSingleGrandContest(contest);
+    } catch {}
+
     return contest;
   }
 
@@ -132,10 +151,25 @@ export class GrandContestService {
       data.isFree = data.entryFee === 0;
     }
 
+    if (data.status !== 'Cancelled' && data.status !== 'Maintenance') {
+      try {
+        const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+        const calculatedStatus = contestScheduleAutomationService.getTargetContestStatus(data);
+        if (calculatedStatus) {
+          data.status = calculatedStatus;
+        }
+      } catch {}
+    }
+
     const updated = await GrandContest.findByIdAndUpdate(contestIdToUpdate, data, { new: true, runValidators: true }).populate('tasks');
     if (!updated) {
       throw new NotFoundError('Grand Contest not found');
     }
+
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      contestScheduleAutomationService.broadcastStatusChange(updated._id.toString(), updated.status, 'GrandContest');
+    } catch {}
 
     return updated;
   }
@@ -215,12 +249,33 @@ export class GrandContestService {
         isAlreadyJoined = contest.participants.some((p: any) => (p._id ? p._id.toString() === uIdStr : p.toString() === uIdStr));
 
         if (isAlreadyJoined) {
+          const message = 'You have already joined this grand contest.';
+          const responseData = {
+            alreadyJoined: true,
+            message,
+            joinedAt: new Date(),
+            contest,
+            user: {
+              _id: userObj._id,
+              name: userObj.name,
+              walletBalance: userObj.walletBalance,
+              coins: userObj.coins
+            },
+            isJoined: true,
+            joined: true,
+            hasJoined: true
+          };
+
           return {
             success: true,
+            message,
             alreadyJoined: true,
-            message: 'You have already registered for this Grand Contest.',
-            joinedAt: new Date(),
-            contest
+            isJoined: true,
+            joined: true,
+            hasJoined: true,
+            contest,
+            user: responseData.user,
+            data: responseData
           };
         }
 
@@ -256,12 +311,33 @@ export class GrandContestService {
     contest.maxParticipants = Math.max(contest.maxParticipants || 0, currentCount);
     await contest.save();
 
+    const message = 'Joined Grand Contest successfully!';
+    const responseData = {
+      alreadyJoined: false,
+      message,
+      joinedAt: new Date(),
+      contest,
+      user: userObj ? {
+        _id: userObj._id,
+        name: userObj.name,
+        walletBalance: userObj.walletBalance,
+        coins: userObj.coins
+      } : null,
+      isJoined: true,
+      joined: true,
+      hasJoined: true
+    };
+
     return {
       success: true,
+      message,
       alreadyJoined: false,
-      message: 'Joined Grand Contest successfully!',
-      joinedAt: new Date(),
-      contest
+      isJoined: true,
+      joined: true,
+      hasJoined: true,
+      contest,
+      user: responseData.user,
+      data: responseData
     };
   }
 
@@ -533,7 +609,7 @@ export class GrandContestService {
   // ================= SUBMISSIONS FOR GRAND CONTEST =================
   async getGrandContestSubmissions(id: string, query: any = {}) {
     const contest = await this.getGrandContestById(id);
-    const { status, taskId, page = 1, limit = 10 } = query;
+    const { status, taskId, userId, page = 1, limit = 10 } = query;
 
     const filter: any = {
       $or: [
@@ -544,6 +620,7 @@ export class GrandContestService {
 
     if (status && status !== 'All') filter.status = status;
     if (taskId && taskId !== 'All' && mongoose.Types.ObjectId.isValid(taskId)) filter.taskId = taskId;
+    if (userId && userId !== 'All' && mongoose.Types.ObjectId.isValid(userId)) filter.userId = userId;
 
     const skip = (Number(page) - 1) * Number(limit);
     const submissions = await RoomSubmission.find(filter)
@@ -580,6 +657,13 @@ export class GrandContestService {
     }
     if (['Draft', 'Cancelled', 'Completed', 'Maintenance'].includes(contest.status)) {
       throw new BadRequestError(`Submissions disabled: Grand Contest status is currently ${contest.status}.`);
+    }
+
+    // 2. User Join Verification
+    const uIdStr = userId.toString();
+    const isJoined = (contest.participants || []).some((p: any) => (p._id ? p._id.toString() === uIdStr : p.toString() === uIdStr));
+    if (!isJoined) {
+      throw new BadRequestError('You must join this Grand Contest before submitting tasks. Contest join cheyathe submit cheyan pattilla.');
     }
 
     let mediaUrl = submissionData.mediaUrl || '';

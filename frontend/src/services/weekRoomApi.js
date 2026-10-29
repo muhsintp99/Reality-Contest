@@ -44,79 +44,36 @@ export const weekRoomApi = {
     }
   },
 
-  // 6. Check Contestant Join Status
+  // 6. Check Contestant Join Status / Join Action
   checkJoinStatus: async (roomId, contestId) => {
     const targetRoom = roomId || 'default';
     const targetContest = contestId || roomId;
-    try {
-      const response = await api.get(`/v1/mobile/room-cycle/${targetRoom}/join/${targetContest}`);
-      return response.data;
-    } catch (err) {
-      try {
-        const response = await api.get(`/v1/mobile/room-cycle/join-status/${targetRoom}/${targetContest}`);
-        return response.data;
-      } catch (err2) {
-        const response = await api.get(`/week/rooms/${targetRoom}/join/${targetContest}`);
-        return response.data;
-      }
-    }
+    const response = await api.post(`/week/rooms/${targetRoom}/contests/${targetContest}/join`);
+    return response.data;
   },
 
-  // 7. Join Room / Contest
+  // 7. Join Room / Contest (Canonical: /api/week/rooms/:roomId/contests/:contestId/join)
   joinContest: async (roomId, contestId) => {
     const targetRoom = roomId;
     const targetContest = contestId || roomId;
-    try {
-      const response = await api.post(`/v1/mobile/room-cycle/${targetRoom}/join/${targetContest}`);
-      return response.data;
-    } catch (err) {
-      try {
-        const response = await api.post(`/week/rooms/${targetRoom}/join/${targetContest}`);
-        return response.data;
-      } catch (err2) {
-        const response = await api.post('/v1/mobile/room-cycle/join', { roomId: targetRoom, contestId: targetContest });
-        return response.data;
-      }
-    }
+    const response = await api.post(`/week/rooms/${targetRoom}/contests/${targetContest}/join`);
+    return response.data;
   },
 
   // 8. Start Contest / Task Attempt
   startContest: async (roomId, contestId) => {
-    try {
-      const response = await api.post(`/week/rooms/${roomId}/start/${contestId}`);
-      return response.data;
-    } catch (err) {
-      try {
-        const response = await api.post(`/stages/${contestId}/start`);
-        return response.data;
-      } catch (err2) {
-        const response = await api.post(`/contests/${contestId}/join`);
-        return response.data;
-      }
-    }
+    const response = await api.post(`/week/rooms/${roomId}/start/${contestId}`);
+    return response.data;
   },
 
-  // 9. Submit Task / Contest Proof & Answers
+  // 9. Submit Task / Contest Proof & Answers (Canonical: /api/week/rooms/:roomId/submit/:contestId)
   submitContestTask: async (payload) => {
-    // Check if payload is FormData (for file uploads)
     const isFormData = payload instanceof FormData;
     const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' };
-
-    try {
-      const response = await api.post('/v1/mobile/room-cycle/submissions', payload, { headers });
-      return response.data;
-    } catch (err) {
-      const roomId = isFormData ? payload.get('roomId') : payload.roomId;
-      const contestId = isFormData ? payload.get('contestId') : payload.contestId;
-      try {
-        const response = await api.post(`/week/rooms/${roomId}/submit/${contestId}`, payload, { headers });
-        return response.data;
-      } catch (err2) {
-        const taskId = isFormData ? payload.get('taskId') : payload.taskId;
-        const response = await api.post(`/stages/${taskId}/submit`, payload, { headers });
-        return response.data;
-      }
-    }
+    const roomId = isFormData ? payload.get('roomId') : payload.roomId;
+    const contestId = isFormData ? payload.get('contestId') : payload.contestId;
+    const response = await api.post(`/week/rooms/${roomId}/submit/${contestId}`, payload, { headers });
+    return response.data;
   },
 
   // 10. Fetch Room Leaderboard

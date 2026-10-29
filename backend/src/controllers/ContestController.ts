@@ -87,6 +87,16 @@ export class ContestController {
       next(err);
     }
   }
+
+  async syncSchedules(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { contestScheduleAutomationService } = require('../services/ContestScheduleAutomationService');
+      const summary = await contestScheduleAutomationService.runCheck();
+      res.status(200).json({ success: true, message: 'Contest schedules checked and synchronized successfully.', summary });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 export const contestController = new ContestController();
 export default contestController;

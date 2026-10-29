@@ -233,13 +233,40 @@ export class BiWeeklyRoomCycleController {
     try {
       const { roomId, contestId } = req.params;
       const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required. No token provided.'
+        });
+      }
+
+      // Check if user has joined this room contest
+      let status = await biWeeklyRoomCycleService.checkUserJoinStatus(roomId, contestId, userId.toString());
+
+      if (!status.isJoined) {
+        // If autoJoin is requested, perform join
+        if (req.body?.autoJoin === true || req.query?.autoJoin === 'true') {
+          await biWeeklyRoomCycleService.joinRoomCycle(roomId, contestId, userId.toString());
+          status = await biWeeklyRoomCycleService.checkUserJoinStatus(roomId, contestId, userId.toString());
+        } else {
+          return res.status(400).json({
+            success: false,
+            alreadyJoined: false,
+            requiresJoin: true,
+            message: 'You must join this room contest before starting the attempt. Contest join cheyathe start cheyan pattilla.'
+          });
+        }
+      }
+
       return res.status(200).json({
         success: true,
+        alreadyJoined: true,
         message: 'Contest task attempt started successfully',
         data: {
-          roomId,
-          contestId,
+          roomId: status.roomId || roomId,
+          contestId: contestId || status.roomId || roomId,
           userId,
+          room: status.room,
           startedAt: new Date()
         }
       });
@@ -252,6 +279,24 @@ export class BiWeeklyRoomCycleController {
     try {
       const { roomId, contestId } = req.params;
       const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required. No token provided.'
+        });
+      }
+
+      // Check if user has joined this room contest before allowing submission
+      const status = await biWeeklyRoomCycleService.checkUserJoinStatus(roomId, contestId, userId.toString());
+      if (!status.isJoined) {
+        return res.status(400).json({
+          success: false,
+          alreadyJoined: false,
+          requiresJoin: true,
+          message: 'You must join this room contest before submitting the attempt. Contest join cheyathe submit cheyan pattilla.'
+        });
+      }
+
       let uploadedMediaUrl = req.body.mediaUrl || '';
       if (req.file) {
         uploadedMediaUrl = `/uploads/${req.file.filename}`;
@@ -260,7 +305,7 @@ export class BiWeeklyRoomCycleController {
       const submission = await biWeeklyRoomCycleService.createSubmission({
         cycleId: cycleId || undefined,
         contestId: contestId || undefined,
-        roomId,
+        roomId: status.roomId || roomId,
         userId: userId ? userId.toString() : undefined,
         taskId: taskId || 'general_proof',
         submissionType: submissionType || (req.file ? 'File' : 'Link'),
@@ -281,6 +326,25 @@ export class BiWeeklyRoomCycleController {
   async getSubmissions(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await biWeeklyRoomCycleService.getSubmissions(req.query);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err: any) {
+      return next(err);
+    }
+  }
+
+  async getMySubmissions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user ? ((req as any).user.id || (req as any).user._id) : undefined;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Authentication required. No token provided.' });
+      }
+      const roomId = req.params.roomId || (req.query.roomId as string);
+      const query = {
+        ...req.query,
+        userId: userId.toString(),
+        ...(roomId && roomId !== 'All' ? { roomId } : {})
+      };
+      const result = await biWeeklyRoomCycleService.getSubmissions(query);
       return res.status(200).json({ success: true, data: result });
     } catch (err: any) {
       return next(err);

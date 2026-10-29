@@ -87,7 +87,7 @@ export const GrandContestsPortal = () => {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto">
-          {['All', 'Active', 'Registration Open', 'Upcoming', 'Completed'].map((status) => (
+          {['All', 'Live', 'Registration Open', 'Upcoming', 'Registration Closed', 'Completed'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -97,7 +97,7 @@ export const GrandContestsPortal = () => {
                   : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
               }`}
             >
-              {status}
+              {status === 'Live' ? '● Live ⚡' : status}
             </button>
           ))}
         </div>
@@ -155,8 +155,14 @@ export const GrandContestsPortal = () => {
                       {c.contestId || 'GRAND-CONTEST'}
                     </span>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                      c.status === 'Active' || c.status === 'Registration Open'
+                      c.status === 'Live'
+                        ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30 animate-pulse'
+                        : c.status === 'Registration Open' || c.status === 'Active'
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : c.status === 'Upcoming'
+                        ? 'bg-sky-500/10 text-sky-500 border border-sky-500/20'
+                        : c.status === 'Registration Closed'
+                        ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                         : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
                     }`}>
                       ● {c.status || 'Active'}

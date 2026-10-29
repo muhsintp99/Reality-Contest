@@ -48,6 +48,17 @@ export class ContestService {
       endDate: data.endDate ? new Date(data.endDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     };
 
+    // Auto-calculate schedule status based on dates if not Cancelled or Maintenance
+    if (payload.status !== 'Cancelled' && payload.status !== 'Maintenance') {
+      try {
+        const { getTargetContestStatus } = require('./ContestScheduleAutomationService');
+        const evalResult = getTargetContestStatus(payload);
+        if (evalResult && evalResult.targetStatus) {
+          payload.status = evalResult.targetStatus as any;
+        }
+      } catch {}
+    }
+
     // Automatic Random Question Selection if questionsCount > 0 and no explicit questions array provided
     const targetCount = Number(payload.questionsCount) || 0;
     if (targetCount > 0 && (!payload.questions || payload.questions.length === 0)) {
@@ -135,10 +146,26 @@ export class ContestService {
       }
     }
 
+    // Ensure schedule time status is up-to-date
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      await contestScheduleAutomationService.checkAndUpdateSingleContest(contest);
+    } catch {}
+
     return contest;
   }
 
   async listContests(filter: any = {}): Promise<IContest[]> {
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      const activeCandidates = await Contest.find({
+        status: { $nin: ['Cancelled', 'Maintenance'] }
+      }).exec();
+      for (const candidate of activeCandidates) {
+        await contestScheduleAutomationService.checkAndUpdateSingleContest(candidate);
+      }
+    } catch {}
+
     const query: any = {};
     if (filter.status && filter.status !== 'All') {
       query.status = filter.status;
@@ -384,7 +411,27 @@ export class ContestService {
     }
 
     Object.assign(contest, data);
-    return contest.save();
+
+    // Calculate target status from schedule dates if not explicitly set to Cancelled or Maintenance
+    if (contest.status !== 'Cancelled' && contest.status !== 'Maintenance') {
+      try {
+        const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+        const calculatedStatus = contestScheduleAutomationService.getTargetContestStatus(contest);
+        if (calculatedStatus) {
+          contest.status = calculatedStatus;
+        }
+      } catch {}
+    }
+
+    const savedContest = await contest.save();
+
+    // Broadcast update to real-time clients
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      contestScheduleAutomationService.broadcastStatusChange(savedContest._id.toString(), savedContest.status, 'Contest');
+    } catch {}
+
+    return savedContest;
   }
 
   async duplicateContest(id: string): Promise<IContest> {
@@ -395,7 +442,13 @@ export class ContestService {
     const { _id, createdAt, updatedAt, contestId, ...cloneData } = existingObj;
     cloneData.contestId = generateUniqueContestId();
     cloneData.title = `${cloneData.title} (Copy)`;
-    cloneData.status = 'Registration Open';
+
+    try {
+      const { contestScheduleAutomationService } = require('./ContestScheduleAutomationService');
+      cloneData.status = contestScheduleAutomationService.getTargetContestStatus(cloneData);
+    } catch {
+      cloneData.status = 'Registration Open';
+    }
 
     const newContest = await this.contestRepo.create(cloneData);
 

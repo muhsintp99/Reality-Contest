@@ -798,13 +798,14 @@ export class BiWeeklyRoomCycleService {
   }
 
   async getSubmissions(query: any) {
-    const { cycleId, contestId, roomId, taskId, status, search, page = 1, limit = 10 } = query;
+    const { cycleId, contestId, roomId, taskId, userId, status, search, page = 1, limit = 10 } = query;
     const filter: any = {};
 
     if (cycleId && cycleId !== 'All' && mongoose.Types.ObjectId.isValid(cycleId)) filter.cycleId = cycleId;
     if (contestId && contestId !== 'All' && mongoose.Types.ObjectId.isValid(contestId)) filter.contestId = contestId;
     if (roomId && roomId !== 'All' && mongoose.Types.ObjectId.isValid(roomId)) filter.roomId = roomId;
     if (taskId && taskId !== 'All' && mongoose.Types.ObjectId.isValid(taskId)) filter.taskId = taskId;
+    if (userId && userId !== 'All' && mongoose.Types.ObjectId.isValid(userId)) filter.userId = userId;
     if (status && status !== 'All') filter.status = status;
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -1495,16 +1496,84 @@ export class BiWeeklyRoomCycleService {
       targetRoomId = contestId || '';
     }
 
-    if (!targetRoomId || !mongoose.Types.ObjectId.isValid(targetRoomId)) {
-      const activeRoom = await Room.findOne({ status: 'Active' });
-      if (activeRoom) {
-        targetRoomId = activeRoom._id.toString();
+    let room: any = null;
+    if (targetRoomId && mongoose.Types.ObjectId.isValid(targetRoomId)) {
+      room = await Room.findById(targetRoomId);
+    }
+
+    if (!room) {
+      room = await Room.findOne({ status: 'Active' });
+      if (room) {
+        targetRoomId = room._id.toString();
       }
     }
 
-    if (targetRoomId && mongoose.Types.ObjectId.isValid(targetRoomId)) {
+    if (!room) {
+      throw new Error('Room not found or no active room available.');
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    // Check if the user is already joined in this room
+    const existingMember = await RoomMember.findOne({
+      roomId: room._id,
+      userId: user._id,
+      status: 'Active'
+    });
+
+    const alreadyJoined = Boolean(existingMember);
+
+    if (!alreadyJoined) {
+      // Deduct entry fee if room is not free
+      const isFree = room.isFree === true || (room.entryFee === 0 && room.entryFeeCoins === 0);
+      if (!isFree) {
+        if (room.entryFeeType === 'Cash') {
+          const fee = Number(room.entryFee) || 99;
+          if ((user.walletBalance || 0) < fee) {
+            throw new Error(`Insufficient wallet balance. Room requires ₹${fee} entry fee.`);
+          }
+          user.walletBalance = (user.walletBalance || 0) - fee;
+          await user.save();
+
+          await Wallet.create({
+            userId: user._id,
+            amount: -fee,
+            currency: 'INR',
+            type: 'Entry Fee',
+            status: 'Completed',
+            description: `Entry fee for room contest ${room.code}: ${room.name}`,
+            reference: `ROOM-FEE-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+          }).catch(() => null);
+        } else {
+          const coinFee = Math.max(1, Number(room.entryFeeCoins || room.entryFee) || 50);
+          const currentCoins = user.coins || 0;
+          if (currentCoins < coinFee && (user.walletBalance || 0) < coinFee) {
+            throw new Error(`Insufficient coins. Room requires ${coinFee} Coins 🪙.`);
+          }
+          if (currentCoins >= coinFee) {
+            user.coins = currentCoins - coinFee;
+          } else {
+            user.walletBalance = (user.walletBalance || 0) - coinFee;
+          }
+          await user.save();
+
+          await Wallet.create({
+            userId: user._id,
+            amount: -coinFee,
+            currency: 'Coins',
+            type: 'Entry Fee',
+            status: 'Completed',
+            description: `Coin entry fee for room contest ${room.code}: ${room.name} (${coinFee} Coins 🪙)`,
+            reference: `ROOM-COIN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+          }).catch(() => null);
+        }
+      }
+
       await RoomMember.findOneAndUpdate(
-        { roomId: new mongoose.Types.ObjectId(targetRoomId), userId: new mongoose.Types.ObjectId(userId) },
+        { roomId: room._id, userId: user._id },
         {
           role: 'Member',
           status: 'Active',
@@ -1513,36 +1582,83 @@ export class BiWeeklyRoomCycleService {
         { upsert: true, new: true }
       );
 
-      await Room.findByIdAndUpdate(targetRoomId, { $inc: { membersCount: 1 } }).catch(() => null);
+      await Room.findByIdAndUpdate(room._id, { $inc: { membersCount: 1 } }).catch(() => null);
+      room.membersCount = (room.membersCount || 0) + 1;
     }
+
+    const message = alreadyJoined
+      ? 'You have already joined this room contest.'
+      : 'Joined room contest successfully';
+
+    const responseData = {
+      alreadyJoined: Boolean(alreadyJoined),
+      message,
+      roomId: targetRoomId,
+      contestId: contestId || targetRoomId,
+      room: room ? (room.toObject ? room.toObject() : room) : null,
+      user: {
+        _id: user._id,
+        name: user.name,
+        walletBalance: user.walletBalance,
+        coins: user.coins
+      },
+      isJoined: true,
+      joined: true,
+      hasJoined: true
+    };
 
     return {
       success: true,
+      message,
+      alreadyJoined: Boolean(alreadyJoined),
       isJoined: true,
       joined: true,
       hasJoined: true,
-      join: true,
-      jin: true,
-      completed: false,
-      complete: false,
-      isCompleted: false,
-      hasCompleted: false,
-      isComplete: false,
-      message: 'User has successfully joined this room contest',
-      data: {
-        isJoined: true,
-        joined: true,
-        hasJoined: true,
-        join: true,
-        jin: true,
-        completed: false,
-        complete: false,
-        isCompleted: false,
-        hasCompleted: false,
-        isComplete: false,
-        roomId: targetRoomId,
-        contestId
+      room: responseData.room,
+      user: responseData.user,
+      data: responseData
+    };
+  }
+
+  async checkUserJoinStatus(roomId?: string, contestId?: string, userId?: string) {
+    if (!userId) {
+      return { isJoined: false, alreadyJoined: false, room: null, roomId: roomId || contestId || '' };
+    }
+
+    let targetRoomId = roomId;
+    if (!targetRoomId || targetRoomId === 'undefined' || !mongoose.Types.ObjectId.isValid(targetRoomId)) {
+      targetRoomId = contestId || '';
+    }
+
+    let room: any = null;
+    if (targetRoomId && mongoose.Types.ObjectId.isValid(targetRoomId)) {
+      room = await Room.findById(targetRoomId);
+    }
+
+    if (!room) {
+      room = await Room.findOne({ status: 'Active' });
+      if (room) {
+        targetRoomId = room._id.toString();
       }
+    }
+
+    if (!room) {
+      return { isJoined: false, alreadyJoined: false, room: null, roomId: targetRoomId };
+    }
+
+    const existingMember = await RoomMember.findOne({
+      roomId: room._id,
+      userId: new mongoose.Types.ObjectId(userId),
+      status: 'Active'
+    });
+
+    const isJoined = Boolean(existingMember);
+    return {
+      isJoined,
+      alreadyJoined: isJoined,
+      roomId: targetRoomId,
+      contestId: contestId || targetRoomId,
+      room: room ? (room.toObject ? room.toObject() : room) : null
     };
   }
 }

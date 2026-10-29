@@ -4,7 +4,8 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
   Trophy, Plus, Settings, Sparkles, ShieldAlert, Check, X, Save, Layers, Trash2, Eye, Search,
-  Copy, FileText, Video, Image, Clock, HelpCircle, FileCheck, Award, Upload, BarChart2
+  Copy, FileText, Video, Image, Clock, HelpCircle, FileCheck, Award, Upload, BarChart2,
+  RefreshCw, Calendar, Lock
 } from 'lucide-react';
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
@@ -16,6 +17,78 @@ import { RichTextEditor } from '../components/RichTextEditor';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { slugifyTitle } from '../utils/routeUtils';
+
+const formatScheduleDateTime = (dateVal) => {
+  if (!dateVal) return 'Not scheduled';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return 'Not scheduled';
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const renderStatusBadge = (status) => {
+  switch (status) {
+    case 'Live':
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/15 text-rose-500 border border-rose-500/30 flex items-center gap-1.5 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping inline-block" />
+          ● LIVE
+        </span>
+      );
+    case 'Registration Open':
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+          Reg Open
+        </span>
+      );
+    case 'Upcoming':
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/15 text-sky-500 border border-sky-500/30 flex items-center gap-1">
+          <Clock className="w-2.5 h-2.5" />
+          Upcoming
+        </span>
+      );
+    case 'Registration Closed':
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center gap-1">
+          <Lock className="w-2.5 h-2.5" />
+          Reg Closed
+        </span>
+      );
+    case 'Completed':
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/15 text-slate-400 border border-slate-500/30 flex items-center gap-1">
+          <Check className="w-2.5 h-2.5" />
+          Completed
+        </span>
+      );
+    case 'Maintenance':
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30 flex items-center gap-1">
+          <Settings className="w-2.5 h-2.5" />
+          Maintenance
+        </span>
+      );
+    case 'Cancelled':
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-600/15 text-rose-400 border border-rose-600/30 flex items-center gap-1">
+          <X className="w-2.5 h-2.5" />
+          Cancelled
+        </span>
+      );
+    default:
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+          {status || 'Draft'}
+        </span>
+      );
+  }
+};
 
 const getLocalDateString = (date) => {
   if (!date) return '';
@@ -65,6 +138,7 @@ export const ContestManagement = () => {
   const { markModuleAsRead } = useNotification();
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -252,10 +326,40 @@ export const ContestManagement = () => {
     }
   };
 
+  const handleSyncSchedules = async () => {
+    setSyncing(true);
+    try {
+      const res = await axios.post('/api/admin/contests/sync-schedules', {}, { withCredentials: true });
+      if (res.data?.success) {
+        showSnackbar(res.data.message || 'Contest schedules checked and synchronized successfully!', 'success');
+        await fetchContests();
+      }
+    } catch (err) {
+      try {
+        const res2 = await axios.post('/api/contests/sync-schedules', {}, { withCredentials: true });
+        if (res2.data?.success) {
+          showSnackbar(res2.data.message || 'Contest schedules checked and synchronized successfully!', 'success');
+          await fetchContests();
+          return;
+        }
+      } catch {}
+      showAlert(err.response?.data?.message || 'Failed to sync schedules', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
     fetchContests();
     markModuleAsRead('contests');
+
+    // Auto-refresh every 30 seconds to reflect automatic schedule transitions
+    const interval = setInterval(() => {
+      fetchContests();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [isMockMode]);
 
   const handleEditClick = (c) => {
@@ -373,15 +477,26 @@ export const ContestManagement = () => {
             Contest Management Desk
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Create, Edit, Delete, Duplicate contests, manage Prize Pools, Entry Fees, Timers & Questions.
+            Create, Edit, Delete, Duplicate contests, manage Prize Pools, Entry Fees, Timers & Automatic Schedules.
           </p>
         </div>
-        <button
-          onClick={() => navigate('/admin-dashboard/contests/create')}
-          className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow-indigo-500/20"
-        >
-          <Plus className="w-4 h-4" /> Create Contest
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncSchedules}
+            disabled={syncing}
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200 dark:border-white/10 active:scale-95 disabled:opacity-50"
+            title="Evaluate all contest schedule dates right now and automatically update statuses"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-brandPrimary' : ''}`} />
+            <span>{syncing ? 'Syncing...' : 'Sync Schedules'}</span>
+          </button>
+          <button
+            onClick={() => navigate('/admin-dashboard/contests/create')}
+            className="px-4 py-2 bg-brandPrimary text-white rounded-xl text-xs font-bold shadow-md hover:bg-brandPrimary/90 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:shadow-indigo-500/20"
+          >
+            <Plus className="w-4 h-4" /> Create Contest
+          </button>
+        </div>
       </div>
 
 
@@ -452,10 +567,9 @@ export const ContestManagement = () => {
                     </span>
                     <h3 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">{c.title}</h3>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${c.status === 'Registration Open' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                    }`}>
-                    {c.status}
-                  </span>
+                  <div>
+                    {renderStatusBadge(c.status)}
+                  </div>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{c.description}</p>
 
@@ -480,6 +594,26 @@ export const ContestManagement = () => {
                     </strong>
                   </div>
                   <div><span className="text-[10px] text-slate-400 block">Timer</span><strong className="text-slate-800 dark:text-white font-bold">{c.timerLimit || 30} mins</strong></div>
+                </div>
+
+                {/* Schedule Timeline */}
+                <div className="bg-slate-50/80 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/5 p-2 rounded-xl text-[10px] space-y-1">
+                  <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span className="flex items-center gap-1 font-semibold">
+                      <Calendar className="w-3 h-3 text-brandPrimary" /> Reg:
+                    </span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300">
+                      {formatScheduleDateTime(c.registrationStart)} - {formatScheduleDateTime(c.registrationEnd)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                    <span className="flex items-center gap-1 font-semibold">
+                      <Clock className="w-3 h-3 text-rose-500" /> Contest:
+                    </span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300">
+                      {formatScheduleDateTime(c.startDate)} - {formatScheduleDateTime(c.endDate)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -517,10 +651,36 @@ export const ContestManagement = () => {
             {viewingContest.imageUrl && (
               <img src={viewingContest.imageUrl} className="w-full h-40 object-cover rounded-xl border border-slate-200 dark:border-white/10" alt="Cover" />
             )}
-            <div><span className="text-[10px] font-bold text-slate-400 block">Contest ID</span><strong className="text-brandPrimary font-mono text-xs">{viewingContest.contestId || `CNT-2026-${String(viewingContest._id).slice(-4).toUpperCase()}`}</strong></div>
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 block">Contest ID</span>
+                <strong className="text-brandPrimary font-mono text-xs">{viewingContest.contestId || `CNT-2026-${String(viewingContest._id).slice(-4).toUpperCase()}`}</strong>
+              </div>
+              <div>
+                {renderStatusBadge(viewingContest.status)}
+              </div>
+            </div>
             <div><span className="text-[10px] font-bold text-slate-400 block">Title</span><strong className="text-slate-900 dark:text-white text-sm">{viewingContest.title}</strong></div>
             <div><span className="text-[10px] font-bold text-slate-400 block">Description</span><p className="text-slate-600 dark:text-slate-300">{viewingContest.description}</p></div>
             <div><span className="text-[10px] font-bold text-slate-400 block">Contest Rules</span><p className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl font-mono text-[11px]">{viewingContest.rules || 'Standard contest rules apply.'}</p></div>
+            
+            {/* Detailed Schedule Box */}
+            <div className="bg-slate-50 dark:bg-white/5 p-3 rounded-xl space-y-2 border border-slate-200 dark:border-white/5">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Schedule Timeline & Automatic Status</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500">Status Mode:</span>
+                <div>{renderStatusBadge(viewingContest.status)}</div>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Registration Period:</span>
+                <span className="font-mono font-bold">{formatScheduleDateTime(viewingContest.registrationStart)} → {formatScheduleDateTime(viewingContest.registrationEnd)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-500">Contest Live Period:</span>
+                <span className="font-mono font-bold text-rose-500">{formatScheduleDateTime(viewingContest.startDate)} → {formatScheduleDateTime(viewingContest.endDate)}</span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-white/5 p-3 rounded-xl">
               <div><span className="text-slate-400 block text-[10px]">Prize Pool</span><strong className="text-emerald-500 font-bold text-sm">₹{viewingContest.prizePool?.toLocaleString()}</strong></div>
               <div><span className="text-slate-400 block text-[10px]">Entry Fee</span><strong className="text-brandPrimary font-bold text-sm">₹{viewingContest.entryFee}</strong></div>

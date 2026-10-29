@@ -21,6 +21,7 @@ import { queueService } from './services/QueueService';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerDocument } from './config/swagger';
 import { seedDatabase } from './config/seed';
+import { contestScheduleAutomationService } from './services/ContestScheduleAutomationService';
 
 // Import Workers (so they start processing in independent threads if Redis is online)
 import { initEmailWorker } from './queues/EmailWorker';
@@ -72,6 +73,10 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     // Start Bi-Weekly Room Cycle background automation service
     const { roomCycleAutomationService } = require('./services/RoomCycleAutomationService');
     roomCycleAutomationService.startAutomation();
+
+    // Start Contest Schedule Automatic Status Transition Service (every 30s)
+    const { contestScheduleAutomationService } = require('./services/ContestScheduleAutomationService');
+    contestScheduleAutomationService.startAutomation(30000);
 
     // Start 24-Hour Automatic Log Cleanup and Retention Service
     const { logRotationService } = require('./services/LogRotationService');
@@ -258,6 +263,11 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     const PORT = config.PORT;
     server.listen(PORT, '0.0.0.0', () => {
       logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
+      try {
+        contestScheduleAutomationService.startAutomation(30000);
+      } catch (automationErr: any) {
+        logger.warn(`Failed to initialize contest schedule automation: ${automationErr.message}`);
+      }
     });
   };
 

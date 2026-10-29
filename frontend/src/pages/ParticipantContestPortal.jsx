@@ -9,6 +9,52 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '../components/common/Badges';
 import { GuestViewBanner, GuestRestrictionModal } from '../components/common/GuestViewMode';
 
+const renderPortalStatusBadge = (status) => {
+  switch (status) {
+    case 'Live':
+      return (
+        <span className="text-[10px] text-rose-500 font-extrabold uppercase tracking-wider bg-rose-500/15 border border-rose-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 animate-pulse shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+          ● LIVE
+        </span>
+      );
+    case 'Registration Open':
+      return (
+        <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          Reg Open
+        </span>
+      );
+    case 'Upcoming':
+      return (
+        <span className="text-[10px] text-sky-500 font-bold uppercase tracking-wider bg-sky-500/15 border border-sky-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+          <Clock className="w-2.5 h-2.5" />
+          Upcoming
+        </span>
+      );
+    case 'Registration Closed':
+      return (
+        <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+          <Lock className="w-2.5 h-2.5" />
+          Reg Closed
+        </span>
+      );
+    case 'Completed':
+      return (
+        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-500/15 border border-slate-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+          <Check className="w-2.5 h-2.5" />
+          Completed
+        </span>
+      );
+    default:
+      return (
+        <span className="text-[10px] text-brandPrimary dark:text-brandSecondary font-bold uppercase tracking-wider bg-brandPrimary/10 border border-brandPrimary/15 px-2.5 py-0.5 rounded-full">
+          {status || 'Active'}
+        </span>
+      );
+  }
+};
+
 export const ParticipantContestPortal = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -39,6 +85,13 @@ export const ParticipantContestPortal = () => {
 
   useEffect(() => {
     fetchContests();
+
+    // Auto-refresh contest list every 30 seconds to track live status updates
+    const timer = setInterval(() => {
+      fetchContests();
+    }, 30000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const handleRegister = async (c) => {
@@ -204,9 +257,7 @@ export const ParticipantContestPortal = () => {
                   >
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-brandPrimary dark:text-brandSecondary font-bold uppercase tracking-wider bg-brandPrimary/10 border border-brandPrimary/15 px-2.5 py-0.5 rounded-full">
-                          LOBBY OPEN
-                        </span>
+                        {renderPortalStatusBadge(c.status)}
                         <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-lg">
                           {c.entryFee === 0 || c.isFree === true || c.entryFeeType === 'Free' ? (
                             <span className="text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase">🎁 Free Entry</span>
@@ -227,12 +278,43 @@ export const ParticipantContestPortal = () => {
                     </div>
 
                     <div className="flex gap-2.5 mt-5">
-                      <button
-                        onClick={() => handleRegister(c)}
-                        className="flex-grow py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98]"
-                      >
-                        Register Entry
-                      </button>
+                      {c.status === 'Completed' ? (
+                        <button
+                          disabled
+                          className="flex-grow py-2 bg-slate-200 dark:bg-white/10 text-slate-400 rounded-xl text-xs font-bold transition-all cursor-not-allowed select-none"
+                        >
+                          Contest Completed
+                        </button>
+                      ) : c.status === 'Upcoming' ? (
+                        <button
+                          disabled
+                          className="flex-grow py-2 bg-sky-500/10 border border-sky-500/20 text-sky-500 rounded-xl text-xs font-bold transition-all cursor-not-allowed select-none"
+                        >
+                          Opens Soon
+                        </button>
+                      ) : c.status === 'Registration Closed' ? (
+                        <button
+                          disabled
+                          className="flex-grow py-2 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-xl text-xs font-bold transition-all cursor-not-allowed select-none"
+                        >
+                          Registration Closed
+                        </button>
+                      ) : c.status === 'Live' ? (
+                        <button
+                          onClick={() => handleRegister(c)}
+                          className="flex-grow py-2 bg-gradient-to-r from-rose-500 to-brandPrimary hover:from-rose-600 hover:to-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                          <span>Enter Live Contest ⚡</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRegister(c)}
+                          className="flex-grow py-2 bg-brandPrimary hover:bg-brandPrimary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98]"
+                        >
+                          Register Entry
+                        </button>
+                      )}
                       <button
                         onClick={() => handleSelectContest(c)}
                         className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-white transition-colors"

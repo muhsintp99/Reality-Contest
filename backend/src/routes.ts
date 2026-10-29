@@ -129,15 +129,12 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/public/contests/completed', (req: any, res: any, next: any) => { req.query = { ...req.query, status: 'Completed' }; contestController.listContests(req, res, next); });
   router.get('/public/daily-contests', dailyContestsController.listDailyContests);
   router.get('/public/grand-contests', grandContestController.listGrandContests);
-  router.get('/public/bi-weekly-contests', biWeeklyRoomCycleController.getRooms);
-  router.get('/bi-weekly-contests', biWeeklyRoomCycleController.getRooms);
-  router.get('/public/biweekly-contests', biWeeklyRoomCycleController.getRooms);
-  router.get('/biweekly-contests', biWeeklyRoomCycleController.getRooms);
-  router.get('/public/bi-weekly', biWeeklyRoomCycleController.getRooms);
-  router.get('/bi-weekly', biWeeklyRoomCycleController.getRooms);
   router.get('/public/coupons', couponController.listCoupons);
 
   // Contest routes
+  router.get('/contests/sync-schedules', optionalAuthenticate, contestController.syncSchedules);
+  router.post('/contests/sync-schedules', optionalAuthenticate, contestController.syncSchedules);
+  router.post('/admin/contests/sync-schedules', optionalAuthenticate, contestController.syncSchedules);
   router.post('/contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.createContest);
   router.get('/contests', optionalAuthenticate, contestController.listContests);
   router.get('/contests/:id/analytics', authenticate, contestController.getContestAnalytics);
@@ -164,6 +161,7 @@ export function createApiRouter(authLimiter: any): Router {
   router.delete('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.deleteGrandContest);
   router.post('/grand-contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.duplicateGrandContest);
   router.post('/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
+  router.post('/grand-contests/:id/start', authenticate, grandContestController.startGrandContest);
   router.post('/admin/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
   router.post('/v1/mobile/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
   router.post('/mobile/grand-contests/:id/join', authenticate, grandContestController.joinGrandContest);
@@ -205,7 +203,6 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/grand-contests/:id/tasks', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContestTask);
   router.delete('/grand-contests/:id/tasks/:taskId', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.removeGrandContestTask);
   router.get('/grand-contests/:id/submissions', authenticate, grandContestController.getGrandContestSubmissions);
-  router.post('/grand-contests/:id/tasks/:taskId/submit', authenticate, requireNotGuest, grandContestController.submitGrandContestTask);
   router.post('/grand-contests/:id/submissions', authenticate, requireNotGuest, grandContestController.submitGrandContestTask);
   router.put('/grand-contests/submissions/:id/review', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.reviewGrandContestSubmission);
 
@@ -460,7 +457,10 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/daily-contests', optionalAuthenticate, dailyContestsController.listDailyContests);
   router.get('/daily-contests/:id/analytics', authenticate, dailyContestsController.getDailyContestAnalytics);
   router.get('/daily-contests/:id', authenticate, dailyContestsController.getDailyContestDetail);
-  router.post('/daily-contests/:id/join', authenticate, dailyContestsController.joinDailyContest);
+  router.post('/daily-contests/:id/join', authenticate, requireNotGuest, dailyContestsController.joinDailyContest);
+  router.post('/daily-contests/:id/start', authenticate, requireNotGuest, dailyContestsController.startDailyContest);
+  router.post('/daily-contests/:id/submit', authenticate, requireNotGuest, dailyContestsController.submitDailyContestAnswers);
+  router.post('/daily-contests/:id/answers', authenticate, requireNotGuest, dailyContestsController.submitDailyContestAnswers);
   router.get('/admin/daily-contests', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.listDailyContests);
   router.get('/admin/daily-contests/:id', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.getDailyContestDetail);
   router.get('/admin/daily-contests/:id/analytics', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.getDailyContestAnalytics);
@@ -530,76 +530,29 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/v1/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
   router.post('/mobile/contests/:id/join', authenticate, mobileContestantController.joinContestById);
 
-  // Check Join Status Endpoints (GET)
-  router.get('/v1/mobile/room-cycle/join', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/mobile/room-cycle/join', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/v1/mobile/room-cycle/:roomId/join/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/mobile/room-cycle/:roomId/join/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/v1/mobile/room-cycle/join/:roomId/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/mobile/room-cycle/join/:roomId/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/v1/mobile/room-cycle/:roomId/join/:_id', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/mobile/room-cycle/:roomId/join/:_id', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/v1/mobile/room-cycle/join-status/:roomId/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/v1/mobile/room-cycle/join-status/:roomId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/room-cycle/:roomId/join/:contestId', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-  router.get('/room-cycle/:roomId/join', optionalAuthenticate, mobileContestantController.checkJoinStatus);
-
-  // Perform Join Action Endpoints (POST)
-  router.post('/v1/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
-  router.post('/mobile/room-cycle/join', authenticate, mobileContestantController.joinRoomCycle);
-  router.post('/v1/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.post('/mobile/room-cycle/:roomId/join/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.post('/v1/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.post('/mobile/room-cycle/join/:roomId/:contestId', authenticate, mobileContestantController.joinRoomAndContest);
-  router.post('/v1/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
-  router.post('/mobile/room-cycle/:roomId/join/:_id', authenticate, mobileContestantController.joinRoomAndContest);
-
-  // Contestant Task Submission Endpoint
-  router.post('/v1/mobile/room-cycle/submissions', authenticate, upload.single('mediaFile'), mobileContestantController.submitTask);
-  router.post('/mobile/room-cycle/submissions', authenticate, upload.single('mediaFile'), mobileContestantController.submitTask);
-
   // ==================================================================
-  // BI-WEEKLY ROOM CYCLE MODULE API ENDPOINTS
+  // BI-WEEKLY ROOM CYCLE MODULE API ENDPOINTS (/api/week/rooms)
   // ==================================================================
-  // Room Management & Contestant Participation (Canonical: /api/week/rooms)
+  // Room Management & Contestant Participation
   router.get('/week/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
-  router.get('/v1/week/rooms', optionalAuthenticate, biWeeklyRoomCycleController.getRooms);
   router.get('/week/rooms/:id/cycles', optionalAuthenticate, biWeeklyRoomCycleController.getRoomCycles);
-  router.get('/v1/week/rooms/:id/cycles', optionalAuthenticate, biWeeklyRoomCycleController.getRoomCycles);
   router.get('/week/rooms/:id/tasks', optionalAuthenticate, biWeeklyRoomCycleController.getRoomTasks);
-  router.get('/v1/week/rooms/:id/tasks', optionalAuthenticate, biWeeklyRoomCycleController.getRoomTasks);
   router.get('/week/rooms/:id', optionalAuthenticate, biWeeklyRoomCycleController.getRoomById);
-  router.get('/v1/week/rooms/:id', optionalAuthenticate, biWeeklyRoomCycleController.getRoomById);
   router.post('/week/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
-  router.post('/v1/week/rooms', authenticate, biWeeklyRoomCycleController.createRoom);
   router.put('/week/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
-  router.put('/v1/week/rooms/:id', authenticate, biWeeklyRoomCycleController.updateRoom);
   router.delete('/week/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
-  router.delete('/v1/week/rooms/:id', authenticate, biWeeklyRoomCycleController.deleteRoom);
   router.post('/week/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
-  router.post('/v1/week/rooms/bulk-action', authenticate, biWeeklyRoomCycleController.bulkRoomAction);
 
-  // Room Cycle Join Status & Join Participation Endpoints
-  router.get('/week/rooms/:roomId/contests/:contestId/check-status', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
-  router.get('/v1/week/rooms/:roomId/contests/:contestId/check-status', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
-  router.get('/week/rooms/:roomId/contests/:contestId/join', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
-  router.get('/v1/week/rooms/:roomId/contests/:contestId/join', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
-  router.get('/week/rooms/:roomId/join/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
-  router.get('/v1/week/rooms/:roomId/join/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
-  router.get('/week/rooms/:roomId/contests/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
-  router.get('/v1/week/rooms/:roomId/contests/:contestId', optionalAuthenticate, biWeeklyRoomCycleController.checkJoinStatus);
+  // Room Contest Join Participation Endpoint
   router.post('/week/rooms/:roomId/contests/:contestId/join', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
-  router.post('/v1/week/rooms/:roomId/contests/:contestId/join', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
   router.post('/week/rooms/:roomId/join/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
-  router.post('/v1/week/rooms/:roomId/join/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
-  router.post('/week/rooms/:roomId/contests/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
-  router.post('/v1/week/rooms/:roomId/contests/:contestId', authenticate, biWeeklyRoomCycleController.joinRoomCycle);
 
   // Room Contest Attempt & Submission
   router.post('/week/rooms/:roomId/start/:contestId', authenticate, biWeeklyRoomCycleController.startAttempt);
-  router.post('/v1/week/rooms/:roomId/start/:contestId', authenticate, biWeeklyRoomCycleController.startAttempt);
   router.post('/week/rooms/:roomId/submit/:contestId', authenticate, upload.single('mediaFile'), biWeeklyRoomCycleController.submitAttempt);
-  router.post('/v1/week/rooms/:roomId/submit/:contestId', authenticate, upload.single('mediaFile'), biWeeklyRoomCycleController.submitAttempt);
+  router.get('/week/rooms/:roomId/submissions/my', authenticate, biWeeklyRoomCycleController.getMySubmissions);
+  router.get('/week/rooms/submissions/my', authenticate, biWeeklyRoomCycleController.getMySubmissions);
+  router.get('/week/rooms/my-submissions', authenticate, biWeeklyRoomCycleController.getMySubmissions);
 
   // Member Assignment & Transfer (Canonical: /admin/members/...)
   router.post('/admin/members/assign', authenticate, biWeeklyRoomCycleController.assignMembers);
