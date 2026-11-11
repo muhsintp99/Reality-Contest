@@ -7,7 +7,7 @@ import { useAlert } from '../context/AlertContext';
 import { usePageTitle } from '../context/PageTitleContext';
 import { RightDrawer } from '../components/RightDrawer';
 import { CustomSelect } from '../components/CustomSelect';
-import { ChevronRight, Plus, Clock, Play, Trash2, Edit, GripVertical, BarChart2 } from 'lucide-react';
+import { ChevronRight, Plus, Clock, Play, Trash2, Edit, GripVertical, BarChart2, Trophy } from 'lucide-react';
 
 const STAGE_ICON_OPTIONS = [
   'Milestone', 'Trophy', 'Brain', 'Code', 'Video', 'Play', 'Users', 'Search', 'Shield', 'FileText', 'Star', 'Camera', 'Mic', 'HeartPulse', 'Globe', 'CheckCircle'
@@ -188,7 +188,15 @@ export const ContestDetails = () => {
           <h2 className="text-xl font-bold text-white">{contest.title}</h2>
           <p className="text-xs text-white/50 mt-1">Manage the sequence of stages for this contest.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => navigate(`/admin-dashboard/leaderboard?contest=${encodeURIComponent(contest?.title || contestId)}&category=Standard Contest`)}
+            className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-500 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            title="View Contest Leaderboard"
+          >
+            <Trophy className="w-4 h-4" />
+            Leaderboard
+          </button>
           <button
             onClick={() => navigate(`/admin-dashboard/contests/${contestId}/analytics`)}
             className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"

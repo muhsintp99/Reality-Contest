@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import {
   Crown, Plus, Calendar, Clock, Percent, Award, Play, XCircle, CheckCircle2, Sliders, Shield,
   Search, Filter, Edit2, Trash2, Eye, ToggleLeft, ToggleRight, X, Sparkles, Layers, FileText,
-  UserCheck, Trophy, AlertTriangle, Send, CheckSquare, RefreshCw, ChevronRight, Copy
+  UserCheck, Trophy, AlertTriangle, Send, CheckSquare, RefreshCw, ChevronRight, Copy, BarChart2
 } from 'lucide-react';
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
@@ -452,7 +452,21 @@ export const GrandContestManagement = () => {
 
                 {/* Action Controls */}
                 <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => navigate(`/admin-dashboard/grand-contests/${s.id || s._id}/analytics`)}
+                      title="Grand Contest Analytics"
+                      className="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 rounded-lg flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                    >
+                      <BarChart2 className="w-3.5 h-3.5" /> Analytics
+                    </button>
+                    <button
+                      onClick={() => navigate(`/admin-dashboard/grand-contests/${s.id || s._id}?tab=leaderboard`)}
+                      title="Grand Contest Leaderboard"
+                      className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                    >
+                      <Trophy className="w-3.5 h-3.5" /> Leaderboard
+                    </button>
                     <button onClick={() => setViewingSeason(s)} title="View Season Details" className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg">
                       <Eye className="w-4 h-4" />
                     </button>

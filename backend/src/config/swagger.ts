@@ -1273,6 +1273,92 @@ export const swaggerDocument = {
         }
       }
     },
+    '/api/contests/{id}/leaderboard': {
+      get: {
+        tags: ['4. Contest Participation'],
+        summary: 'Get Contest Leaderboard Standings',
+        description: 'Returns real-time ranked contestants for a contest, sorted by score and completion speed. Includes currentUserRank if authenticated.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 50 } },
+          { name: 'groupId', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'stageId', in: 'query', required: false, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: {
+            description: 'Contest leaderboard fetched successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    contestId: { type: 'string', example: '664fa1...' },
+                    contestTitle: { type: 'string', example: 'India Creator Showdown 2026' },
+                    totalParticipants: { type: 'number', example: 120 },
+                    page: { type: 'number', example: 1 },
+                    limit: { type: 'number', example: 50 },
+                    totalPages: { type: 'number', example: 3 },
+                    leaderboard: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          rank: { type: 'number', example: 1 },
+                          userId: { type: 'string', example: 'USR-8902' },
+                          name: { type: 'string', example: 'Aarav Sharma' },
+                          score: { type: 'number', example: 195 },
+                          passed: { type: 'boolean', example: true },
+                          status: { type: 'string', example: 'Qualified' },
+                          submittedAt: { type: 'string', example: '2026-11-07T05:30:00.000Z' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    '/api/contests/{id}/analytics': {
+      get: {
+        tags: ['4. Contest Participation', '6. Admin Contest & Daily Contest Management'],
+        summary: 'Get Standard Contest Analytics Overview & Breakdown',
+        description: 'Returns real-time KPIs (registered, joined, active, completed, exited), hourly registration trends, join vs exit analysis, podium winners, and execution timeline.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'test' } }
+        ],
+        responses: {
+          200: {
+            description: 'Contest analytics data retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        contest: { type: 'object' },
+                        overview: { type: 'object' },
+                        charts: { type: 'object' },
+                        participants: { type: 'object' },
+                        winners: { type: 'object' },
+                        timeline: { type: 'array' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     '/api/stages/{id}/start': {
       post: {
         tags: ['4. Contest Participation'],
@@ -1405,6 +1491,38 @@ export const swaggerDocument = {
         responses: {
           200: {
             description: 'Joined daily contest successfully.'
+          }
+        }
+      }
+    },
+    '/api/daily-contests/{id}/leaderboard': {
+      get: {
+        tags: ['5. Daily Contests (24h Arena)'],
+        summary: 'Get Daily Contest 24h Leaderboard Standings',
+        description: 'Returns live rankings for the 24h daily contest sorted by score and submission time. Includes currentUserRank if authenticated.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'test' } },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } }
+        ],
+        responses: {
+          200: {
+            description: 'Daily contest leaderboard retrieved successfully.'
+          }
+        }
+      }
+    },
+    '/api/daily-contests/{id}/analytics': {
+      get: {
+        tags: ['5. Daily Contests (24h Arena)', '6. Admin Contest & Daily Contest Management'],
+        summary: 'Get Daily Contest Analytics Overview',
+        description: 'Fetches participant statistics, join vs drop rates, podium winners, and status breakdown for daily contests.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'test' } }
+        ],
+        responses: {
+          200: {
+            description: 'Daily contest analytics retrieved successfully.'
           }
         }
       }
@@ -4206,6 +4324,21 @@ export const swaggerDocument = {
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'GNC-2026-98124' } }],
         responses: {
           200: { description: 'Grand Contest analytics metrics object.' }
+        }
+      }
+    },
+    '/api/grand-contests/{id}/leaderboard': {
+      get: {
+        tags: ['12. Grand Contest Management'],
+        summary: 'Get Grand Contest Overall & Cohort Leaderboard',
+        description: 'Returns evaluated contestant standings ranked by aggregate submission points and completed milestones across grand contest tasks.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'test' } },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } }
+        ],
+        responses: {
+          200: { description: 'Grand Contest leaderboard standings retrieved successfully.' }
         }
       }
     },

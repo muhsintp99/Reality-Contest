@@ -137,8 +137,18 @@ export function createApiRouter(authLimiter: any): Router {
   router.post('/admin/contests/sync-schedules', optionalAuthenticate, contestController.syncSchedules);
   router.post('/contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.createContest);
   router.get('/contests', optionalAuthenticate, contestController.listContests);
-  router.get('/contests/:id/analytics', authenticate, contestController.getContestAnalytics);
+  router.get('/contests/:id/analytics', optionalAuthenticate, contestController.getContestAnalytics);
+  router.get('/contest/:id/analytics', optionalAuthenticate, contestController.getContestAnalytics);
   router.get('/admin/contests/:id/analytics', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), contestController.getContestAnalytics);
+  router.get('/admin/contest/:id/analytics', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), contestController.getContestAnalytics);
+  // Contest Leaderboard routes
+  router.get('/contests/leaderboard', optionalAuthenticate, contestController.getContestLeaderboard);
+  router.get('/contests/:id/leaderboard', optionalAuthenticate, contestController.getContestLeaderboard);
+  router.get('/contest/:id/leaderboard', optionalAuthenticate, contestController.getContestLeaderboard);
+  router.get('/admin/contests/:id/leaderboard', optionalAuthenticate, contestController.getContestLeaderboard);
+  router.post('/contests/:id/leaderboard/recalculate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.recalculateContestLeaderboard);
+  router.post('/contest/:id/leaderboard/recalculate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.recalculateContestLeaderboard);
+  router.post('/admin/contests/:id/leaderboard/recalculate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.recalculateContestLeaderboard);
   router.get('/contests/:id', optionalAuthenticate, contestController.getContestDetail);
   router.get('/admin/contests/:id', optionalAuthenticate, contestController.getContestDetail);
   router.put('/contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), contestController.updateContest);
@@ -156,7 +166,15 @@ export function createApiRouter(authLimiter: any): Router {
   // Grand Contest routes (/admin/grand-contests & /grand-contests)
   router.post('/grand-contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContest);
   router.get('/grand-contests', optionalAuthenticate, grandContestController.listGrandContests);
-  router.get('/grand-contests/:id', authenticate, grandContestController.getGrandContestDetail);
+  // Grand Contest Leaderboard routes
+  router.get('/grand-contests/leaderboard', optionalAuthenticate, grandContestController.getGrandContestLeaderboard);
+  router.get('/grand-contests/:id/leaderboard', optionalAuthenticate, grandContestController.getGrandContestLeaderboard);
+  router.get('/grand-contest/:id/leaderboard', optionalAuthenticate, grandContestController.getGrandContestLeaderboard);
+  router.get('/admin/grand-contests/:id/leaderboard', optionalAuthenticate, grandContestController.getGrandContestLeaderboard);
+  router.post('/admin/grand-contests/:id/leaderboard/recalculate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.recalculateGrandContestLeaderboard);
+  router.post('/grand-contests/:id/leaderboard/recalculate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.recalculateGrandContestLeaderboard);
+  router.get('/grand-contests/:id', optionalAuthenticate, grandContestController.getGrandContestDetail);
+  router.get('/grand-contest/:id', optionalAuthenticate, grandContestController.getGrandContestDetail);
   router.put('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.updateGrandContest);
   router.delete('/grand-contests/:id', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.deleteGrandContest);
   router.post('/grand-contests/:id/duplicate', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.duplicateGrandContest);
@@ -188,7 +206,8 @@ export function createApiRouter(authLimiter: any): Router {
   router.get('/v1/mobile/grand-contests/:id/join-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
   router.get('/mobile/grand-contests/:id/join-status', optionalAuthenticate, grandContestController.checkGrandContestStatus);
 
-  router.get('/grand-contests/:id/analytics', authenticate, grandContestController.getGrandContestAnalytics);
+  router.get('/grand-contests/:id/analytics', optionalAuthenticate, grandContestController.getGrandContestAnalytics);
+  router.get('/grand-contest/:id/analytics', optionalAuthenticate, grandContestController.getGrandContestAnalytics);
 
   router.post('/admin/grand-contests', authenticate, authorize('Admin', 'Super Admin', 'Contest Manager'), grandContestController.createGrandContest);
   router.get('/admin/grand-contests', authenticate, grandContestController.listGrandContests);
@@ -455,8 +474,16 @@ export function createApiRouter(authLimiter: any): Router {
 
   // Daily Contests Routes
   router.get('/daily-contests', optionalAuthenticate, dailyContestsController.listDailyContests);
-  router.get('/daily-contests/:id/analytics', authenticate, dailyContestsController.getDailyContestAnalytics);
-  router.get('/daily-contests/:id', authenticate, dailyContestsController.getDailyContestDetail);
+  router.get('/daily-contests/leaderboard', optionalAuthenticate, dailyContestsController.getDailyContestLeaderboard);
+  router.get('/daily-contests/:id/leaderboard', optionalAuthenticate, dailyContestsController.getDailyContestLeaderboard);
+  router.get('/daily-contest/:id/leaderboard', optionalAuthenticate, dailyContestsController.getDailyContestLeaderboard);
+  router.get('/admin/daily-contests/:id/leaderboard', optionalAuthenticate, dailyContestsController.getDailyContestLeaderboard);
+  router.post('/admin/daily-contests/:id/leaderboard/recalculate', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.recalculateDailyContestLeaderboard);
+  router.post('/daily-contests/:id/leaderboard/recalculate', authenticate, authorize('Super Admin', 'Admin', 'Contest Manager'), dailyContestsController.recalculateDailyContestLeaderboard);
+  router.get('/daily-contests/:id/analytics', optionalAuthenticate, dailyContestsController.getDailyContestAnalytics);
+  router.get('/daily-contest/:id/analytics', optionalAuthenticate, dailyContestsController.getDailyContestAnalytics);
+  router.get('/daily-contests/:id', optionalAuthenticate, dailyContestsController.getDailyContestDetail);
+  router.get('/daily-contest/:id', optionalAuthenticate, dailyContestsController.getDailyContestDetail);
   router.post('/daily-contests/:id/join', authenticate, requireNotGuest, dailyContestsController.joinDailyContest);
   router.post('/daily-contests/:id/start', authenticate, requireNotGuest, dailyContestsController.startDailyContest);
   router.post('/daily-contests/:id/submit', authenticate, requireNotGuest, dailyContestsController.submitDailyContestAnswers);
@@ -579,6 +606,12 @@ export function createApiRouter(authLimiter: any): Router {
   router.put('/admin/room-cycle/submissions/:id/review', authenticate, biWeeklyRoomCycleController.reviewSubmission);
 
   // Leaderboard & Recalculation (Canonical: /admin/leaderboard)
+  router.get('/week/rooms/leaderboard', optionalAuthenticate, biWeeklyRoomCycleController.getLeaderboard);
+  router.get('/week/rooms/:roomId/leaderboard', optionalAuthenticate, biWeeklyRoomCycleController.getLeaderboard);
+  router.get('/room-cycle/leaderboard', optionalAuthenticate, biWeeklyRoomCycleController.getLeaderboard);
+  router.get('/bi-weekly/leaderboard', optionalAuthenticate, biWeeklyRoomCycleController.getLeaderboard);
+  router.post('/week/rooms/:roomId/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
+  router.post('/room-cycle/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
   router.get('/admin/leaderboard', authenticate, biWeeklyRoomCycleController.getLeaderboard);
   router.post('/admin/leaderboard/recalculate', authenticate, biWeeklyRoomCycleController.recalculateLeaderboard);
   router.get('/admin/room-cycle/leaderboard', authenticate, biWeeklyRoomCycleController.getLeaderboard);

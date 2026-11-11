@@ -16,6 +16,7 @@ import { WalletDashboard } from './pages/WalletDashboard';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { RewardsBadgeCenter } from './pages/RewardsBadgeCenter';
 import { WebsiteHome } from './pages/WebsiteHome';
+import { AppLandingPage } from './pages/AppLandingPage';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsOfService } from './pages/TermsOfService';
 import { SupportContact } from './pages/SupportContact';
@@ -123,9 +124,15 @@ const AppContent = () => {
     );
   }
 
-  // 1. Standalone Public Website Routes (Default home page for all users on '/' or '/website')
-  const isWebsitePage = location.pathname === '/' || location.pathname === '/website';
-  if (isWebsitePage) {
+  // 1. Standalone Public Mobile App Landing Page (Default root '/' or '/app' or '/download')
+  const isAppLandingPage = location.pathname === '/' || ['/app', '/download', '/mobile-app'].includes(location.pathname);
+  if (isAppLandingPage) {
+    return <AppLandingPage />;
+  }
+
+  // 1.5 Standalone Public Contest Browser Website ('/contest' or '/contests-hub' or '/website')
+  const isContestPage = ['/contest', '/contests-hub', '/website'].includes(location.pathname);
+  if (isContestPage) {
     return (
       <WebsiteHome 
         onNavigateToLogin={() => navigate('/login')} 

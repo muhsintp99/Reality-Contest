@@ -383,9 +383,35 @@ export class BiWeeklyRoomCycleController {
   // ================= LEADERBOARD =================
   async getLeaderboard(req: Request, res: Response, next: NextFunction) {
     try {
-      const { scope = 'Room', cycleId, roomId } = req.query;
-      const data = await biWeeklyRoomCycleService.getLeaderboard(scope as any, cycleId as string, roomId as string);
-      return res.status(200).json({ success: true, data });
+      const { scope = 'Room', cycleId } = req.query;
+      const roomId = req.params.roomId || req.params.id || (req.query.roomId as string);
+      const currentUserId = (req as any).user?.id || (req as any).user?._id;
+      const data: any = await biWeeklyRoomCycleService.getLeaderboard(scope as any, cycleId as string, roomId as string);
+
+      let currentUserRank: any = null;
+      if (currentUserId && Array.isArray(data)) {
+        const uIdx = data.findIndex((item: any) =>
+          (item.userId?._id || item.userId)?.toString() === currentUserId.toString()
+        );
+        if (uIdx !== -1) {
+          const itemObj = data[uIdx].toObject ? data[uIdx].toObject() : data[uIdx];
+          currentUserRank = {
+            ...itemObj,
+            rank: uIdx + 1
+          };
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        roomId: roomId || undefined,
+        cycleId: cycleId || undefined,
+        scope,
+        totalParticipants: Array.isArray(data) ? data.length : 0,
+        currentUserRank,
+        data,
+        leaderboard: data
+      });
     } catch (err: any) {
       return next(err);
     }
@@ -393,9 +419,17 @@ export class BiWeeklyRoomCycleController {
 
   async recalculateLeaderboard(req: Request, res: Response, next: NextFunction) {
     try {
-      const { cycleId } = req.body;
-      await biWeeklyRoomCycleService.recalculateLeaderboard(cycleId);
-      return res.status(200).json({ success: true, message: 'Leaderboard recalculation completed' });
+      const cycleId = req.body?.cycleId || req.params.cycleId || req.query.cycleId;
+      const roomId = req.params.roomId || req.params.id || req.body?.roomId;
+      await biWeeklyRoomCycleService.recalculateLeaderboard(cycleId as string);
+
+      const updatedLeaderboard = await biWeeklyRoomCycleService.getLeaderboard('Room', cycleId as string, roomId as string);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Leaderboard recalculation completed',
+        leaderboard: updatedLeaderboard
+      });
     } catch (err: any) {
       return next(err);
     }

@@ -189,7 +189,7 @@ export const DailyContestDetailsPage = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => navigate(`/admin-dashboard/daily-contests/${slugifyTitle(contest.title, contest._id || contestId)}/analytics`)}
+            onClick={() => navigate(`/admin-dashboard/daily-contests/${contest._id || contest.dailyContestId || slugifyTitle(contest.title)}/analytics`)}
             className="px-3 py-2 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 border border-indigo-500/20 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
           >
             <BarChart2 className="w-4 h-4" /> Analytics

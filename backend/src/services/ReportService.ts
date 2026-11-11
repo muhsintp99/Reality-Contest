@@ -8,6 +8,8 @@ import { RoomSubmission } from '../models/RoomSubmission';
 import { RoomReward } from '../models/RoomReward';
 import { User } from '../models/User';
 import { Result } from '../models/Result';
+import { Attempt } from '../models/Attempt';
+import { Group } from '../models/Group';
 import { Transaction } from '../models/Transaction';
 import { AuditLog, IAuditLog } from '../models/AuditLog';
 
@@ -644,30 +646,84 @@ export class ReportService {
     const prizePool = Number(contestObj.prizePool || contestObj.totalPrizePool || 100000);
     const maxParticipants = Number(contestObj.maxParticipants || contestObj.maxMembers || 250);
 
-    const totalRegisteredUsers = 248;
-    const totalJoinedUsers = 224;
-    const totalExitedUsers = 19;
-    const totalActiveParticipants = 65;
-    const totalCompletedParticipants = 140;
+    let totalRegisteredUsers = 0;
+    let totalJoinedUsers = 0;
+    let totalExitedUsers = 0;
+    let totalActiveParticipants = 0;
+    let totalCompletedParticipants = 0;
+    let participantsList: any[] = [];
+
+    const isMongoId = mongoose.isValidObjectId(contestObj._id);
+    if (isMongoId) {
+      try {
+        const queryFilter: any = { contestId: new mongoose.Types.ObjectId(contestObj._id) };
+        const [dbResults, dbAttempts, dbGroups] = await Promise.all([
+          Result.find(queryFilter).populate('userId', 'name username email phone avatar').sort({ score: -1, createdAt: 1 }).lean(),
+          Attempt.find(queryFilter).populate('userId', 'name username email phone avatar').lean(),
+          Group.find(queryFilter).lean()
+        ]);
+
+        const pIdSet = new Set<string>();
+        dbGroups.forEach((g: any) => {
+          if (Array.isArray(g.participants)) {
+            g.participants.forEach((p: any) => {
+              const pid = (p?._id || p)?.toString();
+              if (pid) pIdSet.add(pid);
+            });
+          }
+        });
+        dbAttempts.forEach((a: any) => {
+          const uid = (a.userId?._id || a.userId)?.toString();
+          if (uid) pIdSet.add(uid);
+        });
+        dbResults.forEach((r: any) => {
+          const uid = (r.userId?._id || r.userId)?.toString();
+          if (uid) pIdSet.add(uid);
+        });
+
+        const validUserIds = Array.from(pIdSet).filter(id => mongoose.isValidObjectId(id));
+        const dbUsers = validUserIds.length > 0
+          ? await User.find({ _id: { $in: validUserIds } }).select('name username email phone avatar createdAt').lean()
+          : [];
+
+        const uMap = new Map<string, any>();
+        dbUsers.forEach((u: any) => uMap.set(u._id.toString(), u));
+
+        // Format real participants
+        participantsList = dbResults.map((r: any, idx: number) => {
+          const u = r.userId || uMap.get((r.userId?._id || r.userId)?.toString()) || {};
+          const uIdStr = (u._id || r.userId?._id || r.userId || '').toString();
+          const prizeShare = idx === 0 ? Math.floor(prizePool * 0.5) : idx === 1 ? Math.floor(prizePool * 0.3) : idx === 2 ? Math.floor(prizePool * 0.2) : 0;
+          return {
+            id: `REG-${idx + 101}`,
+            userName: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username || `Contestant ${idx + 1}`,
+            contestantId: `CNT-${uIdStr ? uIdStr.slice(-4).toUpperCase() : idx + 1}`,
+            email: u.email || '',
+            phone: u.phone || '+91 98000 00000',
+            registeredAt: u.createdAt ? new Date(u.createdAt).toLocaleString() : 'Earlier',
+            joinTime: r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Earlier',
+            completionTime: r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Earlier',
+            score: r.score ?? 0,
+            rank: idx + 1,
+            status: r.status || (r.passed ? 'Completed' : 'Evaluated'),
+            prize: prizeShare,
+            tdsDeducted: Math.floor(prizeShare * 0.3),
+            netPrize: Math.floor(prizeShare * 0.7)
+          };
+        });
+
+        totalRegisteredUsers = Math.max(dbUsers.length, participantsList.length);
+        totalCompletedParticipants = dbResults.length;
+        totalJoinedUsers = Math.max(dbAttempts.length, totalCompletedParticipants);
+        totalExitedUsers = dbAttempts.filter((a: any) => a.cheatAlerts && a.cheatAlerts.length > 0).length;
+        totalActiveParticipants = Math.max(0, totalJoinedUsers - totalCompletedParticipants - totalExitedUsers);
+      } catch (err) {}
+    }
 
     const grossRevenue = entryFee * totalRegisteredUsers;
     const gstCollected = Math.round(grossRevenue * 0.18);
     const platformCommission = Math.round(grossRevenue * 0.20);
     const netPrizePool = prizePool;
-
-    // Participant Roster
-    const participantsList = [
-      { id: 'REG-101', userName: 'Aarav Sharma', contestantId: 'CNT-8902', email: 'aarav@gmail.com', phone: '+91 98765 43210', registeredAt: '2026-07-01 10:15 AM', joinTime: '10:30 AM', completionTime: '11:15 AM', score: 195, rank: 1, status: 'Completed', prize: Math.floor(prizePool * 0.50), tdsDeducted: Math.floor(prizePool * 0.50 * 0.30), netPrize: Math.floor(prizePool * 0.50 * 0.70) },
-      { id: 'REG-102', userName: 'Priya Patel', contestantId: 'CNT-4412', email: 'priya.p@yahoo.com', phone: '+91 98765 43211', registeredAt: '2026-07-01 10:20 AM', joinTime: '10:32 AM', completionTime: '11:18 AM', score: 188, rank: 2, status: 'Completed', prize: Math.floor(prizePool * 0.30), tdsDeducted: Math.floor(prizePool * 0.30 * 0.30), netPrize: Math.floor(prizePool * 0.30 * 0.70) },
-      { id: 'REG-103', userName: 'Rahul Verma', contestantId: 'CNT-1109', email: 'rahul.v@gmail.com', phone: '+91 98765 43212', registeredAt: '2026-07-01 10:22 AM', joinTime: '10:35 AM', completionTime: '11:20 AM', score: 182, rank: 3, status: 'Completed', prize: Math.floor(prizePool * 0.20), tdsDeducted: Math.floor(prizePool * 0.20 * 0.30), netPrize: Math.floor(prizePool * 0.20 * 0.70) },
-      { id: 'REG-104', userName: 'Simran Kaur', contestantId: 'CNT-1823', email: 'simran.k@yahoo.com', phone: '+91 98765 43213', registeredAt: '2026-07-01 10:25 AM', joinTime: '10:40 AM', completionTime: '11:25 AM', score: 174, rank: 4, status: 'Completed', prize: 0, tdsDeducted: 0, netPrize: 0 },
-      { id: 'REG-105', userName: 'Siddharth Nair', contestantId: 'CNT-5502', email: 'siddharth@live.com', phone: '+91 98765 43214', registeredAt: '2026-07-01 10:28 AM', joinTime: '10:42 AM', completionTime: '11:28 AM', score: 169, rank: 5, status: 'Completed', prize: 0, tdsDeducted: 0, netPrize: 0 },
-      { id: 'REG-106', userName: 'Ananya Gupta', contestantId: 'CNT-6631', email: 'ananya.g@outlook.com', phone: '+91 98765 43215', registeredAt: '2026-07-01 10:30 AM', joinTime: '10:45 AM', completionTime: null, score: 110, rank: 6, status: 'Active', prize: 0, tdsDeducted: 0, netPrize: 0 },
-      { id: 'REG-107', userName: 'Kavya Joshi', contestantId: 'CNT-2144', email: 'kavya.j@gmail.com', phone: '+91 98765 43216', registeredAt: '2026-07-01 10:35 AM', joinTime: '10:50 AM', completionTime: null, score: 95, rank: 7, status: 'Active', prize: 0, tdsDeducted: 0, netPrize: 0 },
-      { id: 'REG-108', userName: 'Vikram Singh', contestantId: 'CNT-7729', email: 'vikram.s@gmail.com', phone: '+91 98765 43217', registeredAt: '2026-07-01 10:18 AM', joinTime: '10:31 AM', completionTime: null, score: 45, rank: 8, status: 'Exited', exitReason: 'App Minimized / Timeout', prize: 0, tdsDeducted: 0, netPrize: 0 },
-      { id: 'REG-109', userName: 'Rohan Mehra', contestantId: 'CNT-9011', email: 'rohan.m@gmail.com', phone: '+91 98765 43218', registeredAt: '2026-07-01 10:40 AM', joinTime: '10:55 AM', completionTime: null, score: 20, rank: 9, status: 'Exited', exitReason: 'User Cancelled Session', prize: 0, tdsDeducted: 0, netPrize: 0 },
-      { id: 'REG-110', userName: 'Neha Reddy', contestantId: 'CNT-3391', email: 'neha.r@gmail.com', phone: '+91 98765 43219', registeredAt: '2026-07-01 10:45 AM', joinTime: null, completionTime: null, score: 0, rank: 10, status: 'Registered', prize: 0, tdsDeducted: 0, netPrize: 0 }
-    ];
 
     // Submission / Task Proofs Analytics
     const submissionsList = [

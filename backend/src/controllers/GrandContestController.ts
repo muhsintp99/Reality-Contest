@@ -23,7 +23,14 @@ export class GrandContestController {
   async getGrandContestDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const contest = await grandContestService.getGrandContestById(req.params.id);
-      res.status(200).json({ success: true, data: contest });
+      const analytics = await grandContestService.getGrandContestAnalytics(req.params.id).catch(() => null);
+
+      const contestObj = (contest && (contest as any).toObject) ? (contest as any).toObject() : { ...contest };
+      if (analytics) {
+        contestObj.analytics = (analytics as any).overview || analytics;
+      }
+
+      res.status(200).json({ success: true, data: contestObj, contest: contestObj, analytics });
     } catch (err) {
       next(err);
     }
@@ -190,6 +197,27 @@ export class GrandContestController {
       const reviewerId = (req as any).user?.id || (req as any).user?._id;
       const submission = await grandContestService.reviewGrandContestSubmission(req.params.id, reviewerId, req.body);
       res.status(200).json({ success: true, message: 'Submission review recorded', data: submission });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getGrandContestLeaderboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contestId = req.params.id || (req.query.contestId as string) || (req.query.id as string);
+      const currentUserId = (req as any).user?.id || (req as any).user?._id;
+      const data = await grandContestService.getGrandContestLeaderboard(contestId, currentUserId, req.query);
+      res.status(200).json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async recalculateGrandContestLeaderboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contestId = req.params.id || req.body?.contestId || req.body?.id;
+      const data = await grandContestService.recalculateGrandContestLeaderboard(contestId);
+      res.status(200).json(data);
     } catch (err) {
       next(err);
     }

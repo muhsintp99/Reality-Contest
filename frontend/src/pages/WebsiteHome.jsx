@@ -7,7 +7,7 @@ import {
   ArrowRight, CheckCircle2, Clock, Eye, ShoppingBag, Award, Users, 
   ChevronRight, ChevronLeft, LogIn, UserPlus, Flame, AlertCircle, X, RotateCw, Check,
   Home, Search, Heart, Sliders, Volume2, User, Download, MoreHorizontal,
-  ExternalLink, Copy, HelpCircle, ChevronUp, Sparkle, ArrowUp, Briefcase, Wallet
+  ExternalLink, Copy, HelpCircle, ChevronUp, Sparkle, ArrowUp, Briefcase, Wallet, Smartphone
 } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -977,7 +977,7 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
           <div className="flex items-center gap-3">
             
             {/* Logo Image */}
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/contest')}>
               <img 
                 src="/haka_favicon.png" 
                 alt="HAKA Logo" 
@@ -1052,6 +1052,16 @@ export const WebsiteHome = ({ onNavigateToLogin, onNavigateToRegister }) => {
             >
               <Wallet className="w-4 h-4 text-[#CEF500]" />
               <span className="hidden sm:inline">Wallet</span>
+            </button>
+
+            {/* Mobile App Landing Page Button Pill */}
+            <button
+              onClick={() => navigate('/')}
+              className="h-10 bg-[#CEF500]/10 hover:bg-[#CEF500]/25 border border-[#CEF500]/60 hover:border-[#CEF500] rounded-full px-3.5 flex items-center gap-1.5 text-xs font-black text-[#CEF500] shadow-lg hover:scale-105 transition-all cursor-pointer shrink-0"
+              title="Download HAKA Mobile App & Guide"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Get App</span>
             </button>
 
             {/* User Icon Avatar Button (Uniform h-10) */}

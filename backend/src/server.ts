@@ -206,7 +206,7 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
     }));
 
     // Apply general API rate limiting and mount standard API routes
-    app.use('/api', generalApiLimiter, createApiRouter(authLimiter));
+    app.use(['/api', '/api/api'], generalApiLimiter, createApiRouter(authLimiter));
 
     // Health Check Endpoint
     app.get('/health', (req, res) => {
@@ -233,13 +233,14 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
       logger.error('MongoDB connection error event:', err?.message || err);
     });
 
-    const dbOptions = {
-      maxPoolSize: 50,
-      minPoolSize: 5,
+    const dbOptions: mongoose.ConnectOptions = {
+      maxPoolSize: config.NODE_ENV === 'production' ? 50 : 20,
+      minPoolSize: config.NODE_ENV === 'production' ? 5 : 1,
+      maxIdleTimeMS: 30000, // Recycle idle sockets gracefully before cloud NAT/load balancer drops them
       socketTimeoutMS: 45000,
       serverSelectionTimeoutMS: 30000,
       connectTimeoutMS: 30000,
-      heartbeatFrequencyMS: 10000,
+      heartbeatFrequencyMS: 15000,
       retryWrites: true,
       retryReads: true
     };
@@ -261,6 +262,15 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
 
     // Start listening after MongoDB connection attempt completes
     const PORT = config.PORT;
+
+    server.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        logger.error(`Port ${PORT} is currently in use. Waiting for previous instance to release...`);
+      } else {
+        logger.error(`Server error: ${err?.message || err}`);
+      }
+    });
+
     server.listen(PORT, '0.0.0.0', () => {
       logger.info(`Haka Auth Server running on http://localhost:${PORT} [Worker: ${process.pid}]`);
       try {
@@ -269,6 +279,23 @@ if (isProduction && !process.env.PM2_USAGE && cluster.isPrimary) {
         logger.warn(`Failed to initialize contest schedule automation: ${automationErr.message}`);
       }
     });
+
+    // Graceful shutdown listeners for nodemon (SIGUSR2), Docker/PM2 (SIGTERM), and terminal (SIGINT)
+    const gracefulShutdown = () => {
+      server.close(() => {
+        logger.info('Server closed cleanly on shutdown signal.');
+        process.exit(0);
+      });
+    };
+
+    process.once('SIGUSR2', () => {
+      server.close(() => {
+        process.kill(process.pid, 'SIGUSR2');
+      });
+    });
+
+    process.on('SIGINT', gracefulShutdown);
+    process.on('SIGTERM', gracefulShutdown);
   };
 
   startServer().catch((err) => {

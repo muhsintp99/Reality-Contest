@@ -23,7 +23,14 @@ export class ContestController {
   async getContestDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const contest = await contestService.getContestById(req.params.id);
-      res.status(200).json({ success: true, contest });
+      const analytics = await contestService.getContestAnalytics(req.params.id).catch(() => null);
+
+      const contestObj = (contest && (contest as any).toObject) ? (contest as any).toObject() : { ...contest };
+      if (analytics) {
+        contestObj.analytics = analytics.overview || analytics;
+      }
+
+      res.status(200).json({ success: true, contest: contestObj, analytics });
     } catch (err) {
       next(err);
     }
@@ -83,6 +90,27 @@ export class ContestController {
       const { answers, cheatAlerts } = req.body;
       const result = await contestService.submitContestAnswers(contestId, userId, { answers, cheatAlerts });
       res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getContestLeaderboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contestId = req.params.id || (req.query.contestId as string) || (req.query.id as string);
+      const currentUserId = (req as any).user?.id || (req as any).user?._id;
+      const data = await contestService.getContestLeaderboard(contestId, currentUserId, req.query);
+      res.status(200).json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async recalculateContestLeaderboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const contestId = req.params.id || req.body?.contestId;
+      const data = await contestService.recalculateContestLeaderboard(contestId);
+      res.status(200).json(data);
     } catch (err) {
       next(err);
     }

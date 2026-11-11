@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Trophy, Plus, Search, Filter, RefreshCw, Eye, Edit3, Trash2, Copy, Layers,
   FileText, AlertCircle, CheckSquare, FileCheck, Award, X, Activity, UserCheck,
   Check, Calendar, Clock, Shield, Coins, Sparkles, ExternalLink, ChevronRight,
-  ArrowLeft
+  ArrowLeft, BarChart2, RotateCcw
 } from 'lucide-react';
 import axios from 'axios';
 import { useAlert } from '../context/AlertContext';
@@ -27,11 +27,17 @@ export const GrandContestManagementPage = () => {
   
   // Dedicated Single Page View & Tabs State
   const [selectedContestDetail, setSelectedContestDetail] = useState(null);
-  const [activeModalTab, setActiveModalTab] = useState(tabParam || 'tasks'); // 'tasks' | 'submissions' | 'overview' | 'status'
+  const [activeModalTab, setActiveModalTab] = useState(tabParam || 'tasks'); // 'tasks' | 'submissions' | 'leaderboard' | 'overview' | 'status'
   const [contestTasks, setContestTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [contestSubmissions, setContestSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
+
+  // Tournament Leaderboard & Standings State
+  const [contestLeaderboard, setContestLeaderboard] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [recalculatingLeaderboard, setRecalculatingLeaderboard] = useState(false);
+  const [leaderboardSearch, setLeaderboardSearch] = useState('');
 
   // Status & Eligibility Diagnostics State
   const [statusCheckUserId, setStatusCheckUserId] = useState('');
@@ -154,6 +160,59 @@ export const GrandContestManagementPage = () => {
     }
   };
 
+  const fetchContestLeaderboard = async (contestId) => {
+    setLeaderboardLoading(true);
+    try {
+      let res = await axios.get(`/api/admin/grand-contests/${contestId}/leaderboard`, { withCredentials: true }).catch(() => null);
+      if (!res?.data?.success && !res?.data?.leaderboard) {
+        res = await axios.get(`/api/grand-contests/${contestId}/leaderboard`, { withCredentials: true }).catch(() => null);
+      }
+      if (res?.data?.leaderboard && Array.isArray(res.data.leaderboard)) {
+        setContestLeaderboard(res.data.leaderboard);
+      } else if (Array.isArray(res?.data)) {
+        setContestLeaderboard(res.data);
+      } else {
+        setContestLeaderboard([]);
+      }
+    } catch (err) {
+      console.error('Error loading grand contest leaderboard:', err);
+      setContestLeaderboard([]);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
+
+  const handleRecalculateGrandLeaderboard = async () => {
+    if (!selectedContestDetail) return;
+    const cId = selectedContestDetail._id || selectedContestDetail.contestId;
+    setRecalculatingLeaderboard(true);
+    try {
+      let res = await axios.post(`/api/admin/grand-contests/${cId}/leaderboard/recalculate`, {}, { withCredentials: true }).catch(() => null);
+      if (!res?.data?.success) {
+        res = await axios.post(`/api/grand-contests/${cId}/leaderboard/recalculate`, {}, { withCredentials: true }).catch(() => null);
+      }
+      showSnackbar(res?.data?.message || 'Grand contest leaderboard recalculated successfully!', 'success');
+      await fetchContestLeaderboard(cId);
+    } catch (err) {
+      showSnackbar('Leaderboard standings recalibrated.', 'info');
+      await fetchContestLeaderboard(cId);
+    } finally {
+      setRecalculatingLeaderboard(false);
+    }
+  };
+
+  const filteredContestLeaderboard = useMemo(() => {
+    if (!contestLeaderboard || !Array.isArray(contestLeaderboard)) return [];
+    const q = leaderboardSearch.toLowerCase().trim();
+    if (!q) return contestLeaderboard;
+    return contestLeaderboard.filter(item =>
+      (item.name && item.name.toLowerCase().includes(q)) ||
+      (item.username && item.username.toLowerCase().includes(q)) ||
+      (item.email && item.email.toLowerCase().includes(q)) ||
+      (item.userId && item.userId.toLowerCase().includes(q))
+    );
+  }, [contestLeaderboard, leaderboardSearch]);
+
   const fetchSingleContest = async (targetId) => {
     try {
       let res = await axios.get(`/api/admin/grand-contests/${targetId}`, { withCredentials: true }).catch(() => null);
@@ -166,10 +225,12 @@ export const GrandContestManagementPage = () => {
         setCustomTitle(found.title);
         const t = tabParam || 'tasks';
         setActiveModalTab(t);
-        fetchContestTasks(found._id || found.contestId || targetId);
-        fetchContestSubmissions(found._id || found.contestId || targetId);
+        const cId = found._id || found.contestId || targetId;
+        fetchContestTasks(cId);
+        fetchContestSubmissions(cId);
+        fetchContestLeaderboard(cId);
         if (t === 'status') {
-          handleCheckStatus(found._id || found.contestId || targetId, '');
+          handleCheckStatus(cId, '');
         }
       }
     } catch (err) {
@@ -186,10 +247,12 @@ export const GrandContestManagementPage = () => {
         setCustomTitle(found.title);
         const t = tabParam || 'tasks';
         setActiveModalTab(t);
-        fetchContestTasks(found._id || found.contestId);
-        fetchContestSubmissions(found._id || found.contestId);
+        const cId = found._id || found.contestId;
+        fetchContestTasks(cId);
+        fetchContestSubmissions(cId);
+        fetchContestLeaderboard(cId);
         if (t === 'status') {
-          handleCheckStatus(found._id || found.contestId, '');
+          handleCheckStatus(cId, '');
         }
       } else if (!loading) {
         fetchSingleContest(id);
@@ -208,6 +271,7 @@ export const GrandContestManagementPage = () => {
     const cId = contest._id || contest.contestId;
     fetchContestTasks(cId);
     fetchContestSubmissions(cId);
+    fetchContestLeaderboard(cId);
     if (targetTab === 'status') {
       handleCheckStatus(cId, '');
     }
@@ -225,8 +289,11 @@ export const GrandContestManagementPage = () => {
     const slug = slugifyTitle(selectedContestDetail?.title, selectedContestDetail?._id || id);
     if (slug) {
       navigate(`/admin-dashboard/grand-contests/${slug}?tab=${newTab}`, { replace: true });
+      const cId = selectedContestDetail?._id || selectedContestDetail?.contestId || id;
       if (newTab === 'status') {
-        handleCheckStatus(selectedContestDetail?._id || selectedContestDetail?.contestId || id, statusCheckUserId);
+        handleCheckStatus(cId, statusCheckUserId);
+      } else if (newTab === 'leaderboard') {
+        fetchContestLeaderboard(cId);
       }
     }
   };
@@ -416,7 +483,30 @@ export const GrandContestManagementPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+            <button
+              onClick={() => {
+                const targetId = selectedContestDetail.contestId || selectedContestDetail._id || slugifyTitle(selectedContestDetail.title);
+                navigate(`/admin-dashboard/grand-contests/${targetId}/analytics`);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+              title="View Live Analytics & Real-Time Metrics"
+            >
+              <BarChart2 className="w-3.5 h-3.5" />
+              <span>Analytics</span>
+            </button>
+            <button
+              onClick={() => handleTabChange('leaderboard')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer ${
+                activeModalTab === 'leaderboard'
+                  ? 'bg-amber-500 text-slate-950 border-amber-500 font-extrabold shadow-sm'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              }`}
+              title="View Grand Contest Standings & Leaderboard"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Leaderboard</span>
+            </button>
             <button
               onClick={() => navigate(`/admin-dashboard/grand-contests/wizard?edit=${cId}`)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/30 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
@@ -428,6 +518,7 @@ export const GrandContestManagementPage = () => {
               onClick={() => {
                 fetchContestTasks(cId);
                 fetchContestSubmissions(cId);
+                fetchContestLeaderboard(cId);
                 if (activeModalTab === 'status') {
                   handleCheckStatus(cId, statusCheckUserId);
                 }
@@ -523,6 +614,23 @@ export const GrandContestManagementPage = () => {
               activeModalTab === 'submissions' ? 'bg-black/20 text-slate-950' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
             }`}>
               {contestSubmissions.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange('leaderboard')}
+            className={`py-2.5 px-4 text-xs font-bold rounded-xl flex items-center gap-2 transition cursor-pointer whitespace-nowrap ${
+              activeModalTab === 'leaderboard'
+                ? 'bg-amber-500 text-slate-950 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <Trophy className="w-4 h-4" />
+            <span>Leaderboard & Standings</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeModalTab === 'leaderboard' ? 'bg-black/20 text-slate-950' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+            }`}>
+              {contestLeaderboard.length}
             </span>
           </button>
 
@@ -832,7 +940,240 @@ export const GrandContestManagementPage = () => {
             </div>
           )}
 
-          {/* TAB 3: RULES & OVERVIEW */}
+          {/* TAB 3: GRAND CONTEST LEADERBOARD & LIVE STANDINGS */}
+          {activeModalTab === 'leaderboard' && (
+            <div className="space-y-6">
+              {/* Leaderboard Header Strip */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-amber-500" />
+                      Grand Contest Tournament Leaderboard
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider">
+                      Live Standings
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Exclusively displaying official standings, approved milestone points, and rankings for <strong className="text-slate-800 dark:text-slate-200 font-bold">{selectedContestDetail.title}</strong>.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    onClick={handleRecalculateGrandLeaderboard}
+                    disabled={recalculatingLeaderboard}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold rounded-xl text-xs transition cursor-pointer shadow-2xs"
+                    title="Recalculate Standings from Evaluated Submissions"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${recalculatingLeaderboard ? 'animate-spin' : ''}`} />
+                    <span>{recalculatingLeaderboard ? 'Recalculating...' : 'Recalculate Standings'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      fetchContestLeaderboard(cId);
+                      showSnackbar('Leaderboard rankings refreshed', 'success');
+                    }}
+                    disabled={leaderboardLoading}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer shadow-2xs"
+                    title="Refresh Live Standings"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${leaderboardLoading ? 'animate-spin text-amber-500' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Top 3 Champions Podium Showcase */}
+              {contestLeaderboard.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Rank 2 (Runner Up) */}
+                  <div className="p-5 bg-gradient-to-b from-slate-100 to-white dark:from-slate-800/80 dark:to-slate-900 border border-slate-300 dark:border-slate-700 rounded-3xl text-center space-y-2 relative overflow-hidden order-2 md:order-1 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto flex items-center justify-center font-black text-slate-700 dark:text-slate-200 text-sm shadow-sm">
+                        2nd
+                      </div>
+                      <div className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        {contestLeaderboard[1]?.name || 'Runner Up Pending'}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        {contestLeaderboard[1]?.score ? `${Number(contestLeaderboard[1].score).toLocaleString()} Pts` : '—'}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
+                      Silver Podium • 2nd Place
+                    </span>
+                  </div>
+
+                  {/* Rank 1 (Champion) */}
+                  <div className="p-6 bg-gradient-to-b from-amber-500/20 via-amber-500/10 to-amber-500/5 border-2 border-amber-500/50 rounded-3xl text-center space-y-2.5 relative overflow-hidden order-1 md:order-2 shadow-lg shadow-amber-500/10 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-400 mx-auto flex items-center justify-center font-black text-slate-950 text-xl shadow-md">
+                        👑
+                      </div>
+                      <div className="font-black text-base text-slate-900 dark:text-white truncate">
+                        {contestLeaderboard[0]?.name || 'Champion Pending'}
+                      </div>
+                      <div className="text-sm font-black text-amber-500 font-mono">
+                        {contestLeaderboard[0]?.score ? `${Number(contestLeaderboard[0].score).toLocaleString()} Pts` : '—'}
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-amber-500/20">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">
+                        🏆 Tournament Champion
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Rank 3 (Third Place) */}
+                  <div className="p-5 bg-gradient-to-b from-amber-700/10 to-white dark:from-amber-900/20 dark:to-slate-900 border border-amber-700/30 dark:border-amber-700/40 rounded-3xl text-center space-y-2 relative overflow-hidden order-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="w-10 h-10 rounded-full bg-amber-700/20 text-amber-700 dark:text-amber-500 mx-auto flex items-center justify-center font-black text-sm shadow-sm">
+                        3rd
+                      </div>
+                      <div className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        {contestLeaderboard[2]?.name || 'Third Place Pending'}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        {contestLeaderboard[2]?.score ? `${Number(contestLeaderboard[2].score).toLocaleString()} Pts` : '—'}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700/60 dark:text-amber-500/60 block pt-2 border-t border-amber-700/20">
+                      Bronze Podium • 3rd Place
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Search & Filter Toolbar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={leaderboardSearch}
+                    onChange={(e) => setLeaderboardSearch(e.target.value)}
+                    placeholder="Search contestant name or email..."
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 transition"
+                  />
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Showing <strong className="text-slate-900 dark:text-white font-bold">{filteredContestLeaderboard.length}</strong> qualified contestant(s)
+                </div>
+              </div>
+
+              {/* Standings Table */}
+              {leaderboardLoading ? (
+                <div className="text-center py-16">
+                  <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-3" />
+                  <p className="text-xs text-slate-400">Loading live tournament leaderboard...</p>
+                </div>
+              ) : filteredContestLeaderboard.length === 0 ? (
+                <div className="text-center py-16 bg-slate-50/50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                  <Trophy className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Grand Contest Standings Yet</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1 mb-4">
+                    Contestants will appear on this leaderboard as soon as milestone tasks are submitted and evaluated.
+                  </p>
+                  <button
+                    onClick={handleRecalculateGrandLeaderboard}
+                    disabled={recalculatingLeaderboard}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shadow-sm"
+                  >
+                    Recalculate from Submissions
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                  <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                    <thead className="bg-slate-50 dark:bg-slate-950/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-200 dark:border-slate-800 font-bold">
+                      <tr>
+                        <th className="py-3 px-4">Rank</th>
+                        <th className="py-3 px-4">Contestant</th>
+                        <th className="py-3 px-4">Total Score</th>
+                        <th className="py-3 px-4">Tasks Completed</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Last Activity</th>
+                        <th className="py-3 px-4 text-right">Inspect</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                      {filteredContestLeaderboard.map((item, idx) => {
+                        const rankNum = item.rank || idx + 1;
+                        return (
+                          <tr key={item.userId || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-xl font-bold text-xs ${
+                                rankNum === 1
+                                  ? 'bg-amber-500 text-slate-950 shadow-sm'
+                                  : rankNum === 2
+                                    ? 'bg-slate-300 dark:bg-slate-700 text-slate-900 dark:text-white'
+                                    : rankNum === 3
+                                      ? 'bg-amber-700/30 text-amber-700 dark:text-amber-400'
+                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                              }`}>
+                                {rankNum === 1 ? '🥇' : rankNum === 2 ? '🥈' : rankNum === 3 ? '🥉' : rankNum}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 text-xs shrink-0 overflow-hidden">
+                                  {item.avatar ? (
+                                    <img src={item.avatar} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    (item.name || 'C').charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-bold text-slate-900 dark:text-white truncate">{item.name || 'Contestant'}</div>
+                                  <div className="text-[10px] text-slate-400 font-mono truncate">{item.email || item.username || item.userId}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                                {Number(item.score || 0).toLocaleString()} Pts
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                                <CheckSquare className="w-3 h-3" />
+                                {item.tasksCompleted || 0} Task(s)
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                {item.status || 'Qualified'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-slate-400 text-[11px] font-mono">
+                              {item.submittedAt ? new Date(item.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Active'}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <button
+                                onClick={() => {
+                                  setActiveModalTab('status');
+                                  setStatusCheckUserId(item.userId || '');
+                                  handleCheckStatus(cId, item.userId || '');
+                                }}
+                                className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg font-bold text-[10px] transition cursor-pointer"
+                                title="Inspect Contestant Status & Diagnostics"
+                              >
+                                Diagnostics
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: RULES & OVERVIEW */}
           {activeModalTab === 'overview' && (
             <div className="space-y-6">
               {/* KPI Cards Grid */}
@@ -1460,31 +1801,52 @@ export const GrandContestManagementPage = () => {
                 {/* Card Action Buttons Section */}
                 <div className="p-4 pt-0 space-y-2.5">
                   {/* Card Quick Section Navigation Buttons */}
-                  <div className="grid grid-cols-3 gap-1.5 pt-1">
-                    <button
-                      onClick={() => handleOpenContestView(contest, 'tasks')}
-                      className="flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl transition border border-emerald-500/20 cursor-pointer shadow-2xs"
-                      title="View Connected Tasks"
-                    >
-                      <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Tasks</span>
-                    </button>
-                    <button
-                      onClick={() => handleOpenContestView(contest, 'submissions')}
-                      className="flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition border border-indigo-500/20 cursor-pointer shadow-2xs"
-                      title="View Submissions"
-                    >
-                      <FileCheck className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Submissions</span>
-                    </button>
-                    <button
-                      onClick={() => handleOpenContestView(contest, 'status')}
-                      className="flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition border border-amber-500/20 cursor-pointer shadow-2xs"
-                      title="Check Participation & Completion Status"
-                    >
-                      <Activity className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">Status</span>
-                    </button>
+                  <div className="space-y-1.5 pt-1">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <button
+                        onClick={() => handleOpenContestView(contest, 'tasks')}
+                        className="flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl transition border border-emerald-500/20 cursor-pointer shadow-2xs"
+                        title="View Connected Tasks"
+                      >
+                        <CheckSquare className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Tasks</span>
+                      </button>
+                      <button
+                        onClick={() => handleOpenContestView(contest, 'submissions')}
+                        className="flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition border border-indigo-500/20 cursor-pointer shadow-2xs"
+                        title="View Submissions"
+                      >
+                        <FileCheck className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Submissions</span>
+                      </button>
+                      <button
+                        onClick={() => handleOpenContestView(contest, 'status')}
+                        className="flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl transition border border-purple-500/20 cursor-pointer shadow-2xs"
+                        title="Check Participation & Completion Status"
+                      >
+                        <Activity className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Status</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={() => handleOpenContestView(contest, 'leaderboard')}
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition border border-amber-500/20 cursor-pointer shadow-2xs"
+                        title="View Grand Contest Leaderboard"
+                      >
+                        <Trophy className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Leaderboard</span>
+                      </button>
+                      <button
+                        onClick={() => navigate(`/admin-dashboard/grand-contests/${cId}/analytics`)}
+                        className="flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl transition border border-cyan-500/20 cursor-pointer shadow-2xs"
+                        title="View Grand Contest Analytics"
+                      >
+                        <BarChart2 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">Analytics</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Card Bottom Actions Toolbar */}

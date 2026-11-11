@@ -620,8 +620,15 @@ export const ContestManagement = () => {
               {/* Card Action Buttons */}
               <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
                 <div className="flex items-center gap-1 w-full justify-between">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => navigate(`/admin-dashboard/contests/${slugifyTitle(c.title, c._id)}/analytics`)} title="Contest Analytics" className="p-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-lg flex items-center gap-1 text-[11px] font-bold">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      onClick={() => navigate(`/admin-dashboard/leaderboard?contest=${encodeURIComponent(c.title)}&category=Standard Contest`)}
+                      title="Contest Leaderboard"
+                      className="p-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                    >
+                      <Trophy className="w-4 h-4" /> Leaderboard
+                    </button>
+                    <button onClick={() => navigate(`/admin-dashboard/contests/${c._id || slugifyTitle(c.title)}/analytics`)} title="Contest Analytics" className="p-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-lg flex items-center gap-1 text-[11px] font-bold cursor-pointer">
                       <BarChart2 className="w-4 h-4" /> Analytics
                     </button>
                     <button onClick={() => handleViewClick(c)} title="View Contest Details" className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-lg">

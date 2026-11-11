@@ -211,6 +211,10 @@ const AppContent = () => {
                   <Route path="grand-contests" element={<GrandContestManagement />} />
                   <Route path="grand-contest/:id" element={<GrandContestManagement />} />
                   <Route path="grand-contests/:id" element={<GrandContestManagement />} />
+                  <Route path="grand-contest/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
+                  <Route path="grand-contests/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
+                  <Route path="grand-contest/:title/analytics" element={<DailyContestAnalyticsPage />} />
+                  <Route path="grand-contests/:title/analytics" element={<DailyContestAnalyticsPage />} />
                   <Route path="grand-contests/wizard" element={<GrandContestWizard />} />
                   <Route path="question-bank" element={<Navigate to="question-bank/pool" replace />} />
                   <Route path="question-bank/pool" element={<QuestionPoolPage />} />
@@ -274,6 +278,9 @@ const AppContent = () => {
                   <Route path="sponsors" element={<UsersDirectory type="Sponsor" />} />
                   <Route path="contests" element={<ContestManagement />} />
                   <Route path="contests/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
+                  <Route path="contest/:contestId/analytics" element={<DailyContestAnalyticsPage />} />
+                  <Route path="contests/:title/analytics" element={<DailyContestAnalyticsPage />} />
+                  <Route path="contest/:title/analytics" element={<DailyContestAnalyticsPage />} />
                   <Route path="daily-contest" element={<DailyContestPage />} />
                   <Route path="daily-contest/create" element={<DailyContestWizard />} />
                   <Route path="daily-contest/:contestId/details" element={<DailyContestDetailsPage />} />

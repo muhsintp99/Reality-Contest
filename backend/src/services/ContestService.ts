@@ -9,6 +9,8 @@ import { IGroup } from '../models/Group';
 import { Question } from '../models/Question';
 import { Attempt } from '../models/Attempt';
 import { Result } from '../models/Result';
+import { Leaderboard } from '../models/Leaderboard';
+import { User } from '../models/User';
 import { walletService } from './WalletService';
 import { socketService } from './SocketService';
 import { BadRequestError, NotFoundError } from '../core/errors';
@@ -93,25 +95,36 @@ export class ContestService {
   }
 
   async getContestById(id: string): Promise<IContest> {
+    if (!id) {
+      throw new BadRequestError('Contest identifier is required.');
+    }
+    const cleanId = decodeURIComponent(id).trim();
     let contest: any = null;
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      contest = await Contest.findById(id).populate('questions').exec();
+    if (mongoose.Types.ObjectId.isValid(cleanId)) {
+      contest = await Contest.findById(cleanId).populate('questions').exec();
     }
     if (!contest) {
       // Also attempt lookup by custom contestId (e.g. CNT-2026-12345)
-      contest = await Contest.findOne({ contestId: id }).populate('questions').exec();
+      contest = await Contest.findOne({ contestId: cleanId }).sort({ createdAt: -1 }).populate('questions').exec();
+    }
+    if (!contest) {
+      // Lookup by exact or case-insensitive title (prefer newest active contest)
+      contest = await Contest.findOne({
+        title: { $regex: new RegExp(`^${cleanId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+      }).sort({ createdAt: -1 }).populate('questions').exec();
     }
     if (!contest) {
       // Attempt lookup by title slug
-      const slugSearch = id.replace(/-/g, ' ');
+      const slugSearch = cleanId.replace(/[-_]+/g, ' ');
       contest = await Contest.findOne({
         title: { $regex: new RegExp(`^${slugSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-      }).populate('questions').exec();
+      }).sort({ createdAt: -1 }).populate('questions').exec();
       if (!contest) {
-        const all = await Contest.find().populate('questions').limit(100).exec();
+        const all = await Contest.find().sort({ createdAt: -1 }).populate('questions').limit(150).exec();
+        const targetSlug = cleanId.toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
         contest = all.find((c: any) => {
           const s = (c.title || '').toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
-          return s === id.toLowerCase();
+          return s === targetSlug || (c.title || '').toLowerCase() === cleanId.toLowerCase();
         }) || null;
       }
     }
@@ -471,80 +484,245 @@ export class ContestService {
   }
 
   async getContestAnalytics(id: string): Promise<any> {
+    const rawParam = decodeURIComponent(id || '').trim();
     let contest: any = null;
     try {
-      contest = await this.getContestById(id);
+      contest = await this.getContestById(rawParam);
     } catch (e) {
       contest = null;
     }
 
+    const cleanTitle = contest
+      ? contest.title
+      : (rawParam && rawParam !== ':title')
+        ? rawParam.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        : 'Contest';
+
+    const cleanId = contest
+      ? (contest.contestId || contest._id.toString())
+      : (rawParam && rawParam !== ':title')
+        ? rawParam
+        : 'CNT-2026-101';
+
     const contestObj: any = contest ? (contest.toObject ? contest.toObject() : contest) : {
-      _id: id,
-      contestId: id,
-      title: 'India Creator Showdown 2026',
-      categories: ['Reality Showdown'],
-      status: 'Registration Open',
-      entryFee: 499,
-      prizePool: 1000000,
-      questionsCount: 25,
-      timerLimit: 45
+      _id: cleanId,
+      contestId: cleanId,
+      title: cleanTitle,
+      categories: ['Reality Contest'],
+      status: 'Upcoming',
+      entryFee: 0,
+      prizePool: 0,
+      questionsCount: 0,
+      timerLimit: 30
     };
 
-    const baseParticipants = 192;
-    const totalRegisteredUsers = 248;
-    const totalJoinedUsers = baseParticipants;
-    const totalExitedUsers = 23;
-    const totalActiveParticipants = 54;
-    const totalCompletedParticipants = 115;
-
-    const isWinnerSelected = contestObj.status === 'Completed' || totalCompletedParticipants > 10;
-    const winner = isWinnerSelected ? {
-      name: 'Aarav Sharma',
-      userId: 'USR-8902',
-      contestantId: 'CNT-8902',
-      finalScore: 195,
-      prizeAmount: Math.floor(Number(contestObj.prizePool || 1000000) * 0.5),
-      selectionTime: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-      runnerUp: { name: 'Priya Patel', userId: 'USR-4412', contestantId: 'CNT-4412', finalScore: 188, prizeAmount: Math.floor(Number(contestObj.prizePool || 1000000) * 0.3) },
-      thirdPlace: { name: 'Rahul Verma', userId: 'USR-1109', contestantId: 'CNT-1109', finalScore: 182, prizeAmount: Math.floor(Number(contestObj.prizePool || 1000000) * 0.2) }
-    } : null;
-
     const now = Date.now();
-    const formatTime = (msAgo: number) => new Date(now - msAgo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formatTime = (dateOrMs: Date | number) => {
+      const d = typeof dateOrMs === 'number' ? new Date(now - dateOrMs) : new Date(dateOrMs);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
 
-    const registeredList = [
-      { id: 'REG-101', userName: 'Aarav Sharma', userId: 'USR-8902', contestantId: 'CNT-8902', email: 'aarav@gmail.com', registrationTime: formatTime(6 * 3600 * 1000), status: 'Completed' },
-      { id: 'REG-102', userName: 'Priya Patel', userId: 'USR-4412', contestantId: 'CNT-4412', email: 'priya.p@yahoo.com', registrationTime: formatTime(5.8 * 3600 * 1000), status: 'Completed' },
-      { id: 'REG-103', userName: 'Rahul Verma', userId: 'USR-1109', contestantId: 'CNT-1109', email: 'rahul.v@gmail.com', registrationTime: formatTime(5.5 * 3600 * 1000), status: 'Completed' },
-      { id: 'REG-104', userName: 'Ananya Gupta', userId: 'USR-6631', contestantId: 'CNT-6631', email: 'ananya.g@outlook.com', registrationTime: formatTime(5.1 * 3600 * 1000), status: 'Active' },
-      { id: 'REG-105', userName: 'Vikram Singh', userId: 'USR-7729', contestantId: 'CNT-7729', email: 'vikram.s@gmail.com', registrationTime: formatTime(4.8 * 3600 * 1000), status: 'Exited' },
-      { id: 'REG-106', userName: 'Neha Reddy', userId: 'USR-3391', contestantId: 'CNT-3391', email: 'neha.r@gmail.com', registrationTime: formatTime(4.2 * 3600 * 1000), status: 'Registered' },
-      { id: 'REG-107', userName: 'Siddharth Nair', userId: 'USR-5502', contestantId: 'CNT-5502', email: 'siddharth@live.com', registrationTime: formatTime(3.9 * 3600 * 1000), status: 'Completed' },
-      { id: 'REG-108', userName: 'Kavya Joshi', userId: 'USR-2144', contestantId: 'CNT-2144', email: 'kavya.j@gmail.com', registrationTime: formatTime(3.1 * 3600 * 1000), status: 'Active' },
-      { id: 'REG-109', userName: 'Rohan Mehra', userId: 'USR-9011', contestantId: 'CNT-9011', email: 'rohan.m@gmail.com', registrationTime: formatTime(2.5 * 3600 * 1000), status: 'Exited' },
-      { id: 'REG-110', userName: 'Simran Kaur', userId: 'USR-1823', contestantId: 'CNT-1823', email: 'simran.k@yahoo.com', registrationTime: formatTime(1.8 * 3600 * 1000), status: 'Completed' }
-    ];
+    // 1. Fetch real groups & participants (safely check ObjectId validity)
+    const isValidId = Boolean(contest && contest._id) || mongoose.Types.ObjectId.isValid(contestObj._id);
+    let rawResults: any[] = [];
+    let rawAttempts: any[] = [];
+    const participantIdSet = new Set<string>();
 
-    const joinedList = registeredList.filter(u => u.status !== 'Registered').map(u => ({
-      ...u,
-      joinTime: formatTime(6 * 3600 * 1000 - 15 * 60 * 1000),
-      currentStatus: u.status
-    }));
+    if (isValidId) {
+      try {
+        const contestObjectId = (contest && contest._id)
+          ? contest._id
+          : (mongoose.Types.ObjectId.isValid(contestObj._id) ? new mongoose.Types.ObjectId(contestObj._id) : null);
+        const orConditions: any[] = [];
+        if (contestObjectId) {
+          orConditions.push({ contestId: contestObjectId });
+        }
+        if (contestObj.contestId && mongoose.Types.ObjectId.isValid(contestObj.contestId)) {
+          orConditions.push({ contestId: new mongoose.Types.ObjectId(contestObj.contestId) });
+        }
 
-    const exitedList = [
-      { id: 'EXIT-01', userName: 'Vikram Singh', userId: 'USR-7729', contestantId: 'CNT-7729', email: 'vikram.s@gmail.com', exitTime: formatTime(3.5 * 3600 * 1000), exitReason: 'App Minimized / Timeout' },
-      { id: 'EXIT-02', userName: 'Rohan Mehra', userId: 'USR-9011', contestantId: 'CNT-9011', email: 'rohan.m@gmail.com', exitTime: formatTime(1.2 * 3600 * 1000), exitReason: 'User Cancelled Quiz' },
-      { id: 'EXIT-03', userName: 'Deepak Roy', userId: 'USR-4819', contestantId: 'CNT-4819', email: 'deepak.r@gmail.com', exitTime: formatTime(0.8 * 3600 * 1000), exitReason: 'Network Connection Lost' },
-      { id: 'EXIT-04', userName: 'Meera Das', userId: 'USR-9921', contestantId: 'CNT-9921', email: 'meera.d@yahoo.com', exitTime: formatTime(0.3 * 3600 * 1000), exitReason: 'Time Limit Exceeded' }
-    ];
+        const queryFilter = orConditions.length === 1
+          ? orConditions[0]
+          : (orConditions.length > 1 ? { $or: orConditions } : null);
 
-    const completedList = [
-      { id: 'CMP-01', userName: 'Aarav Sharma', userId: 'USR-8902', contestantId: 'CNT-8902', email: 'aarav@gmail.com', completionTime: formatTime(2.1 * 3600 * 1000), finalScore: 195, rank: 1 },
-      { id: 'CMP-02', userName: 'Priya Patel', userId: 'USR-4412', contestantId: 'CNT-4412', email: 'priya.p@yahoo.com', completionTime: formatTime(2.3 * 3600 * 1000), finalScore: 188, rank: 2 },
-      { id: 'CMP-03', userName: 'Rahul Verma', userId: 'USR-1109', contestantId: 'CNT-1109', email: 'rahul.v@gmail.com', completionTime: formatTime(2.4 * 3600 * 1000), finalScore: 182, rank: 3 },
-      { id: 'CMP-04', userName: 'Siddharth Nair', userId: 'USR-5502', contestantId: 'CNT-5502', email: 'siddharth@live.com', completionTime: formatTime(2.0 * 3600 * 1000), finalScore: 176, rank: 4 },
-      { id: 'CMP-05', userName: 'Simran Kaur', userId: 'USR-1823', contestantId: 'CNT-1823', email: 'simran.k@yahoo.com', completionTime: formatTime(1.5 * 3600 * 1000), finalScore: 169, rank: 5 }
-    ];
+        const groupsInContest = queryFilter ? await this.groupRepo.find(queryFilter) : [];
+        groupsInContest.forEach((g) => {
+          if (Array.isArray(g.participants)) {
+            g.participants.forEach((p: any) => {
+              const pid = (p?._id || p)?.toString();
+              if (pid) participantIdSet.add(pid);
+            });
+          }
+        });
+
+        if (Array.isArray(contestObj.participants)) {
+          contestObj.participants.forEach((p: any) => {
+            const pid = (p?._id || p)?.toString();
+            if (pid) participantIdSet.add(pid);
+          });
+        }
+
+        rawResults = queryFilter ? await Result.find(queryFilter)
+          .populate('userId', 'name username email avatar')
+          .populate('attemptId', 'submittedAt startedAt score status answers cheatAlerts')
+          .sort({ score: -1, createdAt: 1 })
+          .lean() : [];
+
+        rawAttempts = queryFilter ? await Attempt.find(queryFilter)
+          .populate('userId', 'name username email avatar')
+          .lean() : [];
+      } catch (err) {
+        logger.warn(`Failed to query contest records for analytics: ${err}`);
+      }
+    }
+
+    // Collect all user IDs who joined or submitted
+    rawAttempts.forEach((att: any) => {
+      const uid = (att.userId?._id || att.userId)?.toString();
+      if (uid) participantIdSet.add(uid);
+    });
+    rawResults.forEach((res: any) => {
+      const uid = (res.userId?._id || res.userId)?.toString();
+      if (uid) participantIdSet.add(uid);
+    });
+
+    const participantIds = Array.from(participantIdSet).filter(uid => mongoose.Types.ObjectId.isValid(uid));
+    const users = participantIds.length > 0
+      ? await User.find({ _id: { $in: participantIds } }).select('name username email avatar createdAt').lean()
+      : [];
+
+    const userMap = new Map<string, any>();
+    users.forEach((u: any) => userMap.set(u._id.toString(), u));
+
+    let completedList: any[] = [];
+    let registeredList: any[] = [];
+    let joinedList: any[] = [];
+    let exitedList: any[] = [];
+
+    if (rawResults.length > 0 || rawAttempts.length > 0 || users.length > 0) {
+      // Build completed list from real results
+      completedList = rawResults.map((r: any, idx: number) => {
+        const u = r.userId || userMap.get((r.userId?._id || r.userId)?.toString()) || {};
+        const uIdStr = (u._id || r.userId?._id || r.userId || '').toString();
+        return {
+          id: `CMP-${idx + 1}`,
+          userName: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username || `Contestant ${idx + 1}`,
+          userId: uIdStr,
+          contestantId: `CNT-${uIdStr ? uIdStr.slice(-4).toUpperCase() : (idx + 101)}`,
+          email: u.email || '',
+          completionTime: r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : formatTime(2 * 3600 * 1000),
+          finalScore: r.score ?? 0,
+          rank: idx + 1,
+          passed: r.passed ?? false,
+          status: r.status || (r.passed ? 'Qualified' : 'Completed')
+        };
+      });
+
+      // Build registered list from users in groups or attempts
+      registeredList = users.map((u: any, idx: number) => {
+        const uIdStr = u._id.toString();
+        const hasCompleted = rawResults.some((r: any) => (r.userId?._id || r.userId)?.toString() === uIdStr);
+        const hasAttempt = rawAttempts.some((a: any) => (a.userId?._id || a.userId)?.toString() === uIdStr);
+        let userStatus = 'Registered';
+        if (hasCompleted) userStatus = 'Completed';
+        else if (hasAttempt) userStatus = 'Active';
+
+        return {
+          id: `REG-${idx + 101}`,
+          userName: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username || `User ${idx + 1}`,
+          userId: uIdStr,
+          contestantId: `CNT-${uIdStr.slice(-4).toUpperCase()}`,
+          email: u.email || '',
+          registrationTime: u.createdAt ? new Date(u.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : formatTime((6 - idx * 0.2) * 3600 * 1000),
+          status: userStatus
+        };
+      });
+
+      // If registeredList is empty but rawResults has entries (e.g. userId populated directly)
+      if (registeredList.length === 0 && rawResults.length > 0) {
+        registeredList = rawResults.map((r: any, idx: number) => {
+          const u = r.userId || {};
+          const uIdStr = (u._id || r.userId || '').toString();
+          return {
+            id: `REG-${idx + 101}`,
+            userName: u.name || u.username || `User ${idx + 1}`,
+            userId: uIdStr,
+            contestantId: `CNT-${uIdStr ? uIdStr.slice(-4).toUpperCase() : idx + 1}`,
+            email: u.email || '',
+            registrationTime: r.createdAt ? new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Earlier',
+            status: 'Completed'
+          };
+        });
+      }
+
+      // Joined list (those who actively joined / attempted / completed)
+      joinedList = registeredList.filter(u => u.status !== 'Registered').map(u => ({
+        ...u,
+        joinTime: formatTime(3 * 3600 * 1000),
+        currentStatus: u.status
+      }));
+
+      // Exited / flagged attempts
+      exitedList = rawAttempts
+        .filter((a: any) => (a.cheatAlerts && a.cheatAlerts.length > 0) || a.status === 'In Progress')
+        .map((a: any, idx: number) => {
+          const u = a.userId || userMap.get((a.userId?._id || a.userId)?.toString()) || {};
+          const uIdStr = (u._id || a.userId?._id || a.userId || '').toString();
+          const reason = (a.cheatAlerts && a.cheatAlerts[0]?.details) || (a.status === 'In Progress' ? 'Timed Out / Left Quiz' : 'Exited Contest');
+          return {
+            id: `EXIT-${idx + 1}`,
+            userName: u.name || u.username || `Contestant ${idx + 1}`,
+            userId: uIdStr,
+            contestantId: `CNT-${uIdStr ? uIdStr.slice(-4).toUpperCase() : idx + 1}`,
+            email: u.email || '',
+            exitTime: a.updatedAt ? new Date(a.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : formatTime(1 * 3600 * 1000),
+            exitReason: reason
+          };
+        });
+    }
+
+    const totalRegisteredUsers = registeredList.length;
+    const totalJoinedUsers = joinedList.length;
+    const totalCompletedParticipants = completedList.length;
+    const totalExitedUsers = exitedList.length;
+    const totalActiveParticipants = Math.max(0, totalJoinedUsers - totalCompletedParticipants - totalExitedUsers);
+
+    // Compute dynamic winner from top completed participant
+    const pool = Number(contestObj.prizePool || 0);
+    let winner: any = null;
+    if (completedList.length > 0) {
+      const top1 = completedList[0];
+      const top2 = completedList[1] || null;
+      const top3 = completedList[2] || null;
+
+      winner = {
+        name: top1.userName,
+        userId: top1.userId,
+        contestantId: top1.contestantId,
+        finalScore: top1.finalScore,
+        prizeAmount: pool > 0 ? Math.floor(pool * 0.5) : (Number(contestObj.coinsReward) || 10),
+        selectionTime: new Date().toISOString(),
+        runnerUp: top2 ? {
+          name: top2.userName,
+          userId: top2.userId,
+          contestantId: top2.contestantId,
+          finalScore: top2.finalScore,
+          prizeAmount: pool > 0 ? Math.floor(pool * 0.3) : 5
+        } : null,
+        thirdPlace: top3 ? {
+          name: top3.userName,
+          userId: top3.userId,
+          contestantId: top3.contestantId,
+          finalScore: top3.finalScore,
+          prizeAmount: pool > 0 ? Math.floor(pool * 0.2) : 2
+        } : null
+      };
+    }
+
+    const registrationPercentage = totalRegisteredUsers > 0 ? 100 : 0;
+    const joinPercentage = totalRegisteredUsers > 0 ? Math.round((totalJoinedUsers / totalRegisteredUsers) * 100) : 0;
+    const completionPercentage = totalJoinedUsers > 0 ? Math.round((totalCompletedParticipants / totalJoinedUsers) * 100) : 0;
+    const exitPercentage = totalJoinedUsers > 0 ? Math.round((totalExitedUsers / totalJoinedUsers) * 100) : 0;
 
     return {
       contest: {
@@ -564,35 +742,31 @@ export class ContestService {
         totalExitedUsers,
         totalActiveParticipants,
         totalCompletedParticipants,
-        winnerSelected: isWinnerSelected,
+        winnerSelected: Boolean(winner),
         winnerName: winner ? winner.name : null,
         contestStatus: contestObj.status || 'Active',
-        registrationPercentage: 100,
-        joinPercentage: 77,
-        exitPercentage: 12,
-        completionPercentage: 60
+        registrationPercentage,
+        joinPercentage,
+        exitPercentage,
+        completionPercentage
       },
       charts: {
-        registrationTrend: [
-          { time: '08:00 AM', count: 32 },
-          { time: '10:00 AM', count: 78 },
-          { time: '12:00 PM', count: 135 },
-          { time: '02:00 PM', count: 182 },
-          { time: '04:00 PM', count: 215 },
-          { time: '06:00 PM', count: 248 }
-        ],
-        joinVsExit: [
-          { hour: '09:00 AM', joined: 42, exited: 3 },
-          { hour: '11:00 AM', joined: 58, exited: 6 },
-          { hour: '01:00 PM', joined: 46, exited: 7 },
-          { hour: '03:00 PM', joined: 31, exited: 4 },
-          { hour: '05:00 PM', joined: 15, exited: 3 }
-        ],
+        registrationTrend: totalRegisteredUsers > 0 ? [
+          { time: '08:00 AM', count: Math.max(1, Math.round(totalRegisteredUsers * 0.2)) },
+          { time: '12:00 PM', count: Math.max(1, Math.round(totalRegisteredUsers * 0.5)) },
+          { time: '04:00 PM', count: Math.max(1, Math.round(totalRegisteredUsers * 0.8)) },
+          { time: '06:00 PM', count: totalRegisteredUsers }
+        ] : [],
+        joinVsExit: totalJoinedUsers > 0 ? [
+          { hour: '10:00 AM', joined: Math.ceil(totalJoinedUsers * 0.4), exited: Math.ceil(totalExitedUsers * 0.3) },
+          { hour: '02:00 PM', joined: Math.ceil(totalJoinedUsers * 0.4), exited: Math.ceil(totalExitedUsers * 0.4) },
+          { hour: '06:00 PM', joined: Math.max(1, totalJoinedUsers - Math.ceil(totalJoinedUsers * 0.8)), exited: Math.max(0, totalExitedUsers - Math.ceil(totalExitedUsers * 0.7)) }
+        ] : [],
         statusDistribution: [
-          { label: 'Completed', value: 115, color: '#10B981' },
-          { label: 'Active', value: 54, color: '#3B82F6' },
-          { label: 'Exited', value: 23, color: '#F43F5E' },
-          { label: 'Registered Only', value: 56, color: '#F59E0B' }
+          { label: 'Completed', value: totalCompletedParticipants, color: '#10B981' },
+          { label: 'Active', value: totalActiveParticipants, color: '#3B82F6' },
+          { label: 'Exited', value: totalExitedUsers, color: '#F43F5E' },
+          { label: 'Registered', value: Math.max(0, totalRegisteredUsers - totalJoinedUsers), color: '#F59E0B' }
         ]
       },
       participants: {
@@ -603,12 +777,36 @@ export class ContestService {
       },
       winners: winner,
       timeline: [
-        { title: 'Contest Created', timestamp: formatTime(12 * 3600 * 1000), details: 'Contest structure initialized', status: 'Completed' },
-        { title: 'Registration Opened', timestamp: formatTime(10 * 3600 * 1000), details: 'Opened for all registered contestants', status: 'Completed' },
-        { title: 'Contest Started', timestamp: formatTime(8 * 3600 * 1000), details: 'Quiz questions unlocked', status: 'Completed' },
-        { title: 'Participants Joined', timestamp: formatTime(6 * 3600 * 1000), details: `${totalJoinedUsers} participants actively engaged`, status: 'Active' },
-        { title: 'Registration Closed', timestamp: formatTime(2 * 3600 * 1000), details: 'Registration window concluded', status: 'Completed' },
-        { title: 'Winner Selected', timestamp: formatTime(0.5 * 3600 * 1000), details: isWinnerSelected ? `Winner: ${winner?.name} (${winner?.finalScore} pts)` : 'Calculating scores...', status: isWinnerSelected ? 'Completed' : 'Pending' }
+        {
+          title: 'Contest Created',
+          timestamp: contestObj.createdAt ? new Date(contestObj.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Created',
+          details: `Contest "${contestObj.title}" initialized with prize pool ${contestObj.prizePool || 0}`,
+          status: 'Completed'
+        },
+        {
+          title: 'Registration Window',
+          timestamp: contestObj.startDate ? new Date(contestObj.startDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Open',
+          details: `${totalRegisteredUsers} contestant(s) enrolled`,
+          status: totalRegisteredUsers > 0 ? 'Completed' : 'Active'
+        },
+        {
+          title: 'Live Contest Quiz',
+          timestamp: contestObj.startDate ? new Date(contestObj.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Live',
+          details: `${totalJoinedUsers} participant(s) joined live quiz session`,
+          status: totalJoinedUsers > 0 ? 'Completed' : 'Pending'
+        },
+        {
+          title: 'Evaluations & Grading',
+          timestamp: completedList.length > 0 ? 'Graded' : 'Pending',
+          details: `${totalCompletedParticipants} participant(s) completed and scored`,
+          status: totalCompletedParticipants > 0 ? 'Completed' : 'Pending'
+        },
+        {
+          title: 'Winners Declared',
+          timestamp: winner ? 'Declared' : 'Pending',
+          details: winner ? `1st Place: ${winner.name} (Score: ${winner.finalScore})` : 'Awaiting contest conclusion and scoring',
+          status: winner ? 'Completed' : 'Pending'
+        }
       ]
     };
   }
@@ -858,6 +1056,11 @@ export class ContestService {
       currency
     });
 
+    // Update or trigger live Leaderboard sync
+    try {
+      this.recalculateContestLeaderboard(contest._id.toString()).catch(() => null);
+    } catch (e) {}
+
     return {
       success: true,
       contestId: contest._id.toString(),
@@ -879,6 +1082,272 @@ export class ContestService {
         coins: updatedUser?.coins ?? user.coins
       },
       answerDetails
+    };
+  }
+
+  async getContestLeaderboard(
+    contestId?: string,
+    currentUserId?: string,
+    query: { limit?: string | number; page?: string | number; groupId?: string; stageId?: string } = {}
+  ): Promise<any> {
+    let targetParam = contestId;
+    if (!targetParam) {
+      try {
+        const latestContest = await Contest.findOne().sort({ createdAt: -1 }).lean();
+        if (latestContest) {
+          targetParam = latestContest.contestId || latestContest._id.toString();
+        }
+      } catch {}
+      if (!targetParam) {
+        targetParam = 'test';
+      }
+    }
+
+    const rawParam = decodeURIComponent(targetParam || '').trim();
+    let contest: any = null;
+    try {
+      contest = await this.getContestById(rawParam);
+    } catch {
+      contest = null;
+    }
+
+    const cleanTitle = contest
+      ? contest.title
+      : (rawParam && rawParam !== ':title')
+        ? rawParam.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        : 'Contest';
+
+    const cleanId = contest
+      ? (contest.contestId || contest._id.toString())
+      : (rawParam && rawParam !== ':title')
+        ? rawParam
+        : 'CNT-2026-101';
+
+    const contestObj = contest ? (contest.toObject ? contest.toObject() : contest) : {
+      _id: cleanId,
+      contestId: cleanId,
+      title: cleanTitle
+    };
+
+    const filter: any = { contestId: contestObj._id };
+    if (query.groupId) filter.groupId = query.groupId;
+    if (query.stageId) filter.stageId = query.stageId;
+
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(query.limit) || 50));
+    const skip = (page - 1) * limit;
+
+    const isValidId = Boolean(contest && contest._id) || mongoose.Types.ObjectId.isValid(contestObj._id);
+
+    // 1. Fetch real result records from database if valid ObjectId
+    let rawResults: any[] = [];
+    if (isValidId) {
+      try {
+        rawResults = await Result.find(filter)
+          .populate('userId', 'name username email avatar walletBalance score')
+          .populate('attemptId', 'submittedAt startedAt answers cheatAlerts')
+          .sort({ score: -1, createdAt: 1 })
+          .lean();
+      } catch (err) {}
+    }
+
+    let leaderboardItems: any[] = [];
+    let totalParticipants = rawResults.length;
+
+    if (rawResults.length > 0) {
+      leaderboardItems = rawResults.map((r: any, idx: number) => {
+        const u = r.userId || {};
+        const att = r.attemptId || {};
+        const uIdStr = (u._id || r.userId || '').toString();
+        return {
+          rank: idx + 1,
+          userId: uIdStr,
+          name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username || `Contestant ${idx + 1}`,
+          username: u.username || '',
+          email: u.email || '',
+          avatar: u.avatar || '',
+          score: r.score ?? 0,
+          passed: r.passed ?? false,
+          status: r.status || (r.passed ? 'Qualified' : 'Evaluated'),
+          remarks: r.remarks || '',
+          submittedAt: att.submittedAt || r.createdAt || r.updatedAt
+        };
+      });
+    } else {
+      // 2. Check if Leaderboard collection has cached rankings
+      let cachedLeaderboard: any = null;
+      if (isValidId) {
+        try {
+          cachedLeaderboard = await Leaderboard.findOne({ contestId: contestObj._id })
+            .populate('rankings.userId', 'name username email avatar')
+            .lean();
+        } catch (err) {}
+      }
+
+      if (cachedLeaderboard && cachedLeaderboard.rankings && cachedLeaderboard.rankings.length > 0) {
+        totalParticipants = cachedLeaderboard.rankings.length;
+        leaderboardItems = cachedLeaderboard.rankings.map((rk: any, idx: number) => {
+          const u = rk.userId || {};
+          const uIdStr = (u._id || rk.userId || '').toString();
+          return {
+            rank: rk.rank || idx + 1,
+            userId: uIdStr,
+            name: u.name || u.username || `Contestant ${idx + 1}`,
+            username: u.username || '',
+            email: u.email || '',
+            avatar: u.avatar || '',
+            score: rk.score ?? 0,
+            passed: true,
+            status: 'Qualified',
+            submittedAt: cachedLeaderboard.updatedAt || new Date()
+          };
+        });
+      } else {
+        // 3. Fallback: Check participants enrolled in contest groups
+        let groupsInContest: any[] = [];
+        if (isValidId) {
+          try {
+            groupsInContest = await this.groupRepo.find({ contestId: contestObj._id });
+          } catch (err) {}
+        }
+        const participantIds: any[] = [];
+        for (const g of groupsInContest) {
+          if (Array.isArray(g.participants)) {
+            participantIds.push(...g.participants);
+          }
+        }
+
+        if (participantIds.length > 0) {
+          let users: any[] = [];
+          try {
+            users = await User.find({ _id: { $in: participantIds } })
+              .select('name username email avatar score')
+              .lean();
+          } catch (err) {}
+          totalParticipants = users.length;
+          leaderboardItems = users
+            .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
+            .map((u: any, idx: number) => ({
+              rank: idx + 1,
+              userId: u._id.toString(),
+              name: u.name || u.username || `Contestant ${idx + 1}`,
+              username: u.username || '',
+              email: u.email || '',
+              avatar: u.avatar || '',
+              score: u.score ?? 0,
+              passed: true,
+              status: 'Joined',
+              submittedAt: new Date()
+            }));
+        } else {
+          totalParticipants = 0;
+          leaderboardItems = [];
+        }
+      }
+    }
+
+    // Find current user's standing
+    let currentUserRank: any = null;
+    if (currentUserId) {
+      const uRankIdx = leaderboardItems.findIndex((item) =>
+        item.userId?.toString() === currentUserId.toString()
+      );
+      if (uRankIdx !== -1) {
+        currentUserRank = {
+          ...leaderboardItems[uRankIdx],
+          rank: uRankIdx + 1
+        };
+      }
+    }
+
+    // Apply pagination
+    const paginatedLeaderboard = leaderboardItems.slice(skip, skip + limit);
+
+    return {
+      success: true,
+      contestId: contestObj._id.toString(),
+      contestTitle: contestObj.title,
+      totalParticipants,
+      page,
+      limit,
+      totalPages: Math.ceil(totalParticipants / limit) || 1,
+      currentUserRank,
+      leaderboard: paginatedLeaderboard
+    };
+  }
+
+  async recalculateContestLeaderboard(contestId: string): Promise<any> {
+    const rawParam = decodeURIComponent(contestId || '').trim();
+    let contest: any = null;
+    try {
+      contest = await this.getContestById(rawParam);
+    } catch {
+      contest = null;
+    }
+
+    const cleanTitle = contest
+      ? contest.title
+      : (rawParam && rawParam !== ':title')
+        ? rawParam.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        : 'Contest';
+
+    const cleanId = contest
+      ? (contest.contestId || contest._id.toString())
+      : (rawParam && rawParam !== ':title')
+        ? rawParam
+        : 'CNT-2026-101';
+
+    const contestObj = contest ? (contest.toObject ? contest.toObject() : contest) : {
+      _id: cleanId,
+      contestId: cleanId,
+      title: cleanTitle
+    };
+
+    const isValidId = Boolean(contest && contest._id) || mongoose.Types.ObjectId.isValid(contestObj._id);
+    let rankings: any[] = [];
+
+    if (isValidId) {
+      try {
+        const rawResults = await Result.find({ contestId: contestObj._id })
+          .populate('userId', 'name username email')
+          .sort({ score: -1, createdAt: 1 })
+          .lean();
+
+        rankings = rawResults.map((r: any, idx: number) => ({
+          userId: r.userId?._id || r.userId,
+          score: r.score || 0,
+          rank: idx + 1
+        }));
+
+        if (rankings.length > 0) {
+          await Leaderboard.findOneAndUpdate(
+            { contestId: contestObj._id },
+            { contestId: contestObj._id, rankings, updatedAt: new Date() },
+            { upsert: true, new: true }
+          );
+        }
+      } catch (err) {}
+    }
+
+    if (rankings.length === 0) {
+      rankings = [];
+    }
+
+    // Broadcast live update to real-time socket connections
+    try {
+      socketService.broadcastLeaderboard({
+        contestId: contestObj._id,
+        contestTitle: contestObj.title,
+        updatedAt: new Date(),
+        rankings
+      });
+    } catch (e) {}
+
+    return {
+      success: true,
+      message: `Leaderboard recalculated for contest "${contestObj.title}".`,
+      totalRanked: rankings.length,
+      topRankings: rankings.slice(0, 10)
     };
   }
 }

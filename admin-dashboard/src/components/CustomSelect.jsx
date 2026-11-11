@@ -80,7 +80,7 @@ export const CustomSelect = ({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 bg-slate-900/90 dark:bg-[#0f172a]/95 backdrop-blur-md border ${
+        className={`w-full h-full flex items-center justify-between gap-3 px-3.5 py-2 bg-slate-900/90 dark:bg-[#0f172a]/95 backdrop-blur-md border ${
           disabled
             ? 'opacity-50 cursor-not-allowed border-slate-800'
             : isOpen
