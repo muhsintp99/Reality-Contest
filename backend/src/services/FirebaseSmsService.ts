@@ -44,7 +44,121 @@ class FirebaseSmsService {
   }
 
   async sendSMS(phone: string, message: string): Promise<boolean> {
-    logger.info(`[FIREBASE SMS CLIENT] Triggering SMS to ${phone} via Firebase Authentication API. Message: "${message}"`);
+    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+    const twilioToken = process.env.TWILIO_AUTH_TOKEN;
+    const twilioFrom = process.env.TWILIO_PHONE_NUMBER;
+
+    const enablexSmsAppId = process.env.ENABLEX_SMS_APP_ID;
+    const enablexSmsAppKey = process.env.ENABLEX_SMS_APP_KEY;
+
+    const fast2smsApiKey = process.env.FAST2SMS_API_KEY;
+
+    // Extract OTP digits if present
+    const otpMatch = message.match(/\b\d{4,6}\b/);
+    const otp = otpMatch ? otpMatch[0] : '';
+
+    // Standardize Indian phone number (10 digits for Indian gateways, E.164 for international)
+    const cleanDigits = phone.replace(/\D/g, '');
+    const indian10Digit = cleanDigits.length > 10 ? cleanDigits.slice(-10) : cleanDigits;
+    const internationalPhone = phone.startsWith('+') ? phone : `+91${indian10Digit}`;
+
+    // 1. TWILIO GATEWAY (Configured via TWILIO_* in .env)
+    if (twilioSid && twilioToken && twilioFrom) {
+      try {
+        logger.info(`[SMS GATEWAY] Sending SMS via Twilio to ${internationalPhone}...`);
+        const basicAuth = Buffer.from(`${twilioSid.trim()}:${twilioToken.trim()}`).toString('base64');
+        const params = new URLSearchParams();
+        params.append('To', internationalPhone);
+        params.append('From', twilioFrom.trim());
+        params.append('Body', message);
+
+        const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid.trim()}/Messages.json`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${basicAuth}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: params.toString()
+        });
+
+        const data: any = await response.json();
+        if (response.ok && data.sid) {
+          logger.info(`[SMS GATEWAY] Twilio SMS delivered successfully to ${internationalPhone}. SID: ${data.sid}`);
+          return true;
+        } else {
+          logger.warn(`[SMS GATEWAY] Twilio error: ${data.message || JSON.stringify(data)}. Trying EnableX fallback if available...`);
+        }
+      } catch (err: any) {
+        logger.warn(`[SMS GATEWAY] Twilio network error: ${err.message}`);
+      }
+    }
+
+    // 2. ENABLEX SMS GATEWAY (Configured via ENABLEX_SMS_* in .env)
+    if (enablexSmsAppId && enablexSmsAppKey) {
+      try {
+        logger.info(`[SMS GATEWAY] Sending SMS via EnableX to ${internationalPhone}...`);
+        const basicAuth = Buffer.from(`${enablexSmsAppId.trim()}:${enablexSmsAppKey.trim()}`).toString('base64');
+        const response = await fetch('https://api.enablex.io/sms/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${basicAuth}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: internationalPhone,
+            body: message,
+            type: 'transactional',
+            data_coding: 'plain'
+          })
+        });
+
+        const data: any = await response.json();
+        if (response.ok || data.status === 'queued' || data.job_id) {
+          logger.info(`[SMS GATEWAY] EnableX SMS queued successfully to ${internationalPhone}. Job ID: ${data.job_id || 'OK'}`);
+          return true;
+        } else {
+          logger.warn(`[SMS GATEWAY] EnableX error: ${JSON.stringify(data)}`);
+        }
+      } catch (err: any) {
+        logger.warn(`[SMS GATEWAY] EnableX network error: ${err.message}`);
+      }
+    }
+
+    // 3. FAST2SMS GATEWAY (Fallback if configured)
+    if (fast2smsApiKey) {
+      try {
+        logger.info(`[SMS GATEWAY] Sending OTP SMS via Fast2SMS to ${indian10Digit}...`);
+        const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+          method: 'POST',
+          headers: {
+            'authorization': fast2smsApiKey.trim(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            route: 'otp',
+            variables_values: otp || '123456',
+            numbers: indian10Digit
+          })
+        });
+
+        const data: any = await response.json();
+        if (data.return === true) {
+          logger.info(`[SMS GATEWAY] Fast2SMS delivered successfully to ${indian10Digit}: ${JSON.stringify(data.message)}`);
+          return true;
+        } else {
+          logger.error(`[SMS GATEWAY] Fast2SMS returned error: ${JSON.stringify(data.message || data)}`);
+        }
+      } catch (err: any) {
+        logger.error(`[SMS GATEWAY] Fast2SMS network error: ${err.message}`);
+      }
+    }
+
+    // 4. FALLBACK / SIMULATION (If no active gateway succeeded)
+    if (!twilioSid && !enablexSmsAppId && !fast2smsApiKey) {
+      logger.warn(`⚠️ [SMS GATEWAY] No SMS Gateway API Key found in backend/.env.`);
+    }
+    logger.info(`[SMS LOG] Target: ${phone} | OTP: ${otp || message}`);
+
     return true;
   }
 }

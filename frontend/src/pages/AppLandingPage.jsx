@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Trophy, Play, Download, Smartphone, ShieldCheck, Zap, Star, 
@@ -229,7 +229,11 @@ export const AppLandingPage = () => {
   const [openFaqIdx, setOpenFaqIdx] = useState(0);
   const [showQrModal, setShowQrModal] = useState(false);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
-  const [teamSlideIdx, setTeamSlideIdx] = useState(0);
+  const [teamSlideIdx, setTeamSlideIdx] = useState(1);
+  const [slideDirection, setSlideDirection] = useState(1);
+  const [isTeamHovered, setIsTeamHovered] = useState(false);
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
   const [selectedPreviewImage, setSelectedPreviewImage] = useState(null);
 
   // Contact form state
@@ -324,7 +328,7 @@ export const AppLandingPage = () => {
     }
   ];
 
-  // Team members matching the 3 circle cards in reference image
+  // Team members matching the 3 circle cards in reference image (Slider Roster)
   const TEAM_MEMBERS = [
     {
       id: 'cto',
@@ -334,7 +338,7 @@ export const AppLandingPage = () => {
       badge: "CTO",
       bio: "12+ yrs building ultra-low latency real-time tournament servers & anti-cheat engines.",
       ringColor: "border-[#8B5CF6]",
-      glowColor: "shadow-[#8B5CF6]/30",
+      glowColor: "shadow-[#8B5CF6]/35",
       accentBg: "bg-[#8B5CF6]",
       image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=80"
     },
@@ -346,7 +350,7 @@ export const AppLandingPage = () => {
       badge: "FOUNDER & CEO",
       bio: "Serial gaming founder. Pioneering India's premier skill-based reality contest tournament ecosystem.",
       ringColor: "border-[#FF4B55]",
-      glowColor: "shadow-[#FF4B55]/40",
+      glowColor: "shadow-[#FF4B55]/45",
       accentBg: "bg-[#FF4B55]",
       featured: true,
       image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=500&q=80"
@@ -359,7 +363,7 @@ export const AppLandingPage = () => {
       badge: "GAME DESIGN",
       bio: "Former design lead at premier gaming studios. Mastermind behind HAKA's millisecond quiz flow.",
       ringColor: "border-[#1877F2]",
-      glowColor: "shadow-[#1877F2]/30",
+      glowColor: "shadow-[#1877F2]/35",
       accentBg: "bg-[#1877F2]",
       image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=500&q=80"
     },
@@ -368,14 +372,51 @@ export const AppLandingPage = () => {
       name: "Meera Sharma",
       role: "VP of Contest Integrity",
       tag: "Fair Play & Trust",
-      badge: "OPERATIONS",
+      badge: "INTEGRITY LEAD",
       bio: "National legal & compliance lead. Ensuring 100% audited skill-based integrity across all games.",
       ringColor: "border-emerald-500",
-      glowColor: "shadow-emerald-500/30",
+      glowColor: "shadow-emerald-500/35",
       accentBg: "bg-emerald-500",
       image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=500&q=80"
+    },
+    {
+      id: 'growth',
+      name: "Rohan Das",
+      role: "Head of Player Growth",
+      tag: "Community & Scale",
+      badge: "GROWTH VP",
+      bio: "Scaled interactive mobile platforms to 20M+ users. Architect behind HAKA's viral tournaments.",
+      ringColor: "border-amber-500",
+      glowColor: "shadow-amber-500/35",
+      accentBg: "bg-amber-500",
+      image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=500&q=80"
     }
   ];
+
+  // Auto-play slider rotation (advances smoothly every 4.5 seconds unless hovered)
+  useEffect(() => {
+    if (isTeamHovered) return;
+    const interval = setInterval(() => {
+      setSlideDirection(1);
+      setTeamSlideIdx((prev) => (prev + 1) % TEAM_MEMBERS.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [isTeamHovered, TEAM_MEMBERS.length]);
+
+  const handleNextTeam = () => {
+    setSlideDirection(1);
+    setTeamSlideIdx((prev) => (prev + 1) % TEAM_MEMBERS.length);
+  };
+
+  const handlePrevTeam = () => {
+    setSlideDirection(-1);
+    setTeamSlideIdx((prev) => (prev === 0 ? TEAM_MEMBERS.length - 1 : prev - 1));
+  };
+
+  const handleDotClick = (idx) => {
+    setSlideDirection(idx > teamSlideIdx ? 1 : -1);
+    setTeamSlideIdx(idx);
+  };
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -803,7 +844,7 @@ export const AppLandingPage = () => {
                 y: { repeat: Infinity, duration: 4.5, ease: "easeInOut" },
                 opacity: { duration: 0.6 }
               }}
-              className="hidden xl:flex absolute -right-10 -bottom-10 z-20 flex-col items-center select-none"
+              className="hidden xl:flex absolute -right-6 bottom-0 z-20 flex-col items-center select-none"
             >
               <div className="relative p-2.5 bg-gradient-to-tr from-[#8B5CF6] via-[#FF4B55] to-[#2563EB] rounded-3xl shadow-2xl">
                 <div className="w-28 h-36 rounded-2xl bg-white p-2 flex flex-col items-center justify-between text-center overflow-hidden">
@@ -1738,131 +1779,194 @@ export const AppLandingPage = () => {
             </p>
           </motion.div>
 
-          {/* Interactive Carousel Showcase Container */}
-          <div className="relative max-w-5xl mx-auto flex items-center justify-center">
-            
-            {/* Left Carousel Arrow */}
+          {/* Interactive Perspective Slider Showcase */}
+          <div 
+            className="relative max-w-5xl mx-auto flex items-center justify-center px-4 sm:px-14 py-4 select-none touch-pan-y"
+            onMouseEnter={() => setIsTeamHovered(true)}
+            onMouseLeave={() => setIsTeamHovered(false)}
+            onTouchStart={(e) => {
+              touchStartXRef.current = e.touches[0].clientX;
+              touchStartYRef.current = e.touches[0].clientY;
+            }}
+            onTouchEnd={(e) => {
+              const diffX = touchStartXRef.current - e.changedTouches[0].clientX;
+              const diffY = touchStartYRef.current - e.changedTouches[0].clientY;
+              if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0) handleNextTeam();
+                else handlePrevTeam();
+              }
+            }}
+          >
+            {/* Left Carousel Arrow Button (Safely inside container padding) */}
             <button
-              onClick={() => setTeamSlideIdx((prev) => (prev === 0 ? TEAM_MEMBERS.length - 1 : prev - 1))}
+              onClick={handlePrevTeam}
               aria-label="Previous Team Member"
-              className="hidden lg:flex absolute -left-8 z-30 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl items-center justify-center text-slate-600 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all"
+              className="absolute left-1 sm:left-2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl flex items-center justify-center text-slate-700 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all shadow-slate-300/60"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
-            {/* 3 Team Spotlight Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 w-full items-center">
-              {[0, 1, 2].map((offset) => {
-                const memberIdx = (teamSlideIdx + offset) % TEAM_MEMBERS.length;
-                const member = TEAM_MEMBERS[memberIdx];
-                const isCenter = offset === 1;
+            {/* Slider Viewport with Fixed Height to Prevent ANY Vertical Page Jump */}
+            <div className="w-full overflow-hidden relative min-h-[460px] sm:min-h-[480px] flex items-center justify-center">
+              <AnimatePresence initial={false} custom={slideDirection} mode="popLayout">
+                <motion.div 
+                  key={teamSlideIdx}
+                  custom={slideDirection}
+                  variants={{
+                    enter: (dir) => ({
+                      x: dir > 0 ? 320 : -320,
+                      opacity: 0,
+                    }),
+                    center: {
+                      x: 0,
+                      opacity: 1,
+                      transition: {
+                        x: { type: "spring", stiffness: 280, damping: 28 },
+                        opacity: { duration: 0.28 }
+                      }
+                    },
+                    exit: (dir) => ({
+                      x: dir > 0 ? -320 : 320,
+                      opacity: 0,
+                      transition: {
+                        x: { type: "spring", stiffness: 280, damping: 28 },
+                        opacity: { duration: 0.28 }
+                      }
+                    })
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full items-center"
+                >
+                  {[-1, 0, 1].map((offset) => {
+                    const memberIdx = (teamSlideIdx + offset + TEAM_MEMBERS.length) % TEAM_MEMBERS.length;
+                    const member = TEAM_MEMBERS[memberIdx];
+                    const isCenter = offset === 0;
 
-                return (
-                  <motion.div
-                    key={member.id}
-                    layout
-                    initial={{ opacity: 0, y: 25 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className={`group relative flex flex-col items-center ${isCenter ? 'md:-translate-y-4' : ''}`}
-                  >
-                    {/* Ambient Glow Aura */}
-                    <div className={`absolute top-1/4 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl opacity-30 ${isCenter ? 'bg-[#FF4B55]' : offset === 0 ? 'bg-[#8B5CF6]' : 'bg-[#1877F2]'} pointer-events-none`} />
-
-                    {/* Circular Portrait Frame with double ring */}
-                    <div className="relative">
-                      <div className={`relative ${isCenter ? 'w-48 h-48 sm:w-56 sm:h-56' : 'w-44 h-44 sm:w-48 sm:h-48'} rounded-full p-2.5 border-[4px] ${member.ringColor} bg-white shadow-2xl ${member.glowColor} group-hover:scale-105 transition-all duration-300 overflow-hidden`}>
-                        <img
-                          src={member.image}
-                          alt={member.name}
-                          className="w-full h-full rounded-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      </div>
-
-                      {/* Small Top-Right Floating Icon Pill */}
-                      <div className={`absolute top-2 right-2 p-1.5 rounded-full ${member.accentBg} text-white shadow-md ring-2 ring-white text-[10px]`}>
-                        <Sparkles className="w-3 h-3" />
-                      </div>
-                    </div>
-
-                    {/* Signature Pill Badge Directly Below Circle (Matching reference design) */}
-                    {isCenter ? (
-                      <div className="-mt-4 relative z-20 px-5 py-1.5 rounded-full text-xs font-black bg-[#FF4B55] text-white shadow-lg shadow-[#FF4B55]/40 tracking-wider uppercase select-none">
-                        {member.badge}
-                      </div>
-                    ) : (
-                      <div className="-mt-3 relative z-20 px-3.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-slate-700 shadow-md border border-slate-200 select-none">
-                        {member.badge}
-                      </div>
-                    )}
-
-                    {/* Typography & Roles */}
-                    <div className="mt-4 space-y-1.5 text-center">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        {member.tag}
-                      </span>
-                      <h4 className="text-xl font-black text-slate-900 group-hover:text-[#FF4B55] transition-colors">
-                        {member.name}
-                      </h4>
-                      <p className="text-xs font-bold text-slate-600">
-                        {member.role}
-                      </p>
-                      <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed pt-1">
-                        {member.bio}
-                      </p>
-                    </div>
-
-                    {/* Interactive Social Media Links */}
-                    <div className="flex items-center justify-center gap-2.5 pt-4">
-                      <a 
-                        href="#team" 
-                        aria-label="Twitter Profile"
-                        className="w-8 h-8 rounded-full bg-white hover:bg-[#1877F2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+                    return (
+                      <div
+                        key={member.id}
+                        onClick={() => {
+                          if (offset === -1) handlePrevTeam();
+                          if (offset === 1) handleNextTeam();
+                        }}
+                        className={`group relative flex flex-col items-center transition-all duration-300 ${
+                          isCenter 
+                            ? 'z-20 cursor-default scale-100 sm:scale-105 opacity-100' 
+                            : 'hidden md:flex z-10 cursor-pointer opacity-60 hover:opacity-90 scale-95'
+                        }`}
                       >
-                        <Twitter className="w-3.5 h-3.5" />
-                      </a>
-                      <a 
-                        href="#team" 
-                        aria-label="LinkedIn Profile"
-                        className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
-                      >
-                        <Linkedin className="w-3.5 h-3.5" />
-                      </a>
-                      <a 
-                        href="#team" 
-                        aria-label="Github Profile"
-                        className="w-8 h-8 rounded-full bg-white hover:bg-slate-900 hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
-                      >
-                        <Github className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
+                        {/* Ambient Glow Aura */}
+                        <div className={`absolute top-1/4 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl opacity-35 ${isCenter ? member.accentBg : 'bg-transparent'} pointer-events-none transition-all duration-500`} />
 
-                  </motion.div>
-                );
-              })}
+                        {/* Circular Portrait Frame with double colored ring */}
+                        <div className="relative h-48 sm:h-52 flex items-center justify-center">
+                          <div className={`relative ${isCenter ? 'w-44 h-44 sm:w-52 sm:h-52' : 'w-36 h-36 sm:w-40 sm:h-40'} rounded-full p-2.5 border-[4px] ${member.ringColor} bg-white shadow-2xl ${member.glowColor} group-hover:scale-105 transition-all duration-300 overflow-hidden`}>
+                            <img
+                              src={member.image}
+                              alt={member.name}
+                              className="w-full h-full rounded-full object-cover group-hover:scale-110 transition-transform duration-500 pointer-events-none"
+                            />
+                          </div>
+
+                          {/* Small Top-Right Floating Icon Pill */}
+                          <div className={`absolute top-2 right-2 p-1.5 rounded-full ${member.accentBg} text-white shadow-md ring-2 ring-white text-[10px]`}>
+                            <Sparkles className="w-3 h-3" />
+                          </div>
+                        </div>
+
+                        {/* Signature Pill Badge Directly Below Circle (Fixed height wrapper) */}
+                        <div className="h-8 flex items-center justify-center -mt-3 relative z-20">
+                          {isCenter ? (
+                            <span className="px-5 py-1.5 rounded-full text-xs font-black bg-[#FF4B55] text-white shadow-lg shadow-[#FF4B55]/40 tracking-wider uppercase select-none">
+                              {member.badge}
+                            </span>
+                          ) : (
+                            <span className="px-3.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-slate-700 shadow-md border border-slate-200 select-none">
+                              {member.badge}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Typography & Roles (Fixed height container) */}
+                        <div className="mt-3 text-center w-full max-w-xs flex flex-col items-center">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            {member.tag}
+                          </span>
+                          <h4 className="text-xl font-black text-slate-900 group-hover:text-[#FF4B55] transition-colors mt-0.5">
+                            {member.name}
+                          </h4>
+                          <p className="text-xs font-bold text-slate-600 mt-0.5">
+                            {member.role}
+                          </p>
+                          {/* Standardized 2-line bio with fixed height to guarantee ZERO height shift */}
+                          <p className={`text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed mt-1.5 h-10 line-clamp-2 px-2 transition-opacity ${isCenter ? 'opacity-100' : 'opacity-80'}`}>
+                            {member.bio}
+                          </p>
+                        </div>
+
+                        {/* Interactive Social Media Links */}
+                        <div className="flex items-center justify-center gap-2.5 pt-3 h-10">
+                          <a 
+                            href="#leadership" 
+                            aria-label="Twitter Profile"
+                            className="w-8 h-8 rounded-full bg-white hover:bg-[#1877F2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+                          >
+                            <Twitter className="w-3.5 h-3.5" />
+                          </a>
+                          <a 
+                            href="#leadership" 
+                            aria-label="LinkedIn Profile"
+                            className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+                          >
+                            <Linkedin className="w-3.5 h-3.5" />
+                          </a>
+                          <a 
+                            href="#leadership" 
+                            aria-label="Github Profile"
+                            className="w-8 h-8 rounded-full bg-white hover:bg-slate-900 hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+                          >
+                            <Github className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
             </div>
 
-            {/* Right Carousel Arrow */}
+            {/* Right Carousel Arrow Button (Safely inside container padding) */}
             <button
-              onClick={() => setTeamSlideIdx((prev) => (prev + 1) % TEAM_MEMBERS.length)}
+              onClick={handleNextTeam}
               aria-label="Next Team Member"
-              className="hidden lg:flex absolute -right-8 z-30 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl items-center justify-center text-slate-600 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all"
+              className="absolute right-1 sm:right-2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl flex items-center justify-center text-slate-700 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all shadow-slate-300/60"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-
           </div>
 
-          {/* Dots Indicator for Mobile & Tablet */}
-          <div className="flex items-center justify-center gap-2 pt-2">
-            {TEAM_MEMBERS.map((_, dotIdx) => (
-              <button
-                key={dotIdx}
-                onClick={() => setTeamSlideIdx(dotIdx)}
-                className={`h-2 rounded-full transition-all ${teamSlideIdx === dotIdx ? 'w-7 bg-[#FF4B55]' : 'w-2 bg-slate-200 hover:bg-slate-300'}`}
-                aria-label={`Go to slide ${dotIdx + 1}`}
-              />
-            ))}
+          {/* Slider Status & Dot Indicators */}
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <div className="flex items-center justify-center gap-2">
+              {TEAM_MEMBERS.map((m, dotIdx) => (
+                <button
+                  key={m.id}
+                  onClick={() => handleDotClick(dotIdx)}
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    teamSlideIdx === dotIdx 
+                      ? 'w-8 bg-[#FF4B55] shadow-md shadow-[#FF4B55]/30' 
+                      : 'w-2.5 bg-slate-200 hover:bg-slate-300'
+                  }`}
+                  aria-label={`Go to slide ${dotIdx + 1}: ${m.name}`}
+                />
+              ))}
+            </div>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+              Slide {teamSlideIdx + 1} of {TEAM_MEMBERS.length} • Swipe or click arrows to explore
+            </span>
           </div>
 
         </div>
