@@ -44,7 +44,8 @@ class FirebaseSmsService {
   }
 
   async sendSMS(phone: string, message: string): Promise<boolean> {
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+    const rawSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+    const twilioSid = rawSid ? (rawSid.startsWith('AC') ? rawSid : `AC${rawSid}`) : '';
     const twilioToken = process.env.TWILIO_AUTH_TOKEN;
     const twilioFrom = process.env.TWILIO_PHONE_NUMBER;
 
