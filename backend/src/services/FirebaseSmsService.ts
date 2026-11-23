@@ -99,18 +99,26 @@ class FirebaseSmsService {
       try {
         logger.info(`[SMS GATEWAY] Sending SMS via EnableX to ${internationalPhone}...`);
         const basicAuth = Buffer.from(`${enablexSmsAppId.trim()}:${enablexSmsAppKey.trim()}`).toString('base64');
+        const enablexCampaignId = process.env.ENABLEX_SMS_CAMPAIGN_ID?.trim();
+        const enablexSenderId = process.env.ENABLEX_SMS_SENDER_ID?.trim() || 'ENABLEX';
+
+        const enablexPayload: any = {
+          to: [internationalPhone],
+          body: message,
+          type: 'sms',
+          from: enablexSenderId
+        };
+        if (enablexCampaignId) {
+          enablexPayload.campaign_id = enablexCampaignId;
+        }
+
         const response = await fetch('https://api.enablex.io/sms/v1/messages', {
           method: 'POST',
           headers: {
             'Authorization': `Basic ${basicAuth}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            to: internationalPhone,
-            body: message,
-            type: 'transactional',
-            data_coding: 'plain'
-          })
+          body: JSON.stringify(enablexPayload)
         });
 
         const data: any = await response.json();
