@@ -229,6 +229,7 @@ export const AppLandingPage = () => {
   const [openFaqIdx, setOpenFaqIdx] = useState(0);
   const [showQrModal, setShowQrModal] = useState(false);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
+  const [teamSlideIdx, setTeamSlideIdx] = useState(0);
   const [selectedPreviewImage, setSelectedPreviewImage] = useState(null);
 
   // Contact form state
@@ -326,25 +327,53 @@ export const AppLandingPage = () => {
   // Team members matching the 3 circle cards in reference image
   const TEAM_MEMBERS = [
     {
+      id: 'cto',
       name: "Aravind Nair",
-      role: "Chief Executive Officer",
-      ringColor: "border-[#8B5CF6] text-[#8B5CF6]",
-      badgeBg: "bg-[#8B5CF6]/10",
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+      role: "Chief Technology Officer",
+      tag: "Tech & Architecture",
+      badge: "CTO",
+      bio: "12+ yrs building ultra-low latency real-time tournament servers & anti-cheat engines.",
+      ringColor: "border-[#8B5CF6]",
+      glowColor: "shadow-[#8B5CF6]/30",
+      accentBg: "bg-[#8B5CF6]",
+      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=80"
     },
     {
+      id: 'ceo',
       name: "Siddharth Rao",
-      role: "Head of Game Design",
-      ringColor: "border-[#FF4B55] text-[#FF4B55]",
-      badgeBg: "bg-[#FF4B55]/10",
-      image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80"
+      role: "Founder & Chief Executive",
+      tag: "Vision & Strategy",
+      badge: "FOUNDER & CEO",
+      bio: "Serial gaming founder. Pioneering India's premier skill-based reality contest tournament ecosystem.",
+      ringColor: "border-[#FF4B55]",
+      glowColor: "shadow-[#FF4B55]/40",
+      accentBg: "bg-[#FF4B55]",
+      featured: true,
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=500&q=80"
     },
     {
+      id: 'design',
       name: "Kavya Menon",
-      role: "Lead Platform Architect",
-      ringColor: "border-[#2563EB] text-[#2563EB]",
-      badgeBg: "bg-[#2563EB]/10",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80"
+      role: "Head of Game Design",
+      tag: "UX & Trivia Mechanics",
+      badge: "GAME DESIGN",
+      bio: "Former design lead at premier gaming studios. Mastermind behind HAKA's millisecond quiz flow.",
+      ringColor: "border-[#1877F2]",
+      glowColor: "shadow-[#1877F2]/30",
+      accentBg: "bg-[#1877F2]",
+      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=500&q=80"
+    },
+    {
+      id: 'ops',
+      name: "Meera Sharma",
+      role: "VP of Contest Integrity",
+      tag: "Fair Play & Trust",
+      badge: "OPERATIONS",
+      bio: "National legal & compliance lead. Ensuring 100% audited skill-based integrity across all games.",
+      ringColor: "border-emerald-500",
+      glowColor: "shadow-emerald-500/30",
+      accentBg: "bg-emerald-500",
+      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=500&q=80"
     }
   ];
 
@@ -439,17 +468,10 @@ export const AppLandingPage = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowQrModal(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#1877F2] hover:bg-[#1565d8] text-white text-xs font-bold shadow-md shadow-[#1877F2]/25 hover:shadow-lg transition-all hover:scale-105 active:scale-95"
             >
-              <QrCode className="w-3.5 h-3.5 text-[#2563EB]" />
+              <QrCode className="w-3.5 h-3.5" />
               <span>Get App</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/login')}
-              className="px-6 py-2.5 rounded-full bg-[#1877F2] hover:bg-[#1565d8] text-white text-xs font-bold shadow-md shadow-[#1877F2]/25 hover:shadow-lg transition-all hover:scale-105 active:scale-95"
-            >
-              Sign In
             </button>
           </div>
 
@@ -818,11 +840,12 @@ export const AppLandingPage = () => {
       {/* ========================================================================= */}
       <section id="how-it-works" className="w-full relative overflow-hidden bg-white">
         
-        {/* Asymmetrical Organic Fluid Blue Wave Backdrop (Behind phone on the left, matching reference design) */}
-        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-full lg:w-[48%] h-[540px] lg:h-[620px] pointer-events-none z-0">
+        {/* Asymmetrical Organic Fluid Blue Wave Backdrop (Touching left screen edge) */}
+        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[90%] sm:w-[75%] lg:w-[50%] xl:w-[48%] h-[560px] lg:h-[660px] pointer-events-none z-0">
           <svg 
             viewBox="0 0 600 600" 
             fill="none" 
+            preserveAspectRatio="none"
             className="w-full h-full drop-shadow-[0_20px_50px_rgba(24,119,242,0.25)]"
           >
             <defs>
@@ -832,33 +855,33 @@ export const AppLandingPage = () => {
                 <stop offset="100%" stopColor="#0B4FD8" />
               </linearGradient>
               <linearGradient id="fluidWaveGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#60A5FA" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="#1877F2" stopOpacity="0" />
+                <stop offset="0%" stopColor="#60A5FA" stopOpacity="0.45" />
+                <stop offset="100%" stopColor="#1877F2" stopOpacity="0.15" />
               </linearGradient>
             </defs>
             
-            {/* Soft Outer Wave Layer */}
+            {/* Soft Outer Wave Layer (Touching left edge with zero gap) */}
             <path 
-              d="M0,40 C180,10 320,120 420,240 C520,360 480,500 360,560 C240,620 120,590 0,600 Z" 
+              d="M0,20 C180,-10 330,90 440,220 C540,340 500,480 380,550 C250,600 120,590 0,590 Z" 
               fill="url(#fluidWaveGlow)" 
             />
 
-            {/* Main Fluid Wave Shape */}
+            {/* Main Fluid Wave Shape (Touching left edge with zero gap) */}
             <path 
-              d="M0,60 C160,30 290,140 380,250 C470,360 440,480 320,540 C210,590 100,560 0,570 Z" 
+              d="M0,40 C160,10 300,120 400,240 C490,350 450,470 340,540 C220,580 90,570 0,570 Z" 
               fill="url(#fluidWaveGradient)" 
             />
 
             {/* Internal Decorative Wave Curves */}
             <path 
-              d="M30,140 C140,200 240,110 330,220 C380,280 360,380 300,440" 
+              d="M0,130 C130,190 230,110 330,220 C390,290 370,390 290,450" 
               stroke="white" 
               strokeWidth="2" 
               strokeDasharray="6 6" 
-              opacity="0.3" 
+              opacity="0.35" 
             />
             <path 
-              d="M20,260 C120,320 220,240 310,340" 
+              d="M0,250 C110,310 210,230 310,330" 
               stroke="white" 
               strokeWidth="1.5" 
               opacity="0.25" 
@@ -866,7 +889,7 @@ export const AppLandingPage = () => {
           </svg>
 
           {/* Ambient Radial Soft Glow */}
-          <div className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-white/20 blur-3xl pointer-events-none" />
+          <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-white/20 blur-3xl pointer-events-none" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 relative z-10">
@@ -1075,7 +1098,7 @@ export const AppLandingPage = () => {
 
             <div className="pt-2">
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => setShowQrModal(true)}
                 className="px-7 py-3 rounded-full bg-[#FF4B55] hover:bg-[#e63e48] text-white text-xs font-bold shadow-lg shadow-[#FF4B55]/30 transition-all hover:scale-105 active:scale-95"
               >
                 Explore Analytics
@@ -1149,7 +1172,7 @@ export const AppLandingPage = () => {
 
             <div className="pt-2">
               <button
-                onClick={() => navigate('/register')}
+                onClick={() => setShowQrModal(true)}
                 className="px-7 py-3 rounded-full bg-[#1877F2] hover:bg-[#1565d8] text-white text-xs font-bold shadow-lg shadow-[#1877F2]/30 transition-all hover:scale-105 active:scale-95"
               >
                 Join The Arena
@@ -1593,7 +1616,7 @@ export const AppLandingPage = () => {
 
               <div className="pt-6">
                 <button
-                  onClick={() => navigate('/login')}
+                  onClick={() => setShowQrModal(true)}
                   className="px-8 py-3.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
                 >
                   Start Playing Today
@@ -1673,75 +1696,172 @@ export const AppLandingPage = () => {
 
 
       {/* ========================================================================= */}
-      {/* 12. TEAM MEMBERS SECTION (CIRCLES WITH COLORFUL RING BORDERS) */}
+      {/* 12. TEAM MEMBERS SECTION (PREMIUM INTERACTIVE SPOTLIGHT SHOWCASE) */}
       {/* ========================================================================= */}
-      <section id="team" className="w-full relative overflow-hidden bg-white text-center">
+      <section id="team" className="w-full relative overflow-hidden bg-gradient-to-b from-[#F0F5FF]/50 via-slate-50 to-white text-center">
         
-        {/* Curved Orbit Vectors Behind Team */}
-        <svg viewBox="0 0 1000 300" fill="none" preserveAspectRatio="none" className="absolute top-1/2 left-0 -translate-y-1/2 w-full h-full opacity-25 pointer-events-none select-none">
-          <ellipse cx="500" cy="150" rx="460" ry="90" stroke="url(#orbitGrad)" strokeWidth="2" strokeDasharray="6 6" />
-          <defs>
-            <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#8B5CF6" />
-              <stop offset="50%" stopColor="#FF4B55" />
-              <stop offset="100%" stopColor="#1877F2" />
-            </linearGradient>
-          </defs>
-        </svg>
+        {/* Curved Orbit Trajectory Vectors Behind Team */}
+        <div className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden">
+          <svg viewBox="0 0 1200 400" fill="none" preserveAspectRatio="none" className="w-full h-full opacity-35">
+            <ellipse cx="600" cy="200" rx="550" ry="120" stroke="url(#orbitGrad)" strokeWidth="2" strokeDasharray="8 8" />
+            <circle cx="200" cy="140" r="6" fill="#8B5CF6" opacity="0.6" />
+            <circle cx="600" cy="80" r="8" fill="#FF4B55" opacity="0.7" />
+            <circle cx="1000" cy="140" r="6" fill="#1877F2" opacity="0.6" />
+            <defs>
+              <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#8B5CF6" />
+                <stop offset="50%" stopColor="#FF4B55" />
+                <stop offset="100%" stopColor="#1877F2" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 space-y-12 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 space-y-14 relative z-10">
           
+          {/* Section Header */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="max-w-2xl mx-auto space-y-3"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#8B5CF6]/10 text-[#8B5CF6] text-xs font-bold">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#8B5CF6]/10 text-[#8B5CF6] text-xs font-bold border border-[#8B5CF6]/20">
               <Users className="w-3.5 h-3.5" />
               <span>Leadership</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
               Meet Our Expert Team
             </h2>
-            <p className="text-slate-500 text-sm sm:text-base">
-              The technologists and game designers pioneering India's premier reality gaming platform.
+            <p className="text-slate-500 text-sm sm:text-base leading-relaxed">
+              The visionaries, technologists, and game designers pioneering India's premier reality gaming tournament platform.
             </p>
           </motion.div>
 
-          {/* 3 Team Circles with Staggered Entrance */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-4xl mx-auto">
-            {TEAM_MEMBERS.map((member, idx) => (
-              <motion.div 
-                key={idx} 
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.15 }}
-                className="space-y-4 group"
-              >
-                {/* Circular Portrait with Color Ring Border */}
-                <div className={`relative w-44 h-44 mx-auto rounded-full p-2 border-[5px] ${member.ringColor} shadow-xl group-hover:scale-105 transition-transform duration-300`}>
-                  <img
-                    src={member.image}
-                    alt={member.name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                </div>
+          {/* Interactive Carousel Showcase Container */}
+          <div className="relative max-w-5xl mx-auto flex items-center justify-center">
+            
+            {/* Left Carousel Arrow */}
+            <button
+              onClick={() => setTeamSlideIdx((prev) => (prev === 0 ? TEAM_MEMBERS.length - 1 : prev - 1))}
+              aria-label="Previous Team Member"
+              className="hidden lg:flex absolute -left-8 z-30 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl items-center justify-center text-slate-600 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
 
-                <div>
-                  <h4 className="text-lg font-black text-slate-900">{member.name}</h4>
-                  <p className="text-xs font-bold text-slate-400 mt-0.5">{member.role}</p>
-                </div>
+            {/* 3 Team Spotlight Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 w-full items-center">
+              {[0, 1, 2].map((offset) => {
+                const memberIdx = (teamSlideIdx + offset) % TEAM_MEMBERS.length;
+                const member = TEAM_MEMBERS[memberIdx];
+                const isCenter = offset === 1;
 
-                {/* Social icons */}
-                <div className="flex items-center justify-center gap-3 pt-1 text-slate-400">
-                  <a href="#team" className="hover:text-[#1877F2] transition-colors"><Twitter className="w-4 h-4" /></a>
-                  <a href="#team" className="hover:text-[#1877F2] transition-colors"><Linkedin className="w-4 h-4" /></a>
-                  <a href="#team" className="hover:text-[#1877F2] transition-colors"><Github className="w-4 h-4" /></a>
-                </div>
+                return (
+                  <motion.div
+                    key={member.id}
+                    layout
+                    initial={{ opacity: 0, y: 25 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className={`group relative flex flex-col items-center ${isCenter ? 'md:-translate-y-4' : ''}`}
+                  >
+                    {/* Ambient Glow Aura */}
+                    <div className={`absolute top-1/4 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl opacity-30 ${isCenter ? 'bg-[#FF4B55]' : offset === 0 ? 'bg-[#8B5CF6]' : 'bg-[#1877F2]'} pointer-events-none`} />
 
-              </motion.div>
+                    {/* Circular Portrait Frame with double ring */}
+                    <div className="relative">
+                      <div className={`relative ${isCenter ? 'w-48 h-48 sm:w-56 sm:h-56' : 'w-44 h-44 sm:w-48 sm:h-48'} rounded-full p-2.5 border-[4px] ${member.ringColor} bg-white shadow-2xl ${member.glowColor} group-hover:scale-105 transition-all duration-300 overflow-hidden`}>
+                        <img
+                          src={member.image}
+                          alt={member.name}
+                          className="w-full h-full rounded-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+
+                      {/* Small Top-Right Floating Icon Pill */}
+                      <div className={`absolute top-2 right-2 p-1.5 rounded-full ${member.accentBg} text-white shadow-md ring-2 ring-white text-[10px]`}>
+                        <Sparkles className="w-3 h-3" />
+                      </div>
+                    </div>
+
+                    {/* Signature Pill Badge Directly Below Circle (Matching reference design) */}
+                    {isCenter ? (
+                      <div className="-mt-4 relative z-20 px-5 py-1.5 rounded-full text-xs font-black bg-[#FF4B55] text-white shadow-lg shadow-[#FF4B55]/40 tracking-wider uppercase select-none">
+                        {member.badge}
+                      </div>
+                    ) : (
+                      <div className="-mt-3 relative z-20 px-3.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-slate-700 shadow-md border border-slate-200 select-none">
+                        {member.badge}
+                      </div>
+                    )}
+
+                    {/* Typography & Roles */}
+                    <div className="mt-4 space-y-1.5 text-center">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        {member.tag}
+                      </span>
+                      <h4 className="text-xl font-black text-slate-900 group-hover:text-[#FF4B55] transition-colors">
+                        {member.name}
+                      </h4>
+                      <p className="text-xs font-bold text-slate-600">
+                        {member.role}
+                      </p>
+                      <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed pt-1">
+                        {member.bio}
+                      </p>
+                    </div>
+
+                    {/* Interactive Social Media Links */}
+                    <div className="flex items-center justify-center gap-2.5 pt-4">
+                      <a 
+                        href="#team" 
+                        aria-label="Twitter Profile"
+                        className="w-8 h-8 rounded-full bg-white hover:bg-[#1877F2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+                      >
+                        <Twitter className="w-3.5 h-3.5" />
+                      </a>
+                      <a 
+                        href="#team" 
+                        aria-label="LinkedIn Profile"
+                        className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+                      >
+                        <Linkedin className="w-3.5 h-3.5" />
+                      </a>
+                      <a 
+                        href="#team" 
+                        aria-label="Github Profile"
+                        className="w-8 h-8 rounded-full bg-white hover:bg-slate-900 hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
+                      >
+                        <Github className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Right Carousel Arrow */}
+            <button
+              onClick={() => setTeamSlideIdx((prev) => (prev + 1) % TEAM_MEMBERS.length)}
+              aria-label="Next Team Member"
+              className="hidden lg:flex absolute -right-8 z-30 w-12 h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl items-center justify-center text-slate-600 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+          </div>
+
+          {/* Dots Indicator for Mobile & Tablet */}
+          <div className="flex items-center justify-center gap-2 pt-2">
+            {TEAM_MEMBERS.map((_, dotIdx) => (
+              <button
+                key={dotIdx}
+                onClick={() => setTeamSlideIdx(dotIdx)}
+                className={`h-2 rounded-full transition-all ${teamSlideIdx === dotIdx ? 'w-7 bg-[#FF4B55]' : 'w-2 bg-slate-200 hover:bg-slate-300'}`}
+                aria-label={`Go to slide ${dotIdx + 1}`}
+              />
             ))}
           </div>
 
