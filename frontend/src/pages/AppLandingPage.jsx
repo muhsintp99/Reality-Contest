@@ -6,7 +6,7 @@ import {
   ChevronRight, ChevronLeft, Sparkles, ExternalLink, HelpCircle, ChevronDown,
   Lock, RefreshCw, Flame, Check, AlertCircle, ArrowUpRight, Coins,
   BarChart2, Wallet, Send, Mail, Phone, MapPin, TrendingUp,
-  Globe, X, Layers, MessageSquare, Gift, Linkedin, Twitter, Github
+  Globe, X, Layers, MessageSquare, Gift
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 
@@ -336,7 +336,6 @@ export const AppLandingPage = () => {
       role: "Chief Technology Officer",
       tag: "Tech & Architecture",
       badge: "CTO",
-      bio: "12+ yrs building ultra-low latency real-time tournament servers & anti-cheat engines.",
       ringColor: "border-[#8B5CF6]",
       glowColor: "shadow-[#8B5CF6]/35",
       accentBg: "bg-[#8B5CF6]",
@@ -348,7 +347,6 @@ export const AppLandingPage = () => {
       role: "Founder & Chief Executive",
       tag: "Vision & Strategy",
       badge: "FOUNDER & CEO",
-      bio: "Serial gaming founder. Pioneering India's premier skill-based reality contest tournament ecosystem.",
       ringColor: "border-[#FF4B55]",
       glowColor: "shadow-[#FF4B55]/45",
       accentBg: "bg-[#FF4B55]",
@@ -361,35 +359,10 @@ export const AppLandingPage = () => {
       role: "Head of Game Design",
       tag: "UX & Trivia Mechanics",
       badge: "GAME DESIGN",
-      bio: "Former design lead at premier gaming studios. Mastermind behind HAKA's millisecond quiz flow.",
       ringColor: "border-[#1877F2]",
       glowColor: "shadow-[#1877F2]/35",
       accentBg: "bg-[#1877F2]",
       image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=500&q=80"
-    },
-    {
-      id: 'ops',
-      name: "Meera Sharma",
-      role: "VP of Contest Integrity",
-      tag: "Fair Play & Trust",
-      badge: "INTEGRITY LEAD",
-      bio: "National legal & compliance lead. Ensuring 100% audited skill-based integrity across all games.",
-      ringColor: "border-emerald-500",
-      glowColor: "shadow-emerald-500/35",
-      accentBg: "bg-emerald-500",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=500&q=80"
-    },
-    {
-      id: 'growth',
-      name: "Rohan Das",
-      role: "Head of Player Growth",
-      tag: "Community & Scale",
-      badge: "GROWTH VP",
-      bio: "Scaled interactive mobile platforms to 20M+ users. Architect behind HAKA's viral tournaments.",
-      ringColor: "border-amber-500",
-      glowColor: "shadow-amber-500/35",
-      accentBg: "bg-amber-500",
-      image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=500&q=80"
     }
   ];
 
@@ -1739,24 +1712,14 @@ export const AppLandingPage = () => {
       {/* ========================================================================= */}
       {/* 12. TEAM MEMBERS SECTION (PREMIUM INTERACTIVE SPOTLIGHT SHOWCASE) */}
       {/* ========================================================================= */}
-      <section id="team" className="w-full relative overflow-hidden bg-gradient-to-b from-[#F0F5FF]/50 via-slate-50 to-white text-center">
+      <section id="team" className="w-full relative overflow-hidden bg-gradient-to-b from-[#FAF5FF]/50 via-[#F8FAFC] to-white text-center">
         
-        {/* Curved Orbit Trajectory Vectors Behind Team */}
-        <div className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden">
-          <svg viewBox="0 0 1200 400" fill="none" preserveAspectRatio="none" className="w-full h-full opacity-35">
-            <ellipse cx="600" cy="200" rx="550" ry="120" stroke="url(#orbitGrad)" strokeWidth="2" strokeDasharray="8 8" />
-            <circle cx="200" cy="140" r="6" fill="#8B5CF6" opacity="0.6" />
-            <circle cx="600" cy="80" r="8" fill="#FF4B55" opacity="0.7" />
-            <circle cx="1000" cy="140" r="6" fill="#1877F2" opacity="0.6" />
-            <defs>
-              <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#8B5CF6" />
-                <stop offset="50%" stopColor="#FF4B55" />
-                <stop offset="100%" stopColor="#1877F2" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
+        {/* Ambient Mesh Glow Orbs in Background */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-gradient-to-tr from-[#8B5CF6]/15 via-[#FF4B55]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-gradient-to-bl from-[#1877F2]/15 via-[#8B5CF6]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+        {/* Curving Trajectory Vectors Flowing Across Team Section */}
+        <CurvingDashedJourney className="-top-8 left-0 opacity-40" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 space-y-14 relative z-10">
           
@@ -1765,16 +1728,36 @@ export const AppLandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-2xl mx-auto space-y-3"
+            transition={{ duration: 0.6 }}
+            className="max-w-3xl mx-auto space-y-4"
           >
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#8B5CF6]/10 text-[#8B5CF6] text-xs font-bold border border-[#8B5CF6]/20">
-              <Users className="w-3.5 h-3.5" />
-              <span>Leadership</span>
+            {/* Glowing Glass Pill Badge */}
+            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-purple-200/70 shadow-sm shadow-purple-500/10">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF4B55] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF4B55]"></span>
+              </span>
+              <Users className="w-3.5 h-3.5 text-[#8B5CF6]" />
+              <span className="text-[11px] font-black uppercase tracking-widest bg-gradient-to-r from-[#8B5CF6] via-[#FF4B55] to-[#1877F2] bg-clip-text text-transparent">
+                Leadership
+              </span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
-              Meet Our Expert Team
+
+            {/* Gradient Multi-tone Title with Decorative Wave Accent */}
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.15]">
+              Meet Our{' '}
+              <span className="relative inline-block whitespace-nowrap">
+                <span className="bg-gradient-to-r from-[#FF4B55] via-[#8B5CF6] to-[#1877F2] bg-clip-text text-transparent">
+                  Expert Team
+                </span>
+                <svg className="absolute -bottom-2 left-0 w-full h-3 text-[#FF4B55]/40 -z-10" viewBox="0 0 120 12" fill="none" preserveAspectRatio="none">
+                  <path d="M2 9C38 2 82 2 118 9" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                </svg>
+              </span>
             </h2>
-            <p className="text-slate-500 text-sm sm:text-base leading-relaxed">
+
+            {/* Elegant Subtitle with generous line-height */}
+            <p className="text-slate-500 text-sm sm:text-base lg:text-lg max-w-2xl mx-auto leading-relaxed font-normal">
               The visionaries, technologists, and game designers pioneering India's premier reality gaming tournament platform.
             </p>
           </motion.div>
@@ -1801,13 +1784,13 @@ export const AppLandingPage = () => {
             <button
               onClick={handlePrevTeam}
               aria-label="Previous Team Member"
-              className="absolute left-1 sm:left-2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl flex items-center justify-center text-slate-700 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all shadow-slate-300/60"
+              className="absolute left-1 sm:left-2 z-30 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xl shadow-slate-300/60 flex items-center justify-center text-slate-700 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all"
             >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
 
             {/* Slider Viewport with Fixed Height to Prevent ANY Vertical Page Jump */}
-            <div className="w-full overflow-hidden relative min-h-[460px] sm:min-h-[480px] flex items-center justify-center">
+            <div className="w-full overflow-hidden relative min-h-[380px] sm:min-h-[420px] flex items-center justify-center">
               <AnimatePresence initial={false} custom={slideDirection} mode="popLayout">
                 <motion.div 
                   key={teamSlideIdx}
@@ -1851,18 +1834,20 @@ export const AppLandingPage = () => {
                           if (offset === -1) handlePrevTeam();
                           if (offset === 1) handleNextTeam();
                         }}
-                        className={`group relative flex flex-col items-center transition-all duration-300 ${
+                        className={`group relative rounded-[32px] transition-all duration-500 flex flex-col items-center text-center select-none ${
                           isCenter 
-                            ? 'z-20 cursor-default scale-100 sm:scale-105 opacity-100' 
-                            : 'hidden md:flex z-10 cursor-pointer opacity-60 hover:opacity-90 scale-95'
+                            ? 'z-20 cursor-default bg-white p-7 sm:p-9 shadow-[0_25px_60px_-15px_rgba(139,92,246,0.22)] border-2 border-purple-200/90 ring-4 ring-purple-100/50 scale-100 sm:scale-105 opacity-100' 
+                            : 'hidden md:flex z-10 cursor-pointer bg-white/70 backdrop-blur-md p-6 sm:p-7 shadow-md border border-slate-200/70 hover:bg-white hover:border-slate-300 scale-95 opacity-60 hover:opacity-90'
                         }`}
                       >
-                        {/* Ambient Glow Aura */}
-                        <div className={`absolute top-1/4 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl opacity-35 ${isCenter ? member.accentBg : 'bg-transparent'} pointer-events-none transition-all duration-500`} />
+                        {/* Subtle corner decorative gradient on center card */}
+                        {isCenter && (
+                          <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-bl from-purple-500/10 via-rose-500/5 to-transparent rounded-bl-[80px] pointer-events-none" />
+                        )}
 
-                        {/* Circular Portrait Frame with double colored ring */}
-                        <div className="relative h-48 sm:h-52 flex items-center justify-center">
-                          <div className={`relative ${isCenter ? 'w-44 h-44 sm:w-52 sm:h-52' : 'w-36 h-36 sm:w-40 sm:h-40'} rounded-full p-2.5 border-[4px] ${member.ringColor} bg-white shadow-2xl ${member.glowColor} group-hover:scale-105 transition-all duration-300 overflow-hidden`}>
+                        {/* Portrait Frame with double colored ring and floating badge */}
+                        <div className="relative mb-4 flex items-center justify-center">
+                          <div className={`relative ${isCenter ? 'w-36 h-36 sm:w-44 sm:h-44' : 'w-28 h-28 sm:w-32 sm:h-32'} rounded-full p-2 border-[3.5px] ${member.ringColor} bg-white shadow-xl ${member.glowColor} group-hover:scale-105 transition-all duration-300 overflow-hidden`}>
                             <img
                               src={member.image}
                               alt={member.name}
@@ -1870,67 +1855,32 @@ export const AppLandingPage = () => {
                             />
                           </div>
 
-                          {/* Small Top-Right Floating Icon Pill */}
-                          <div className={`absolute top-2 right-2 p-1.5 rounded-full ${member.accentBg} text-white shadow-md ring-2 ring-white text-[10px]`}>
-                            <Sparkles className="w-3 h-3" />
+                          {/* Floating Badge below circle */}
+                          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 z-20">
+                            {isCenter ? (
+                              <span className="px-4 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-[#FF4B55] to-[#8B5CF6] text-white shadow-md shadow-[#FF4B55]/30 tracking-wider uppercase whitespace-nowrap">
+                                {member.badge}
+                              </span>
+                            ) : (
+                              <span className="px-3 py-0.5 rounded-full text-[9px] font-black bg-white text-slate-700 border border-slate-200 shadow-sm uppercase whitespace-nowrap">
+                                {member.badge}
+                              </span>
+                            )}
                           </div>
                         </div>
 
-                        {/* Signature Pill Badge Directly Below Circle (Fixed height wrapper) */}
-                        <div className="h-8 flex items-center justify-center -mt-3 relative z-20">
-                          {isCenter ? (
-                            <span className="px-5 py-1.5 rounded-full text-xs font-black bg-[#FF4B55] text-white shadow-lg shadow-[#FF4B55]/40 tracking-wider uppercase select-none">
-                              {member.badge}
-                            </span>
-                          ) : (
-                            <span className="px-3.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-slate-700 shadow-md border border-slate-200 select-none">
-                              {member.badge}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Typography & Roles (Fixed height container) */}
+                        {/* Typography: Department Tag, Name, Role */}
                         <div className="mt-3 text-center w-full max-w-xs flex flex-col items-center">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#8B5CF6] bg-purple-50 px-2.5 py-0.5 rounded-full">
                             {member.tag}
                           </span>
-                          <h4 className="text-xl font-black text-slate-900 group-hover:text-[#FF4B55] transition-colors mt-0.5">
+                          <h4 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-[#FF4B55] transition-colors mt-2">
                             {member.name}
                           </h4>
-                          <p className="text-xs font-bold text-slate-600 mt-0.5">
+                          <p className="text-xs sm:text-sm font-bold text-slate-700 mt-1">
                             {member.role}
                           </p>
-                          {/* Standardized 2-line bio with fixed height to guarantee ZERO height shift */}
-                          <p className={`text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed mt-1.5 h-10 line-clamp-2 px-2 transition-opacity ${isCenter ? 'opacity-100' : 'opacity-80'}`}>
-                            {member.bio}
-                          </p>
                         </div>
-
-                        {/* Interactive Social Media Links */}
-                        <div className="flex items-center justify-center gap-2.5 pt-3 h-10">
-                          <a 
-                            href="#leadership" 
-                            aria-label="Twitter Profile"
-                            className="w-8 h-8 rounded-full bg-white hover:bg-[#1877F2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
-                          >
-                            <Twitter className="w-3.5 h-3.5" />
-                          </a>
-                          <a 
-                            href="#leadership" 
-                            aria-label="LinkedIn Profile"
-                            className="w-8 h-8 rounded-full bg-white hover:bg-[#0A66C2] hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
-                          >
-                            <Linkedin className="w-3.5 h-3.5" />
-                          </a>
-                          <a 
-                            href="#leadership" 
-                            aria-label="Github Profile"
-                            className="w-8 h-8 rounded-full bg-white hover:bg-slate-900 hover:text-white text-slate-400 border border-slate-200 flex items-center justify-center transition-all hover:scale-110 shadow-sm"
-                          >
-                            <Github className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-
                       </div>
                     );
                   })}
@@ -1942,14 +1892,14 @@ export const AppLandingPage = () => {
             <button
               onClick={handleNextTeam}
               aria-label="Next Team Member"
-              className="absolute right-1 sm:right-2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-xl flex items-center justify-center text-slate-700 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all shadow-slate-300/60"
+              className="absolute right-1 sm:right-2 z-30 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xl shadow-slate-300/60 flex items-center justify-center text-slate-700 hover:text-[#FF4B55] hover:border-[#FF4B55] hover:scale-110 active:scale-95 transition-all"
             >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              <ChevronRight className="w-6 h-6" />
             </button>
           </div>
 
           {/* Slider Status & Dot Indicators */}
-          <div className="flex flex-col items-center gap-3 pt-2">
+          <div className="flex flex-col items-center gap-3 pt-4">
             <div className="flex items-center justify-center gap-2">
               {TEAM_MEMBERS.map((m, dotIdx) => (
                 <button
@@ -1957,15 +1907,15 @@ export const AppLandingPage = () => {
                   onClick={() => handleDotClick(dotIdx)}
                   className={`h-2.5 rounded-full transition-all duration-300 ${
                     teamSlideIdx === dotIdx 
-                      ? 'w-8 bg-[#FF4B55] shadow-md shadow-[#FF4B55]/30' 
+                      ? 'w-9 bg-gradient-to-r from-[#FF4B55] to-[#8B5CF6] shadow-md shadow-[#FF4B55]/30' 
                       : 'w-2.5 bg-slate-200 hover:bg-slate-300'
                   }`}
                   aria-label={`Go to slide ${dotIdx + 1}: ${m.name}`}
                 />
               ))}
             </div>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-              Slide {teamSlideIdx + 1} of {TEAM_MEMBERS.length} • Swipe or click arrows to explore
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-3 py-1 rounded-full bg-slate-100/80 border border-slate-200/50">
+              Leader {teamSlideIdx + 1} of {TEAM_MEMBERS.length} • Swipe or click arrows
             </span>
           </div>
 
